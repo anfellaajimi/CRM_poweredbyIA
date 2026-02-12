@@ -13,6 +13,31 @@ def list_utilisateurs(db: Session = Depends(get_db)):
     return db.query(Utilisateur).order_by(Utilisateur.userID.desc()).all()
 
 
+@router.post("/seed/admin", response_model=UtilisateurRead, status_code=status.HTTP_201_CREATED)
+def seed_admin_utilisateur(db: Session = Depends(get_db)):
+    payload = {
+        "nom": "Anfel Ajimi",
+        "email": "admin@gmail.com",
+        "role": "developpeur",
+        "actif": True,
+        "motDePasse": "admin123",
+    }
+
+    existing = db.query(Utilisateur).filter(Utilisateur.email == payload["email"]).first()
+    if existing:
+        for key, value in payload.items():
+            setattr(existing, key, value)
+        db.commit()
+        db.refresh(existing)
+        return existing
+
+    item = Utilisateur(**payload)
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return item
+
+
 @router.get("/{user_id}", response_model=UtilisateurRead)
 def get_utilisateur(user_id: int, db: Session = Depends(get_db)):
     item = db.get(Utilisateur, user_id)
@@ -23,6 +48,9 @@ def get_utilisateur(user_id: int, db: Session = Depends(get_db)):
 
 @router.post("", response_model=UtilisateurRead, status_code=status.HTTP_201_CREATED)
 def create_utilisateur(payload: UtilisateurCreate, db: Session = Depends(get_db)):
+    exists = db.query(Utilisateur).filter(Utilisateur.email == payload.email).first()
+    if exists:
+        raise HTTPException(status_code=400, detail="Utilisateur email already exists")
     item = Utilisateur(**payload.model_dump())
     db.add(item)
     db.commit()

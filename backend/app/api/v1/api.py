@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from app.api.v1.endpoints.acces import router as acces_router
 from app.api.v1.endpoints.ai_monitoring import router as ai_monitoring_router
+from app.api.v1.endpoints.auth import router as auth_router
 from app.api.v1.endpoints.cahier_de_charge import router as cahier_router
 from app.api.v1.endpoints.clients import router as clients_router
 from app.api.v1.endpoints.contrats import router as contrats_router
@@ -16,6 +17,7 @@ from app.api.v1.endpoints.utilisateurs import router as utilisateurs_router
 
 api_router = APIRouter()
 api_router.include_router(health_router)
+api_router.include_router(auth_router)
 api_router.include_router(clients_router)
 api_router.include_router(projets_router)
 api_router.include_router(ressources_router)
