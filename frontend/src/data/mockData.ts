@@ -1,42 +1,46 @@
-export const mockClients = [
+export const  mockClients  = [
   {
     id: '1',
-    name: 'Acme Corporation',
+    type: 'Moral', // ✅ ajoute ça
+    nom: 'Acme Corporation',
     email: 'contact@acme.com',
-    phone: '+1 (555) 123-4567',
-    company: 'Acme Corporation',
-    status: 'Active',
-    createdAt: '2024-01-15',
+    téléphone: '+1 (555) 123-4567',
+    entreprise: 'Acme Corporation',
+    statut: 'Actif',
+    crééLe: '2024-01-15',
     avatar: 'https://images.unsplash.com/photo-1560179707-f14e90ef3623?w=100&h=100&fit=crop'
   },
   {
     id: '2',
-    name: 'TechStart Inc',
+    type: 'Moral',
+    nom: 'TechStart Inc',
     email: 'hello@techstart.io',
-    phone: '+1 (555) 234-5678',
-    company: 'TechStart Inc',
-    status: 'Active',
-    createdAt: '2024-02-20',
+    téléphone: '+1 (555) 234-5678',
+    entreprise: 'TechStart Inc',
+    statut: 'Actif',
+    crééLe: '2024-02-20',
     avatar: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=100&h=100&fit=crop'
   },
   {
     id: '3',
-    name: 'Global Solutions',
+    type: 'Moral',
+    nom: 'Global Solutions',
     email: 'info@globalsolutions.com',
-    phone: '+1 (555) 345-6789',
-    company: 'Global Solutions',
-    status: 'Inactive',
-    createdAt: '2024-03-10',
+    téléphone: '+1 (555) 345-6789',
+    entreprise: 'Global Solutions',
+    statut: 'Inactif',
+    crééLe: '2024-03-10',
     avatar: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=100&h=100&fit=crop'
   },
   {
     id: '4',
-    name: 'Digital Agency Pro',
+    type: 'Moral',
+    nom: 'Digital Agency Pro',
     email: 'team@digitalagency.com',
-    phone: '+1 (555) 456-7890',
-    company: 'Digital Agency Pro',
-    status: 'Active',
-    createdAt: '2024-04-05',
+    téléphone: '+1 (555) 456-7890',
+    entreprise: 'Digital Agency Pro',
+    statut: 'Actif',
+    crééLe: '2024-04-05',
     avatar: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=100&h=100&fit=crop'
   }
 ];
@@ -44,63 +48,63 @@ export const mockClients = [
 export const mockProjects = [
   {
     id: '1',
-    name: 'Website Redesign',
+    nom: 'Refonte du Site Web',
     clientId: '1',
-    clientName: 'Acme Corporation',
-    status: 'In Progress',
-    priority: 'High',
+    nomClient: 'Acme Corporation',
+    statut: 'En cours',
+    priorité: 'Haute',
     budget: 50000,
-    spent: 30000,
-    progress: 60,
-    startDate: '2024-01-15',
-    deadline: '2024-06-30',
-    assignedTeam: ['John Doe', 'Jane Smith'],
-    description: 'Complete redesign of corporate website with modern UI/UX'
+    dépensé: 30000,
+    progression: 60,
+    dateDébut: '2024-01-15',
+    dateLimite: '2024-06-30',
+    équipeAssignée: ['John Doe', 'Jane Smith'],
+    description: 'Refonte complète du site web de l\'entreprise avec une interface moderne'
   },
   {
     id: '2',
-    name: 'Mobile App Development',
+    nom: 'Développement Application Mobile',
     clientId: '2',
-    clientName: 'TechStart Inc',
-    status: 'Planning',
-    priority: 'Medium',
+    nomClient: 'TechStart Inc',
+    statut: 'Planification',
+    priorité: 'Moyenne',
     budget: 80000,
-    spent: 5000,
-    progress: 10,
-    startDate: '2024-03-01',
-    deadline: '2024-12-31',
-    assignedTeam: ['Mike Johnson'],
-    description: 'Native iOS and Android app development'
+    dépensé: 5000,
+    progression: 10,
+    dateDébut: '2024-03-01',
+    dateLimite: '2024-12-31',
+    équipeAssignée: ['Mike Johnson'],
+    description: 'Développement d\'une application mobile native iOS et Android'
   },
   {
     id: '3',
-    name: 'E-commerce Platform',
+    nom: 'Plateforme E-commerce',
     clientId: '4',
-    clientName: 'Digital Agency Pro',
-    status: 'Completed',
-    priority: 'High',
+    nomClient: 'Digital Agency Pro',
+    statut: 'Terminé',
+    priorité: 'Haute',
     budget: 120000,
-    spent: 115000,
-    progress: 100,
-    startDate: '2023-09-01',
-    deadline: '2024-03-31',
-    assignedTeam: ['Sarah Connor', 'Tom Hardy'],
-    description: 'Full-featured e-commerce platform with payment integration'
+    dépensé: 115000,
+    progression: 100,
+    dateDébut: '2023-09-01',
+    dateLimite: '2024-03-31',
+    équipeAssignée: ['Sarah Connor', 'Tom Hardy'],
+    description: 'Plateforme e-commerce complète avec intégration de paiement'
   },
   {
     id: '4',
-    name: 'CRM Integration',
+    nom: 'Intégration CRM',
     clientId: '1',
-    clientName: 'Acme Corporation',
-    status: 'On Hold',
-    priority: 'Low',
+    nomClient: 'Acme Corporation',
+    statut: 'En attente',
+    priorité: 'Basse',
     budget: 25000,
-    spent: 0,
-    progress: 0,
-    startDate: '2024-05-01',
-    deadline: '2024-08-31',
-    assignedTeam: [],
-    description: 'Integration with existing CRM system'
+    dépensé: 0,
+    progression: 0,
+    dateDébut: '2024-05-01',
+    dateLimite: '2024-08-31',
+    équipeAssignée: [],
+    description: 'Intégration avec le système CRM existant'
   }
 ];
 
@@ -108,119 +112,120 @@ export const mockDevis = [
   {
     id: 'DEV-2024-001',
     clientId: '1',
-    clientName: 'Acme Corporation',
-    title: 'Website Redesign Quote',
-    amount: 50000,
-    status: 'Accepted',
-    createdAt: '2024-01-10',
-    validUntil: '2024-02-10',
-    items: [
-      { description: 'UI/UX Design', quantity: 1, unitPrice: 15000 },
-      { description: 'Frontend Development', quantity: 1, unitPrice: 20000 },
-      { description: 'Backend Development', quantity: 1, unitPrice: 15000 }
+    nomClient: 'Acme Corporation',
+    titre: 'Devis Refonte du Site Web',
+    montant: 50000,
+    statut: 'Accepté',
+    crééLe: '2024-01-10',
+    valideJusquà: '2024-02-10',
+    articles: [
+      { description: 'Design UI/UX', quantité: 1, prixUnitaire: 15000 },
+      { description: 'Développement Frontend', quantité: 1, prixUnitaire: 20000 },
+      { description: 'Développement Backend', quantité: 1, prixUnitaire: 15000 }
     ]
   },
   {
     id: 'DEV-2024-002',
     clientId: '2',
-    clientName: 'TechStart Inc',
-    title: 'Mobile App Development Quote',
-    amount: 80000,
-    status: 'Sent',
-    createdAt: '2024-02-15',
-    validUntil: '2024-03-15',
-    items: [
-      { description: 'iOS Development', quantity: 1, unitPrice: 40000 },
-      { description: 'Android Development', quantity: 1, unitPrice: 40000 }
+    nomClient: 'TechStart Inc',
+    titre: 'Devis Développement Application Mobile',
+    montant: 80000,
+    statut: 'Envoyé',
+    crééLe: '2024-02-15',
+    valideJusquà: '2024-03-15',
+    articles: [
+      { description: 'Développement iOS', quantité: 1, prixUnitaire: 40000 },
+      { description: 'Développement Android', quantité: 1, prixUnitaire: 40000 }
     ]
   },
   {
     id: 'DEV-2024-003',
     clientId: '3',
-    clientName: 'Global Solutions',
-    title: 'Consulting Services',
-    amount: 15000,
-    status: 'Draft',
-    createdAt: '2024-03-01',
-    validUntil: '2024-04-01',
-    items: [
-      { description: 'Technical Consulting', quantity: 10, unitPrice: 1500 }
+    nomClient: 'Global Solutions',
+    titre: 'Services de Conseil',
+    montant: 15000,
+    statut: 'Brouillon',
+    crééLe: '2024-03-01',
+    valideJusquà: '2024-04-01',
+    articles: [
+      { description: 'Conseil Technique', quantité: 10, prixUnitaire: 1500 }
     ]
   },
   {
     id: 'DEV-2024-004',
     clientId: '4',
-    clientName: 'Digital Agency Pro',
-    title: 'SEO Optimization Package',
-    amount: 12000,
-    status: 'Rejected',
-    createdAt: '2024-03-10',
-    validUntil: '2024-04-10',
-    items: [
-      { description: 'SEO Audit', quantity: 1, unitPrice: 3000 },
-      { description: 'On-page Optimization', quantity: 1, unitPrice: 5000 },
-      { description: 'Link Building', quantity: 1, unitPrice: 4000 }
+    nomClient: 'Digital Agency Pro',
+    titre: 'Pack Optimisation SEO',
+    montant: 12000,
+    statut: 'Rejeté',
+    crééLe: '2024-03-10',
+    valideJusquà: '2024-04-10',
+    articles: [
+      { description: 'Audit SEO', quantité: 1, prixUnitaire: 3000 },
+      { description: 'Optimisation On-page', quantité: 1, prixUnitaire: 5000 },
+      { description: 'Netlinking', quantité: 1, prixUnitaire: 4000 }
     ]
   }
 ];
+
 
 export const mockFactures = [
   {
     id: 'INV-2024-001',
     clientId: '1',
-    clientName: 'Acme Corporation',
-    projectId: '1',
-    projectName: 'Website Redesign',
-    amount: 25000,
-    status: 'Paid',
-    issuedAt: '2024-02-01',
-    dueAt: '2024-03-01',
-    paidAt: '2024-02-28',
-    items: [
-      { description: 'Phase 1 - Design', quantity: 1, unitPrice: 25000 }
+    nomClient: 'Acme Corporation',
+    projetId: '1',
+    nomProjet: 'Refonte du Site Web',
+    montant: 25000,
+    statut: 'Payée',
+    émiseLe: '2024-02-01',
+    dueLe: '2024-03-01',
+    payéeLe: '2024-02-28',
+    articles: [
+      { description: 'Phase 1 - Design', quantité: 1, prixUnitaire: 25000 }
     ]
   },
   {
     id: 'INV-2024-002',
     clientId: '4',
-    clientName: 'Digital Agency Pro',
-    projectId: '3',
-    projectName: 'E-commerce Platform',
-    amount: 115000,
-    status: 'Paid',
-    issuedAt: '2024-03-15',
-    dueAt: '2024-04-15',
-    paidAt: '2024-04-10',
-    items: [
-      { description: 'Full Project Completion', quantity: 1, unitPrice: 115000 }
+    nomClient: 'Digital Agency Pro',
+    projetId: '3',
+    nomProjet: 'Plateforme E-commerce',
+    montant: 115000,
+    statut: 'Payée',
+    émiseLe: '2024-03-15',
+    dueLe: '2024-04-15',
+    payéeLe: '2024-04-10',
+    articles: [
+      { description: 'Projet complet terminé', quantité: 1, prixUnitaire: 115000 }
     ]
   },
   {
     id: 'INV-2024-003',
     clientId: '1',
-    clientName: 'Acme Corporation',
-    projectId: '1',
-    projectName: 'Website Redesign',
-    amount: 20000,
-    status: 'Unpaid',
-    issuedAt: '2024-04-01',
-    dueAt: '2024-05-01',
-    items: [
-      { description: 'Phase 2 - Development', quantity: 1, unitPrice: 20000 }
+    nomClient: 'Acme Corporation',
+    projetId: '1',
+    nomProjet: 'Refonte du Site Web',
+    montant: 20000,
+    statut: 'Impayée',
+    émiseLe: '2024-04-01',
+    dueLe: '2024-05-01',
+    articles: [
+      { description: 'Phase 2 - Développement', quantité: 1, prixUnitaire: 20000 }
     ]
   },
   {
     id: 'INV-2024-004',
     clientId: '2',
-    clientName: 'TechStart Inc',
-    projectId: '2',
-    projectName: 'Mobile App Development',
-    amount: 10000,
-    status: 'Overdue',
-    issuedAt: '2024-03-01',
-    dueAt: '2024-04-01',
-    items: [
-      { description: 'Initial Payment', quantity: 1, unitPrice: 10000 }
+    nomClient: 'TechStart Inc',
+    projetId: '2',
+    nomProjet: 'Développement Application Mobile',
+    montant: 10000,
+    statut: 'En retard',
+    émiseLe: '2024-03-01',
+    dueLe: '2024-04-01',
+    articles: [
+      { description: 'Paiement initial', quantité: 1, prixUnitaire: 10000 }
     ]
   }
 ];
@@ -230,52 +235,52 @@ export const mockContrats = [
     id: 'CON-2024-001',
     clientId: '1',
     clientName: 'Acme Corporation',
-    title: 'Web Development Services Agreement',
-    type: 'Service Agreement',
-    status: 'Active',
-    startDate: '2024-01-15',
-    endDate: '2024-12-31',
+    titre: 'Contrat de services de développement web ',
+    type: 'Contrat de services',
+    status: 'Actif',
+    dateDébut: '2024-01-15',
+    dateFin: '2024-12-31',
     value: 150000,
-    renewalDate: '2024-11-30',
+    dateRenouvellement: '2024-11-30',
     needsRenewal: false
   },
   {
     id: 'CON-2024-002',
     clientId: '2',
     clientName: 'TechStart Inc',
-    title: 'Mobile App Development Contract',
+    titre: 'Contrat Développement Application Mobile',
     type: 'Project Contract',
-    status: 'Active',
-    startDate: '2024-03-01',
-    endDate: '2024-12-31',
+    status: 'Actif',
+    dateDébut: '2024-03-01',
+    dateFin: '2024-12-31',
     value: 80000,
-    renewalDate: '2024-11-30',
+    dateRenouvellement: '2024-11-30',
     needsRenewal: false
   },
   {
     id: 'CON-2023-015',
     clientId: '4',
     clientName: 'Digital Agency Pro',
-    title: 'E-commerce Platform Development',
-    type: 'Project Contract',
-    status: 'Completed',
-    startDate: '2023-09-01',
-    endDate: '2024-03-31',
+    titre: 'Développement Plateforme E-commerce',
+    type: 'Contrat de projet',
+    status: 'Terminé',
+    dateDébut: '2023-09-01',
+    dateFin: '2024-03-31',
     value: 120000,
-    renewalDate: null,
+    dateRenouvellement: null,
     needsRenewal: false
   },
   {
     id: 'CON-2023-008',
     clientId: '3',
     clientName: 'Global Solutions',
-    title: 'Annual Maintenance Contract',
+    titre: 'Contrat Maintenance Annuelle',
     type: 'Maintenance',
-    status: 'Expiring',
-    startDate: '2023-05-01',
-    endDate: '2024-04-30',
+    status: 'Expirant',
+    dateDébut: '2023-05-01',
+    dateFin: '2024-04-30',
     value: 24000,
-    renewalDate: '2024-03-30',
+    dateRenouvellement: '2024-03-30',
     needsRenewal: true
   }
 ];
@@ -283,197 +288,206 @@ export const mockContrats = [
 export const mockUsers = [
   {
     id: '1',
-    name: 'John Doe',
-    email: 'john@crmaipro.com',
+    name: 'Mohamed aziz jouni',
+    email: 'medazizjouni@crmaipro.com',
     role: 'Admin',
-    status: 'Active',
+    status: 'Actif',
     avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop',
-    joinedAt: '2023-01-15'
+    rejointLe: '2023-01-15'
   },
   {
     id: '2',
-    name: 'Jane Smith',
-    email: 'jane@crmaipro.com',
+    name: 'Khalil ibrahim',
+    email: 'khalil@crmaipro.com',
     role: 'Manager',
-    status: 'Active',
+    status: 'Actif',
     avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop',
-    joinedAt: '2023-02-20'
+    rejointLe: '2023-02-20'
   },
   {
     id: '3',
-    name: 'Mike Johnson',
-    email: 'mike@crmaipro.com',
+    name: 'Ahmed ben amor',
+    email: 'ahmed@crmaipro.com',
     role: 'Developer',
-    status: 'Active',
+    status: 'Actif',
     avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop',
-    joinedAt: '2023-03-10'
+    rejointLe: '2023-03-10'
+  },
+   {
+    id: '4',
+    name: 'Sarra rouissi',
+    email: 'sarra@crmaipro.com',
+    role: 'Developer',
+    status: 'Actif',
+    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&h=100&fit=crop',
+    rejointLe: '2023-03-10'
   },
   {
-    id: '4',
-    name: 'Sarah Connor',
-    email: 'sarah@crmaipro.com',
+    id: '5',
+    name: 'imen hammadi',
+    email: 'imen@crmaipro.com',
     role: 'Developer',
-    status: 'Inactive',
+    status: 'Inactif',
     avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop',
-    joinedAt: '2023-04-05'
+    rejointLe: '2023-04-05'
   }
 ];
 
 export const mockReminders = [
   {
     id: '1',
-    title: 'Follow up with Acme Corporation',
-    description: 'Discuss Phase 3 requirements',
-    dueDate: '2024-05-15',
-    priority: 'High',
-    status: 'Pending',
-    relatedTo: 'Client',
-    relatedId: '1'
+    title: 'Relancer Acme Corporation ',
+    description: 'Discuter des exigences de la phase 3 du projet de refonte du site web',
+    dateLimite: '2024-05-15',
+    priorité: 'Élevé',
+    status: 'En attente',
+    liéÀ: 'Client',
+    idLié: '1'
   },
   {
     id: '2',
-    title: 'Send invoice to TechStart Inc',
-    description: 'Monthly maintenance invoice',
-    dueDate: '2024-05-20',
-    priority: 'Medium',
-    status: 'Pending',
-    relatedTo: 'Invoice',
-    relatedId: 'INV-2024-005'
+    title: 'Envoyer la facture à TechStart Inc ',
+    description: 'Facture de maintenance mensuelle pour le projet de développement d\'application mobile',
+    dateLimite: '2024-05-20',
+    priorité: 'Moyen',
+    status: 'En attente',
+    liéÀ: 'Facture',
+    idLié: 'INV-2024-005'
   },
   {
     id: '3',
-    title: 'Contract renewal discussion',
-    description: 'Discuss contract renewal with Global Solutions',
-    dueDate: '2024-05-10',
-    priority: 'High',
-    status: 'Completed',
-    relatedTo: 'Contract',
-    relatedId: 'CON-2023-008'
+    title: 'Discussion sur le renouvellement du contrat',
+    description: 'Discuter du renouvellement du contrat avec Global Solutions',
+    dateLimite: '2024-05-10',
+    priorité: 'Élevé',
+    status: 'Terminé',
+    liéÀ: 'Contrat',
+    idLié: 'CON-2023-008'
   },
   {
     id: '4',
-    title: 'Project deadline approaching',
-    description: 'Website Redesign final delivery',
-    dueDate: '2024-06-30',
-    priority: 'Medium',
-    status: 'Pending',
-    relatedTo: 'Project',
-    relatedId: '1'
+    title: 'Échéance imminente du projet',
+    description: 'Livraison finale de la refonte du site web ',
+    dateLimite: '2024-06-30',
+    priorité: 'Moyen',
+    status: 'En attente',
+    liéÀ: 'Project',
+    idLié: '1'
   }
 ];
 
 export const mockAIServices = [
   {
     id: '1',
-    name: 'API Gateway',
-    status: 'Healthy',
-    lastCheck: '2024-05-12 14:30:00',
-    uptime: 99.9,
-    responseTime: 45,
+    name: 'Passerelle API CRM AI Pro',
+    status: 'En bon état',
+    dernièreVérification: '2024-05-12 14:30:00',
+    disponibilité: 99.9,
+    tempsRéponse: 45,
     endpoint: 'https://api.crmaipro.com'
   },
   {
     id: '2',
     name: 'Email Service',
-    status: 'Healthy',
-    lastCheck: '2024-05-12 14:29:00',
-    uptime: 99.8,
-    responseTime: 120,
-    endpoint: 'https://mail.crmaipro.com'
+    status: 'En bon état',
+    dernièreVérification: '2024-05-12 14:29:00',
+    disponibilité: 99.8,
+    tempsRéponse: 120,
+    endpoint: 'https://Email.crmaipro.com'
   },
   {
     id: '3',
-    name: 'Payment Gateway',
-    status: 'Warning',
-    lastCheck: '2024-05-12 14:25:00',
-    uptime: 98.5,
-    responseTime: 350,
-    endpoint: 'https://payments.crmaipro.com'
+    name: 'Passerelle de paiement ',
+    status: 'Avertissement',
+    dernièreVérification: '2024-05-12 14:25:00',
+    disponibilité: 98.5,
+    tempsRéponse: 350,
+    endpoint: 'https://paiment.crmaipro.com'
   },
   {
     id: '4',
-    name: 'Analytics Engine',
-    status: 'Healthy',
-    lastCheck: '2024-05-12 14:30:00',
-    uptime: 99.95,
-    responseTime: 80,
-    endpoint: 'https://analytics.crmaipro.com'
+    name: 'Moteur d’analytiques',
+    status: 'En bon état',
+    dernièreVérification: '2024-05-12 14:30:00',
+    disponibilité: 99.95,
+    tempsRéponse: 80,
+    endpoint: 'https://analytiques.crmaipro.com'
   },
   {
     id: '5',
-    name: 'Storage Service',
-    status: 'Critical',
-    lastCheck: '2024-05-12 14:15:00',
-    uptime: 95.2,
-    responseTime: 850,
-    endpoint: 'https://storage.crmaipro.com'
+    name: 'Service de stockage',
+    status: 'Critique',
+    dernièreVérification: '2024-05-12 14:15:00',
+    disponibilité: 95.2,
+    tempsRéponse: 850,
+    endpoint: 'https://services.crmaipro.com'
   }
 ];
 
 export const mockActivities = [
   {
     id: '1',
-    type: 'client_created',
-    description: 'New client "Acme Corporation" added',
-    user: 'John Doe',
+    type: 'Client créé ',
+    description: 'Nouveau client "Acme Corporation" ajouté',
+    user: 'Ahmed ben amor',
     timestamp: '2024-05-12 10:30:00',
-    icon: 'UserPlus'
+    icon: 'Nouvel utilisateur' // UserPlus
   },
   {
     id: '2',
-    type: 'invoice_paid',
-    description: 'Invoice INV-2024-002 marked as paid',
-    user: 'Jane Smith',
+    type: 'Facture payée',
+    description: 'Facture INV-2024-002 marquée comme payée',
+    user: 'Khalil ibrahim',
     timestamp: '2024-05-12 09:15:00',
-    icon: 'DollarSign'
+    icon: 'Signe dollar' // DollarSign
   },
   {
     id: '3',
-    type: 'project_updated',
-    description: 'Project "Website Redesign" progress updated to 60%',
-    user: 'Mike Johnson',
+    type: 'Projet mis à jour',
+    description: 'Progression du projet "Refonte du site web" actualisée à 60 %',
+    user: 'Imen Hammadi',
     timestamp: '2024-05-11 16:45:00',
-    icon: 'Briefcase'
+    icon: 'Malette '
   },
   {
     id: '4',
-    type: 'devis_sent',
-    description: 'Quote DEV-2024-002 sent to TechStart Inc',
-    user: 'John Doe',
+    type: 'Devis transmis',
+    description: 'Devis DEV-2024-002 envoyé à TechStart Inc',
+    user: 'Mohamed aziz jouni',
     timestamp: '2024-05-11 14:20:00',
-    icon: 'FileText'
+    icon: 'Texte du fichier' // FileText
   },
   {
     id: '5',
-    type: 'contract_signed',
-    description: 'Contract CON-2024-002 signed by client',
+    type: 'Contrat signé',
+    description: 'Contrat CON-2024-002 signé par le client',
     user: 'System',
     timestamp: '2024-05-10 11:00:00',
-    icon: 'FileCheck'
+    icon: 'Vérification de fichier'
   }
 ];
 
 export const revenueData = [
   { month: 'Jan', revenue: 45000 },
-  { month: 'Feb', revenue: 52000 },
+  { month: 'Fev', revenue: 52000 },
   { month: 'Mar', revenue: 48000 },
-  { month: 'Apr', revenue: 61000 },
-  { month: 'May', revenue: 55000 },
-  { month: 'Jun', revenue: 67000 }
+  { month: 'Avr', revenue: 61000 },
+  { month: 'Mai', revenue: 55000 },
+  { month: 'Juin', revenue: 67000 }
 ];
 
 export const projectStatusData = [
-  { name: 'In Progress', value: 45 },
-  { name: 'Planning', value: 20 },
-  { name: 'Completed', value: 30 },
-  { name: 'On Hold', value: 5 }
+  { name: 'En cours', value: 45 },
+  { name: 'Planification', value: 20 },
+  { name: 'Complété', value: 30 },
+  { name: 'En suspens', value: 5 }
 ];
 
 export const clientGrowthData = [
   { month: 'Jan', clients: 12 },
-  { month: 'Feb', clients: 15 },
+  { month: 'Fev', clients: 15 },
   { month: 'Mar', clients: 18 },
-  { month: 'Apr', clients: 22 },
-  { month: 'May', clients: 28 },
-  { month: 'Jun', clients: 35 }
+  { month: 'Avr', clients: 22 },
+  { month: 'Mai', clients: 28 },
+  { month: 'Juin', clients: 35 }
 ];

@@ -1,51 +1,52 @@
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
+import { useQuery } from '@tanstack/react-query';
 import { Users, Briefcase, DollarSign, FileText, AlertTriangle, TrendingUp } from 'lucide-react';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { revenueData, projectStatusData, clientGrowthData, mockActivities, mockReminders } from '../data/mockData';
-import { Badge } from '../components/ui/Badge';
 import { motion } from 'motion/react';
 
-const COLORS = ['#7c3aed', '#3b82f6', '#10b981', '#f59e0b'];
+import { Badge } from '../components/ui/Badge';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
+import { dashboardAPI } from '../services/api';
+
+const COLORS = ['#7c3aed', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#22c55e'];
 
 export const Dashboard: React.FC = () => {
-  const kpis = [
-    { label: 'Total Clients', value: '128', icon: Users, change: '+12%', color: 'text-purple-600' },
-    { label: 'Active Projects', value: '24', icon: Briefcase, change: '+8%', color: 'text-blue-600' },
-    { label: 'Revenue This Month', value: '$67,000', icon: DollarSign, change: '+15%', color: 'text-green-600' },
-    { label: 'Pending Invoices', value: '18', icon: FileText, change: '-3%', color: 'text-yellow-600' }
-  ];
+  const { data, isLoading } = useQuery({
+    queryKey: ['dashboard-overview'],
+    queryFn: dashboardAPI.overview,
+  });
+
+  const kpis = data ? [
+    { label: 'Nombre total de clients', value: String(data.kpis.totalClients), icon: Users, color: 'text-purple-600' },
+    { label: 'Projets actifs', value: String(data.kpis.activeProjects), icon: Briefcase, color: 'text-blue-600' },
+    { label: 'Revenus ce mois-ci', value: `$${Number(data.kpis.monthlyRevenue).toLocaleString()}`, icon: DollarSign, color: 'text-green-600' },
+    { label: 'Factures en attente', value: String(data.kpis.pendingInvoices), icon: FileText, color: 'text-yellow-600' },
+  ] : [];
+
+  if (isLoading || !data) {
+    return <Card><CardContent className="pt-6">Chargement dashboard...</CardContent></Card>;
+  }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Dashboard</h1>
-          <p className="text-muted-foreground">Welcome back! Here's what's happening today.</p>
-        </div>
+      <div>
+        <h1 className="text-3xl font-bold">Dashboard</h1>
+        <p className="text-muted-foreground">Données en temps réel depuis le backend.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {kpis.map((kpi, index) => {
           const Icon = kpi.icon;
           return (
-            <motion.div
-              key={kpi.label}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-            >
+            <motion.div key={kpi.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.1 }}>
               <Card>
                 <CardContent className="pt-6">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm text-muted-foreground">{kpi.label}</p>
                       <h3 className="text-2xl font-bold mt-2">{kpi.value}</h3>
-                      <p className={`text-sm mt-1 ${kpi.change.startsWith('+') ? 'text-green-600' : 'text-red-600'}`}>
-                        {kpi.change} from last month
-                      </p>
                     </div>
-                    <div className={`p-3 rounded-xl bg-gradient-to-br from-purple-100 to-indigo-100 dark:from-purple-900/30 dark:to-indigo-900/30`}>
+                    <div className="p-3 rounded-xl bg-gradient-to-br from-purple-100 to-indigo-100">
                       <Icon className={`w-6 h-6 ${kpi.color}`} />
                     </div>
                   </div>
@@ -58,48 +59,27 @@ export const Dashboard: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
-          <CardHeader>
-            <CardTitle>Revenue Overview</CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle>Aperçu des revenus</CardTitle></CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={revenueData}>
+              <BarChart data={data.revenueData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" />
                 <YAxis />
                 <Tooltip />
-                <Bar dataKey="revenue" fill="url(#colorRevenue)" radius={[8, 8, 0, 0]} />
-                <defs>
-                  <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#7c3aed" />
-                    <stop offset="100%" stopColor="#4f46e5" />
-                  </linearGradient>
-                </defs>
+                <Bar dataKey="revenue" fill="#7c3aed" radius={[8, 8, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Project Status Distribution</CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle>Répartition des statuts des projets</CardTitle></CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
-                <Pie
-                  data={projectStatusData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={100}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {projectStatusData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
+                <Pie data={data.projectStatusData} cx="50%" cy="50%" labelLine={false} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} outerRadius={100} dataKey="value">
+                  {data.projectStatusData.map((_: any, index: number) => <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />)}
                 </Pie>
                 <Tooltip />
               </PieChart>
@@ -109,12 +89,10 @@ export const Dashboard: React.FC = () => {
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Client Growth</CardTitle>
-        </CardHeader>
+        <CardHeader><CardTitle>Évolution de la clientèle</CardTitle></CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={clientGrowthData}>
+            <LineChart data={data.clientGrowthData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="month" />
               <YAxis />
@@ -128,20 +106,13 @@ export const Dashboard: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
-          <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle>Activité récente</CardTitle></CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {mockActivities.slice(0, 5).map((activity) => (
+              {data.activities.map((activity: any) => (
                 <div key={activity.id} className="flex items-start space-x-3 pb-4 border-b border-border last:border-0 last:pb-0">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center flex-shrink-0">
-                    <TrendingUp className="w-4 h-4 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm">{activity.description}</p>
-                    <p className="text-xs text-muted-foreground mt-1">{activity.timestamp}</p>
-                  </div>
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center flex-shrink-0"><TrendingUp className="w-4 h-4 text-white" /></div>
+                  <div className="flex-1"><p className="text-sm">{activity.message}</p><p className="text-xs text-muted-foreground mt-1">{activity.timestamp}</p></div>
                 </div>
               ))}
             </div>
@@ -149,24 +120,15 @@ export const Dashboard: React.FC = () => {
         </Card>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Upcoming Deadlines</CardTitle>
-          </CardHeader>
+          <CardHeader><CardTitle>Échéances à venir</CardTitle></CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {mockReminders.filter(r => r.status === 'Pending').map((reminder) => (
-                <div key={reminder.id} className="flex items-start space-x-3 pb-4 border-b border-border last:border-0 last:pb-0">
-                  <AlertTriangle className={`w-5 h-5 flex-shrink-0 ${
-                    reminder.priority === 'High' ? 'text-red-500' : 'text-yellow-500'
-                  }`} />
+              {data.reminders.map((rappel: any) => (
+                <div key={rappel.id} className="flex items-start space-x-3 pb-4 border-b border-border last:border-0 last:pb-0">
+                  <AlertTriangle className={`w-5 h-5 flex-shrink-0 ${String(rappel.priorite).toLowerCase().includes('eleve') ? 'text-red-500' : 'text-yellow-500'}`} />
                   <div className="flex-1">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium">{reminder.title}</p>
-                      <Badge variant={reminder.priority === 'High' ? 'danger' : 'warning'}>
-                        {reminder.priority}
-                      </Badge>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">{reminder.dueDate}</p>
+                    <div className="flex items-center justify-between"><p className="text-sm font-medium">{rappel.title}</p><Badge>{rappel.priorite}</Badge></div>
+                    <p className="text-xs text-muted-foreground mt-1">{rappel.dateLimite}</p>
                   </div>
                 </div>
               ))}
@@ -176,31 +138,12 @@ export const Dashboard: React.FC = () => {
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>AI Monitoring Alerts</CardTitle>
-        </CardHeader>
+        <CardHeader><CardTitle>AI Monitoring</CardTitle></CardHeader>
         <CardContent>
           <div className="space-y-3">
-            <div className="flex items-center justify-between p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-              <div className="flex items-center space-x-3">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <div>
-                  <p className="font-medium">All systems operational</p>
-                  <p className="text-sm text-muted-foreground">99.9% uptime</p>
-                </div>
-              </div>
-              <Badge variant="success">Healthy</Badge>
-            </div>
-            <div className="flex items-center justify-between p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-              <div className="flex items-center space-x-3">
-                <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                <div>
-                  <p className="font-medium">Payment Gateway - High Response Time</p>
-                  <p className="text-sm text-muted-foreground">350ms average</p>
-                </div>
-              </div>
-              <Badge variant="warning">Warning</Badge>
-            </div>
+            <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg"><p className="font-medium">Healthy: {data.monitoring.healthy}</p><Badge variant="success">OK</Badge></div>
+            <div className="flex items-center justify-between p-4 bg-yellow-50 rounded-lg"><p className="font-medium">Warning: {data.monitoring.warning}</p><Badge variant="warning">Warning</Badge></div>
+            <div className="flex items-center justify-between p-4 bg-red-50 rounded-lg"><p className="font-medium">Critical: {data.monitoring.critical}</p><Badge variant="danger">Critical</Badge></div>
           </div>
         </CardContent>
       </Card>

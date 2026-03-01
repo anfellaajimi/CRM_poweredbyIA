@@ -18,12 +18,21 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.drop_table("ai_monitoring")
-    op.drop_table("factures")
-    op.drop_table("services")
-    op.drop_table("rappels")
-    op.drop_table("projets")
-    op.drop_table("clients")
+    op.execute("DROP TABLE IF EXISTS ai_monitoring CASCADE")
+    op.execute("DROP TABLE IF EXISTS facture_projets CASCADE")
+    op.execute("DROP TABLE IF EXISTS devis_projets CASCADE")
+    op.execute("DROP TABLE IF EXISTS projet_utilisateurs CASCADE")
+    op.execute("DROP TABLE IF EXISTS acces CASCADE")
+    op.execute("DROP TABLE IF EXISTS factures CASCADE")
+    op.execute("DROP TABLE IF EXISTS devis CASCADE")
+    op.execute("DROP TABLE IF EXISTS contrats CASCADE")
+    op.execute("DROP TABLE IF EXISTS cahier_de_charge CASCADE")
+    op.execute("DROP TABLE IF EXISTS services CASCADE")
+    op.execute("DROP TABLE IF EXISTS ressources CASCADE")
+    op.execute("DROP TABLE IF EXISTS rappels CASCADE")
+    op.execute("DROP TABLE IF EXISTS projets CASCADE")
+    op.execute("DROP TABLE IF EXISTS clients CASCADE")
+    op.execute("DROP TABLE IF EXISTS utilisateurs CASCADE")
 
     op.create_table(
         "clients",

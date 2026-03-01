@@ -3,6 +3,7 @@ import getpass
 
 from alembic import context
 from sqlalchemy import create_engine, engine_from_config, pool
+from sqlalchemy.exc import OperationalError
 
 from app.core.config import settings
 from app.db.base_class import Base
@@ -47,7 +48,7 @@ def run_migrations_online() -> None:
     try:
         _run_with_engine(connectable)
         return
-    except Exception:
+    except OperationalError:
         pass
 
     try:
@@ -66,7 +67,7 @@ def run_migrations_online() -> None:
 
     try:
         _run_with_engine(retry_engine)
-    except Exception as exc:
+    except OperationalError as exc:
         raise RuntimeError(
             "Database authentication failed. Update POSTGRES_USER/POSTGRES_PASSWORD in backend/.env, "
             "then rerun `alembic upgrade head`."

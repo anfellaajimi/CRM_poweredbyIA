@@ -16,5 +16,12 @@ class CahierDeCharge(Base):
     dateCreation: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
     dateValidation: Mapped[datetime | None] = mapped_column(DateTime)
     fileUrl: Mapped[str | None] = mapped_column(String(500))
+    version: Mapped[str] = mapped_column(String(30), default="1.0", nullable=False)
+    objectif: Mapped[str | None] = mapped_column(Text)
+    perimetre: Mapped[str | None] = mapped_column(Text)
+    fonctionnalites: Mapped[str | None] = mapped_column(Text)
+    contraintes: Mapped[str | None] = mapped_column(Text)
+    delais: Mapped[str | None] = mapped_column(Text)
+    budgetTexte: Mapped[str | None] = mapped_column(Text)
 
     projet = relationship("Projet", back_populates="cahierDeCharge")

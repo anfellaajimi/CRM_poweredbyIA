@@ -41,8 +41,8 @@ export const Login: React.FC = () => {
           <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-2xl mb-4">
             <span className="text-white font-bold text-2xl">AI</span>
           </div>
-          <h1 className="text-3xl font-bold mb-2">Welcome Back</h1>
-          <p className="text-muted-foreground">Sign in to CRM AI Pro</p>
+          <h1 className="text-3xl font-bold mb-2">“Ravi de vous retrouver</h1>
+          <p className="text-muted-foreground">Se connecter à CRM AI Pro</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -56,7 +56,7 @@ export const Login: React.FC = () => {
           />
 
           <Input
-            label="Password"
+            label="Mot de passe"
             type="password"
             placeholder="••••••••"
             value={password}
@@ -72,13 +72,13 @@ export const Login: React.FC = () => {
                 onChange={(e) => setRememberMe(e.target.checked)}
                 className="w-4 h-4 rounded border-input text-primary focus:ring-primary"
               />
-              <span className="text-sm">Remember me</span>
+              <span className="text-sm">Se souvenir de moi</span>
             </label>
             <Link
               to="/forgot-password"
               className="text-sm text-primary hover:underline"
             >
-              Forgot password?
+              Mot de passe oublié?
             </Link>
           </div>
 
@@ -87,13 +87,13 @@ export const Login: React.FC = () => {
             className="w-full"
             disabled={loading}
           >
-            {loading ? 'Signing in...' : 'Sign in'}
+            {loading ? 'Connexion...' : 'Se connecter'}
           </Button>
         </form>
 
         <div className="mt-6 text-center">
           <p className="text-sm text-muted-foreground">
-            Don't have an account?{' '}
+           Vous n avez pas de compte{' '}
             <Link to="/register" className="text-primary hover:underline font-medium">
               Sign up
             </Link>
@@ -107,7 +107,7 @@ export const Login: React.FC = () => {
         transition={{ delay: 0.3, duration: 0.5 }}
         className="mt-8 text-center text-sm text-muted-foreground"
       >
-        <p>Demo credentials: admin@crmaipro.com / password</p>
+        <p></p>
       </motion.div>
     </div>
   );

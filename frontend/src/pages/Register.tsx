@@ -21,7 +21,7 @@ export const Register: React.FC = () => {
     e.preventDefault();
 
     if (password !== confirmPassword) {
-      toast.error('Passwords do not match');
+      toast.error('Les mots de passe ne correspondent pas');
       return;
     }
 
@@ -29,10 +29,10 @@ export const Register: React.FC = () => {
 
     try {
       await register(name, email, password, role);
-      toast.success('Registration successful!');
+      toast.success('Inscription réussie!');
       navigate('/');
     } catch (error) {
-      toast.error('Registration failed. Please try again.');
+      toast.error('Échec de l\'inscription. Veuillez réessayer.');
     } finally {
       setLoading(false);
     }
@@ -50,15 +50,15 @@ export const Register: React.FC = () => {
           <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-2xl mb-4">
             <span className="text-white font-bold text-2xl">AI</span>
           </div>
-          <h1 className="text-3xl font-bold mb-2">Create Account</h1>
-          <p className="text-muted-foreground">Join CRM AI Pro today</p>
+          <h1 className="text-3xl font-bold mb-2">Créer un compte</h1>
+          <p className="text-muted-foreground">Rejoindre CRM AI Pro aujourd'hui</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <Input
-            label="Full Name"
+            label="Nom complet"
             type="text"
-            placeholder="John Doe"
+            placeholder="Mohamed aziz jouini"
             value={name}
             onChange={(e) => setName(e.target.value)}
             required
@@ -85,7 +85,7 @@ export const Register: React.FC = () => {
           />
 
           <Input
-            label="Password"
+            label="Mot de passe"
             type="password"
             placeholder="••••••••"
             value={password}
@@ -94,7 +94,7 @@ export const Register: React.FC = () => {
           />
 
           <Input
-            label="Confirm Password"
+            label="Confirmer le mot de passe"
             type="password"
             placeholder="••••••••"
             value={confirmPassword}
@@ -107,15 +107,15 @@ export const Register: React.FC = () => {
             className="w-full"
             disabled={loading}
           >
-            {loading ? 'Creating account...' : 'Create account'}
+            {loading ? 'Création du compte...' : 'Créer un compte'}
           </Button>
         </form>
 
         <div className="mt-6 text-center">
           <p className="text-sm text-muted-foreground">
-            Already have an account?{' '}
+            Vous avez déjà un compte ?{' '}
             <Link to="/login" className="text-primary hover:underline font-medium">
-              Sign in
+             Se connecter
             </Link>
           </p>
         </div>

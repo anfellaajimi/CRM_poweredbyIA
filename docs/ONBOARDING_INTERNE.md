@@ -21,38 +21,38 @@ Arborescence utile (hors `venv`, `node_modules`, caches):
 ```text
 crm-professional/
 +- backend/
-¦  +- app/
-¦  ¦  +- api/v1/
-¦  ¦  ¦  +- api.py
-¦  ¦  ¦  +- endpoints/*.py
-¦  ¦  +- core/config.py
-¦  ¦  +- db/{base.py, base_class.py, session.py}
-¦  ¦  +- models/*.py
-¦  ¦  +- schemas/*.py
-¦  +- alembic/
-¦  ¦  +- env.py
-¦  ¦  +- versions/*.py
-¦  +- scripts/bootstrap_db.py
-¦  +- alembic.ini
-¦  +- requirements.txt
-¦  +- .env.example
+ï¿½  +- app/
+ï¿½  ï¿½  +- api/v1/
+ï¿½  ï¿½  ï¿½  +- api.py
+ï¿½  ï¿½  ï¿½  +- endpoints/*.py
+ï¿½  ï¿½  +- core/config.py
+ï¿½  ï¿½  +- db/{base.py, base_class.py, session.py}
+ï¿½  ï¿½  +- models/*.py
+ï¿½  ï¿½  +- schemas/*.py
+ï¿½  +- alembic/
+ï¿½  ï¿½  +- env.py
+ï¿½  ï¿½  +- versions/*.py
+ï¿½  +- scripts/bootstrap_db.py
+ï¿½  +- alembic.ini
+ï¿½  +- requirements.txt
+ï¿½  +- .env.example
 +- frontend/
-¦  +- src/
-¦  ¦  +- app/App.tsx
-¦  ¦  +- main.tsx
-¦  ¦  +- pages/*.tsx
-¦  ¦  +- services/api.ts
-¦  ¦  +- store/*.ts
-¦  ¦  +- routes/ProtectedRoute.tsx
-¦  ¦  +- layouts/*.tsx
-¦  ¦  +- components/*
-¦  ¦  +- app/components/ui/*
-¦  ¦  +- data/mockData.ts
-¦  ¦  +- styles/*
-¦  +- package.json
-¦  +- .env.example
+ï¿½  +- src/
+ï¿½  ï¿½  +- app/App.tsx
+ï¿½  ï¿½  +- main.tsx
+ï¿½  ï¿½  +- pages/*.tsx
+ï¿½  ï¿½  +- services/api.ts
+ï¿½  ï¿½  +- store/*.ts
+ï¿½  ï¿½  +- routes/ProtectedRoute.tsx
+ï¿½  ï¿½  +- layouts/*.tsx
+ï¿½  ï¿½  +- components/*
+ï¿½  ï¿½  +- app/components/ui/*
+ï¿½  ï¿½  +- data/mockData.ts
+ï¿½  ï¿½  +- styles/*
+ï¿½  +- package.json
+ï¿½  +- .env.example
 +- docs/
-¦  +- ONBOARDING_INTERNE.md
+ï¿½  +- ONBOARDING_INTERNE.md
 +- .gitignore
 +- README.md
 ```
@@ -374,7 +374,7 @@ flowchart LR
 - `ai-monitoring` -> table `ai_monitoring`
 - `cahier-de-charge` -> table `cahier_de_charge`
 
-### Tableau de traçabilite rapide
+### Tableau de traï¿½abilite rapide
 
 | Module | Page Front principale | Service API Front | Endpoint Backend | Table(s) DB |
 |---|---|---|---|---|

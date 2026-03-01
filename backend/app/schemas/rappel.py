@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 class RappelBase(BaseModel):
     clientID: int
+    titre: str
     typeRappel: str | None = None
     dateRappel: datetime | None = None
     message: str | None = None
@@ -18,6 +19,7 @@ class RappelCreate(RappelBase):
 
 class RappelUpdate(BaseModel):
     clientID: int | None = None
+    titre: str | None = None
     typeRappel: str | None = None
     dateRappel: datetime | None = None
     message: str | None = None

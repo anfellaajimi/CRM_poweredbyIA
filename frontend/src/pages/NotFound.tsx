@@ -14,18 +14,18 @@ export const NotFound: React.FC = () => {
             404
           </h1>
         </div>
-        <h2 className="text-3xl font-bold mb-4">Page Not Found</h2>
+        <h2 className="text-3xl font-bold mb-4">Page introuvable</h2>
         <p className="text-muted-foreground mb-8 max-w-md mx-auto">
-          The page you're looking for doesn't exist or has been moved.
+          La page que vous recherchez n'existe pas ou a été déplacée.
         </p>
         <div className="flex items-center justify-center space-x-4">
           <Button variant="outline" onClick={() => navigate(-1)}>
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Go Back
+            Retour
           </Button>
           <Button onClick={() => navigate('/')}>
             <Home className="w-4 h-4 mr-2" />
-            Go Home
+            Accueil
           </Button>
         </div>
       </div>

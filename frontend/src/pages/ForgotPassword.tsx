@@ -18,7 +18,7 @@ export const ForgotPassword: React.FC = () => {
     // Mock API call
     await new Promise(resolve => setTimeout(resolve, 1500));
 
-    toast.success('Password reset link sent to your email');
+    toast.success('Lien de réinitialisation du mot de passe envoyé à votre adresse email !');
     setSubmitted(true);
     setLoading(false);
   };
@@ -35,11 +35,11 @@ export const ForgotPassword: React.FC = () => {
           <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-2xl mb-4">
             <span className="text-white font-bold text-2xl">AI</span>
           </div>
-          <h1 className="text-3xl font-bold mb-2">Forgot Password</h1>
+          <h1 className="text-3xl font-bold mb-2">Mot de passe oublié</h1>
           <p className="text-muted-foreground">
             {submitted
-              ? 'Check your email for reset instructions'
-              : 'Enter your email to reset your password'}
+              ? 'Vérifiez votre email pour les instructions de réinitialisation'
+              : 'Saisissez votre adresse email pour réinitialiser votre mot de passe'}
           </p>
         </div>
 
@@ -59,14 +59,14 @@ export const ForgotPassword: React.FC = () => {
               className="w-full"
               disabled={loading}
             >
-              {loading ? 'Sending...' : 'Send reset link'}
+              {loading ? 'Envoi en cours...' : 'Envoyer le lien de réinitialisation'}
             </Button>
           </form>
         ) : (
           <div className="space-y-6">
             <div className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400 p-4 rounded-lg">
               <p className="text-sm">
-                We've sent a password reset link to <strong>{email}</strong>. Please check your inbox and follow the instructions.
+                Nous avons envoyé un lien de réinitialisation du mot de passe à <strong>{email}</strong>. Veuillez vérifier votre boîte de réception et suivre les instructions.
               </p>
             </div>
             <Button
@@ -74,7 +74,7 @@ export const ForgotPassword: React.FC = () => {
               variant="outline"
               className="w-full"
             >
-              Send again
+              Envoyer à nouveau
             </Button>
           </div>
         )}
@@ -85,7 +85,7 @@ export const ForgotPassword: React.FC = () => {
             className="inline-flex items-center space-x-2 text-sm text-primary hover:underline font-medium"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Back to login</span>
+            <span>Retour à la connexion</span>
           </Link>
         </div>
       </motion.div>

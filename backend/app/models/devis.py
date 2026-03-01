@@ -22,3 +22,8 @@ class Devis(Base):
     projet = relationship("Projet", back_populates="devisPrincipaux")
     projets = relationship("Projet", secondary="devis_projets", back_populates="devis")
     factures = relationship("Facture", back_populates="devis")
+    items = relationship("DevisItem", back_populates="devis", cascade="all, delete-orphan")
+
+    @property
+    def clientNom(self) -> str | None:
+        return self.client.nom if self.client else None

@@ -11,6 +11,7 @@ class Rappel(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     clientID: Mapped[int] = mapped_column(ForeignKey("clients.id", ondelete="CASCADE"), nullable=False, index=True)
+    titre: Mapped[str] = mapped_column(String(255), nullable=False)
     typeRappel: Mapped[str | None] = mapped_column(String(50))
     dateRappel: Mapped[datetime | None] = mapped_column(DateTime)
     message: Mapped[str | None] = mapped_column(Text)

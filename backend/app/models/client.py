@@ -1,6 +1,6 @@
-from datetime import datetime
+from datetime import date, datetime
 
-from sqlalchemy import DateTime, Integer, String, Text
+from sqlalchemy import Date, DateTime, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base_class import Base
@@ -15,6 +15,14 @@ class Client(Base):
     email: Mapped[str | None] = mapped_column(String(255), unique=True, index=True)
     tel: Mapped[str | None] = mapped_column(String(50))
     adresse: Mapped[str | None] = mapped_column(Text)
+    prenom: Mapped[str | None] = mapped_column(String(255))
+    dateNaissance: Mapped[date | None] = mapped_column(Date)
+    cin: Mapped[str | None] = mapped_column(String(100))
+    raisonSociale: Mapped[str | None] = mapped_column(String(255))
+    matriculeFiscale: Mapped[str | None] = mapped_column(String(255))
+    secteurActivite: Mapped[str | None] = mapped_column(String(255))
+    entreprise: Mapped[str | None] = mapped_column(String(255))
+    avatarUrl: Mapped[str | None] = mapped_column(String(500))
     status: Mapped[str] = mapped_column(String(50), default="actif", nullable=False)
     dateCreation: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
 

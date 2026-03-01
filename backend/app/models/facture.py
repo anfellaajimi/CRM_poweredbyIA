@@ -23,3 +23,8 @@ class Facture(Base):
     client = relationship("Client", back_populates="factures")
     devis = relationship("Devis", back_populates="factures")
     projets = relationship("Projet", secondary="facture_projets", back_populates="factures")
+    items = relationship("FactureItem", back_populates="facture", cascade="all, delete-orphan")
+
+    @property
+    def clientNom(self) -> str | None:
+        return self.client.nom if self.client else None

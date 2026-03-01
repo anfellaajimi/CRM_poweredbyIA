@@ -1,21 +1,96 @@
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
-import { Button } from '../components/ui/Button';
-import { Badge } from '../components/ui/Badge';
-import { Plus, Upload, Download, Clock } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Download, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { Badge } from '../components/ui/Badge';
+import { Button } from '../components/ui/Button';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
+import { Input } from '../components/ui/Input';
+import { Modal } from '../components/ui/Modal';
+import { cahierAPI, projectsAPI, UICahier } from '../services/api';
+
+const emptyCahier: Partial<UICahier> = {
+  projetID: 0,
+  objet: '',
+  description: '',
+  version: '1.0',
+  objectif: '',
+  perimetre: '',
+  fonctionnalites: '',
+  contraintes: '',
+  delais: '',
+  budgetTexte: '',
+  fileUrl: '',
+  dateValidation: '',
+};
+
 export const CahierDeCharge: React.FC = () => {
-  const [content, setContent] = useState('');
+  const qc = useQueryClient();
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [draft, setDraft] = useState<Partial<UICahier>>(emptyCahier);
 
-  const versions = [
-    { id: 1, version: '1.2', date: '2024-05-10', author: 'John Doe' },
-    { id: 2, version: '1.1', date: '2024-04-15', author: 'Jane Smith' },
-    { id: 3, version: '1.0', date: '2024-03-01', author: 'John Doe' }
-  ];
+  const { data: cahiers = [] } = useQuery({ queryKey: ['cahiers'], queryFn: cahierAPI.getAll });
+  const { data: projects = [] } = useQuery({ queryKey: ['projects'], queryFn: projectsAPI.getAll });
 
-  const handleSave = () => {
-    toast.success('Document saved successfully!');
+  const selected = useMemo(() => cahiers.find((c) => c.cahierID === selectedId) || null, [cahiers, selectedId]);
+
+  const patchSelected = (field: keyof UICahier, value: any) => {
+    if (!selected) return;
+    qc.setQueryData(['cahiers'], (old: UICahier[] = []) =>
+      old.map((x) => (x.cahierID === selected.cahierID ? { ...x, [field]: value } : x))
+    );
+  };
+
+  const createMutation = useMutation({
+    mutationFn: cahierAPI.create,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['cahiers'] });
+      toast.success('Cahier créé');
+      setIsModalOpen(false);
+      setDraft(emptyCahier);
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, payload }: { id: number; payload: Partial<UICahier> }) => cahierAPI.update(id, payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['cahiers'] });
+      toast.success('Cahier mis à jour');
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => cahierAPI.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['cahiers'] });
+      setSelectedId(null);
+      toast.success('Cahier supprimé');
+    },
+  });
+
+  const projectName = (projectId: number) => projects.find((p) => Number(p.id) === projectId)?.name || `Projet ${projectId}`;
+
+  const openCreate = () => {
+    setDraft(emptyCahier);
+    setIsModalOpen(true);
+  };
+
+  const saveSelected = () => {
+    if (!selected) return;
+    updateMutation.mutate({ id: selected.cahierID, payload: selected });
+  };
+
+  const handleExport = (item: UICahier) => {
+    const content = `CAHIER ${item.cahierID}\nProjet: ${projectName(item.projetID)}\nObjet: ${item.objet}\nVersion: ${item.version}\n\n${item.description || ''}`;
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `cahier_${item.cahierID}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -23,121 +98,98 @@ export const CahierDeCharge: React.FC = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Cahier de Charge</h1>
-          <p className="text-muted-foreground">Project specifications and requirements</p>
+          <p className="text-muted-foreground">Gestion globale des cahiers par projet</p>
         </div>
-        <Button>
-          <Plus className="w-4 h-4 mr-2" />
-          New Document
-        </Button>
+        <Button onClick={openCreate}><Plus className="w-4 h-4 mr-2" />Nouveau Document</Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Document Editor</CardTitle>
-                <div className="flex items-center space-x-2">
-                  <Badge>v1.2</Badge>
-                  <Button size="sm" variant="outline">
-                    <Download className="w-4 h-4 mr-2" />
-                    Export
-                  </Button>
+        <Card className="lg:col-span-1">
+          <CardHeader><CardTitle>Liste des cahiers</CardTitle></CardHeader>
+          <CardContent className="space-y-2 max-h-[70vh] overflow-y-auto">
+            {cahiers.map((c) => (
+              <button
+                key={c.cahierID}
+                onClick={() => setSelectedId(c.cahierID)}
+                className={`w-full text-left p-3 rounded-lg border ${selectedId === c.cahierID ? 'border-primary bg-primary/5' : 'border-border hover:bg-accent'}`}
+              >
+                <div className="flex justify-between items-center">
+                  <p className="font-medium truncate">{c.objet || projectName(c.projetID)}</p>
+                  <Badge>v{c.version}</Badge>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <textarea
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                className="w-full h-96 p-4 rounded-lg border border-input bg-input-background resize-none focus:outline-none focus:ring-2 focus:ring-ring font-mono text-sm"
-                placeholder="Write your project specifications here...
+                <p className="text-xs text-muted-foreground mt-1">{projectName(c.projetID)}</p>
+              </button>
+            ))}
+            {!cahiers.length && <p className="text-sm text-muted-foreground">Aucun cahier trouvé.</p>}
+          </CardContent>
+        </Card>
 
-# Project Overview
-## Objectives
-## Functional Requirements
-## Technical Requirements
-## Timeline
-## Deliverables"
-              />
-              <div className="flex justify-between items-center mt-4">
-                <p className="text-sm text-muted-foreground">
-                  Last saved: Today at 14:30
-                </p>
-                <Button onClick={handleSave}>Save Document</Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>File Attachments</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
-                <Upload className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground mb-4">
-                  Drag and drop files here or click to browse
-                </p>
-                <Button variant="outline">
-                  <Upload className="w-4 h-4 mr-2" />
-                  Upload Files
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Version History</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {versions.map((version) => (
-                  <div
-                    key={version.id}
-                    className="p-4 border border-border rounded-lg hover:bg-accent cursor-pointer transition-colors"
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium">Version {version.version}</span>
-                      {version.id === 1 && <Badge variant="success">Current</Badge>}
+        <div className="lg:col-span-2 space-y-6">
+          {selected ? (
+            <>
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>Éditeur de document</CardTitle>
+                    <div className="flex items-center gap-2">
+                      <Badge>v{selected.version}</Badge>
+                      <Button size="sm" variant="outline" onClick={() => handleExport(selected)}><Download className="w-4 h-4 mr-2" />Exporter</Button>
                     </div>
-                    <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                      <Clock className="w-4 h-4" />
-                      <span>{version.date}</span>
-                    </div>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      By {version.author}
-                    </p>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <Button variant="outline" className="w-full justify-start">
-                <Download className="w-4 h-4 mr-2" />
-                Download as PDF
-              </Button>
-              <Button variant="outline" className="w-full justify-start">
-                <Download className="w-4 h-4 mr-2" />
-                Download as Word
-              </Button>
-              <Button variant="outline" className="w-full justify-start">
-                <Upload className="w-4 h-4 mr-2" />
-                Import Document
-              </Button>
-            </CardContent>
-          </Card>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <Input label="Projet" value={projectName(selected.projetID)} readOnly />
+                  <Input label="Objet" value={selected.objet} onChange={(e) => patchSelected('objet', e.target.value)} />
+                  <Input label="Version" value={selected.version} onChange={(e) => patchSelected('version', e.target.value)} />
+                  <Input label="Description" value={selected.description || ''} onChange={(e) => patchSelected('description', e.target.value)} />
+                  <Input label="Objectif" value={selected.objectif || ''} onChange={(e) => patchSelected('objectif', e.target.value)} />
+                  <Input label="Périmètre" value={selected.perimetre || ''} onChange={(e) => patchSelected('perimetre', e.target.value)} />
+                  <Input label="Fonctionnalités" value={selected.fonctionnalites || ''} onChange={(e) => patchSelected('fonctionnalites', e.target.value)} />
+                  <Input label="Contraintes" value={selected.contraintes || ''} onChange={(e) => patchSelected('contraintes', e.target.value)} />
+                  <Input label="Délais" value={selected.delais || ''} onChange={(e) => patchSelected('delais', e.target.value)} />
+                  <Input label="Budget texte" value={selected.budgetTexte || ''} onChange={(e) => patchSelected('budgetTexte', e.target.value)} />
+                  <Input label="File URL" value={selected.fileUrl || ''} onChange={(e) => patchSelected('fileUrl', e.target.value)} />
+                  <Input label="Date validation" type="date" value={selected.dateValidation || ''} onChange={(e) => patchSelected('dateValidation', e.target.value)} />
+                  <div className="flex justify-end gap-3 pt-2">
+                    <Button variant="outline" onClick={() => deleteMutation.mutate(selected.cahierID)}><Trash2 className="w-4 h-4 mr-2" />Supprimer</Button>
+                    <Button onClick={saveSelected}>Enregistrer le document</Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          ) : (
+            <Card><CardContent className="py-16 text-center text-muted-foreground">Sélectionnez un cahier dans la liste ou créez-en un nouveau.</CardContent></Card>
+          )}
         </div>
-      </div>
+      </div>      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Nouveau Cahier de Charge" size="xl">
+        <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); createMutation.mutate(draft); }}>
+          <div className="max-h-[65vh] overflow-y-auto pr-2 space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Projet</label>
+              <select className="w-full border border-input rounded-lg p-2 bg-background" value={draft.projetID || 0} onChange={(e) => setDraft({ ...draft, projetID: Number(e.target.value), objet: projects.find((p) => Number(p.id) === Number(e.target.value))?.name || draft.objet })} required>
+                <option value={0}>Sélectionner un projet</option>
+                {projects.map((p) => <option key={p.id} value={Number(p.id)}>{p.name}</option>)}
+              </select>
+            </div>
+            <Input label="Objet" value={draft.objet || ''} onChange={(e) => setDraft({ ...draft, objet: e.target.value })} required />
+            <Input label="Version" value={draft.version || '1.0'} onChange={(e) => setDraft({ ...draft, version: e.target.value })} />
+            <Input label="Description" value={draft.description || ''} onChange={(e) => setDraft({ ...draft, description: e.target.value })} />
+            <Input label="Objectif" value={draft.objectif || ''} onChange={(e) => setDraft({ ...draft, objectif: e.target.value })} />
+            <Input label="Périmètre" value={draft.perimetre || ''} onChange={(e) => setDraft({ ...draft, perimetre: e.target.value })} />
+            <Input label="Fonctionnalités" value={draft.fonctionnalites || ''} onChange={(e) => setDraft({ ...draft, fonctionnalites: e.target.value })} />
+            <Input label="Contraintes" value={draft.contraintes || ''} onChange={(e) => setDraft({ ...draft, contraintes: e.target.value })} />
+            <Input label="Délais" value={draft.delais || ''} onChange={(e) => setDraft({ ...draft, delais: e.target.value })} />
+            <Input label="Budget texte" value={draft.budgetTexte || ''} onChange={(e) => setDraft({ ...draft, budgetTexte: e.target.value })} />
+            <Input label="File URL" value={draft.fileUrl || ''} onChange={(e) => setDraft({ ...draft, fileUrl: e.target.value })} />
+            <Input label="Date validation" type="date" value={draft.dateValidation || ''} onChange={(e) => setDraft({ ...draft, dateValidation: e.target.value })} />
+          </div>
+          <div className="flex justify-end gap-3 pt-2">
+            <Button variant="outline" type="button" onClick={() => setIsModalOpen(false)}>Annuler</Button>
+            <Button type="submit">Créer</Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 };
+
