@@ -97,7 +97,7 @@ export const CahierDeCharge: React.FC = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Cahier de Charge</h1>
+          <h1 className="text-3xl font-bold">📋Cahier de Charge</h1>
           <p className="text-muted-foreground">Gestion globale des cahiers par projet</p>
         </div>
         <Button onClick={openCreate}><Plus className="w-4 h-4 mr-2" />Nouveau Document</Button>
@@ -140,14 +140,14 @@ export const CahierDeCharge: React.FC = () => {
                 <CardContent className="space-y-3">
                   <Input label="Projet" value={projectName(selected.projetID)} readOnly />
                   <Input label="Objet" value={selected.objet} onChange={(e) => patchSelected('objet', e.target.value)} />
-                  <Input label="Version" value={selected.version} onChange={(e) => patchSelected('version', e.target.value)} />
+                  <Input label="📄Version" value={selected.version} onChange={(e) => patchSelected('version', e.target.value)} />
                   <Input label="Description" value={selected.description || ''} onChange={(e) => patchSelected('description', e.target.value)} />
-                  <Input label="Objectif" value={selected.objectif || ''} onChange={(e) => patchSelected('objectif', e.target.value)} />
-                  <Input label="Périmètre" value={selected.perimetre || ''} onChange={(e) => patchSelected('perimetre', e.target.value)} />
-                  <Input label="Fonctionnalités" value={selected.fonctionnalites || ''} onChange={(e) => patchSelected('fonctionnalites', e.target.value)} />
-                  <Input label="Contraintes" value={selected.contraintes || ''} onChange={(e) => patchSelected('contraintes', e.target.value)} />
-                  <Input label="Délais" value={selected.delais || ''} onChange={(e) => patchSelected('delais', e.target.value)} />
-                  <Input label="Budget texte" value={selected.budgetTexte || ''} onChange={(e) => patchSelected('budgetTexte', e.target.value)} />
+                  <Input label="🎯Objectif" value={selected.objectif || ''} onChange={(e) => patchSelected('objectif', e.target.value)} />
+                  <Input label="🔍Périmètre" value={selected.perimetre || ''} onChange={(e) => patchSelected('perimetre', e.target.value)} />
+                  <Input label="⚙️Fonctionnalités" value={selected.fonctionnalites || ''} onChange={(e) => patchSelected('fonctionnalites', e.target.value)} />
+                  <Input label="⚠️Contraintes" value={selected.contraintes || ''} onChange={(e) => patchSelected('contraintes', e.target.value)} />
+                  <Input label="⏰Délais" value={selected.delais || ''} onChange={(e) => patchSelected('delais', e.target.value)} />
+                  <Input label="💰Budget texte" value={selected.budgetTexte || ''} onChange={(e) => patchSelected('budgetTexte', e.target.value)} />
                   <Input label="File URL" value={selected.fileUrl || ''} onChange={(e) => patchSelected('fileUrl', e.target.value)} />
                   <Input label="Date validation" type="date" value={selected.dateValidation || ''} onChange={(e) => patchSelected('dateValidation', e.target.value)} />
                   <div className="flex justify-end gap-3 pt-2">
