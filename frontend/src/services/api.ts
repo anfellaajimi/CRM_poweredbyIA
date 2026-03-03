@@ -48,6 +48,7 @@ export type UIClient = {
   raisonSociale?: string;
   matriculeFiscale?: string;
   secteurActivite?: string;
+  devise?: string;
 };
 
 export type UIProject = {
@@ -64,6 +65,7 @@ export type UIProject = {
   deadline?: string;
   description?: string;
   assignedTeam: string[];
+  devise?: string;
 };
 
 const toUIClient = (item: any): UIClient => ({
@@ -82,6 +84,7 @@ const toUIClient = (item: any): UIClient => ({
   raisonSociale: item.raisonSociale || '',
   matriculeFiscale: item.matriculeFiscale || '',
   secteurActivite: item.secteurActivite || '',
+  devise: item.devise || 'TND',
 });
 
 const toClientPayload = (client: Partial<UIClient>) => ({
@@ -99,6 +102,7 @@ const toClientPayload = (client: Partial<UIClient>) => ({
   entreprise: client.company || null,
   avatarUrl: client.avatar || null,
   status: client.status?.toLowerCase() || 'actif',
+  devise: client.devise || 'TND',
 });
 
 const toUIProject = (item: any): UIProject => ({
@@ -115,6 +119,7 @@ const toUIProject = (item: any): UIProject => ({
   deadline: item.dateFin || '',
   description: item.description || '',
   assignedTeam: item.assignedUsers || [],
+  devise: item.clientDevise || 'TND',
 });
 
 const toProjectPayload = (project: Partial<UIProject>) => ({
@@ -432,6 +437,8 @@ export type UIUser = {
   id: string;
   name: string;
   email: string;
+  telephone?: string;
+  dateNaissance?: string;
   role: 'Admin' | 'Manager' | 'Developer';
   status: 'Actif' | 'Inactif';
   joinedAt: string;
@@ -458,6 +465,7 @@ export type UIDevis = {
   validUntil?: string;
   notes?: string;
   items: UIItem[];
+  devise?: string;
 };
 
 export type UIFacture = {
@@ -472,6 +480,7 @@ export type UIFacture = {
   paidAt?: string;
   taxRate: number;
   items: UIItem[];
+  devise?: string;
 };
 
 export type UIContrat = {
@@ -491,6 +500,7 @@ export type UIContrat = {
   obligations?: string;
   responsabilites?: string;
   conditions?: string;
+  devise?: string;
 };
 
 const roleToUi = (role: string): UIUser['role'] => {
@@ -529,6 +539,7 @@ const toUIDevis = (item: any): UIDevis => ({
   validUntil: item.validUntil ? String(item.validUntil).slice(0, 10) : '',
   notes: item.notes || '',
   items: (item.items || []).map(normalizeItem),
+  devise: item.clientDevise || 'TND',
 });
 
 const toDevisPayload = (item: Partial<UIDevis>) => ({
@@ -559,6 +570,7 @@ const toUIFacture = (item: any): UIFacture => ({
   paidAt: item.paymentDate ? String(item.paymentDate).slice(0, 10) : '',
   taxRate: Number(item.taxRate || 0),
   items: (item.items || []).map(normalizeItem),
+  devise: item.clientDevise || 'TND',
 });
 
 const toFacturePayload = (item: Partial<UIFacture>) => ({
@@ -596,6 +608,7 @@ const toUIContrat = (item: any): UIContrat => ({
   obligations: item.obligations || '',
   responsabilites: item.responsabilites || '',
   conditions: item.conditions || '',
+  devise: item.clientDevise || 'TND',
 });
 
 const toContratPayload = (item: Partial<UIContrat>) => ({
@@ -622,26 +635,32 @@ export const usersAPI = {
       id: String(u.userID),
       name: u.nom,
       email: u.email,
+      telephone: u.tel || '',
+      dateNaissance: u.dateNaissance || '',
       role: roleToUi(u.role),
       status: statusToUi(Boolean(u.actif)),
       joinedAt: String(u.dateCreation || '').slice(0, 10),
       avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(u.nom)}&background=random`,
     }));
   },
-  create: async (payload: { name: string; email: string; role: UIUser['role']; status: UIUser['status']; password: string }) => {
+  create: async (payload: { name: string; email: string; telephone?: string; dateNaissance?: string; role: UIUser['role']; status: UIUser['status']; password: string }) => {
     const { data } = await api.post('/utilisateurs', {
       nom: payload.name,
       email: payload.email,
+      tel: payload.telephone || null,
+      dateNaissance: payload.dateNaissance || null,
       role: roleToApi(payload.role),
       actif: statusToApi(payload.status),
       motDePasse: payload.password,
     });
     return data;
   },
-  update: async (id: string, payload: { name?: string; email?: string; role?: UIUser['role']; status?: UIUser['status']; password?: string }) => {
+  update: async (id: string, payload: { name?: string; email?: string; telephone?: string; dateNaissance?: string; role?: UIUser['role']; status?: UIUser['status']; password?: string }) => {
     const body: any = {};
     if (payload.name !== undefined) body.nom = payload.name;
     if (payload.email !== undefined) body.email = payload.email;
+    if (payload.telephone !== undefined) body.tel = payload.telephone || null;
+    if (payload.dateNaissance !== undefined) body.dateNaissance = payload.dateNaissance || null;
     if (payload.role !== undefined) body.role = roleToApi(payload.role);
     if (payload.status !== undefined) body.actif = statusToApi(payload.status);
     if (payload.password !== undefined) body.motDePasse = payload.password;

@@ -1,80 +1,191 @@
 import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Download, DollarSign, Plus } from 'lucide-react';
+import { Download, Plus, Calendar, Search, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, DollarSign, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { Badge } from '../components/ui/Badge';
-import { Button } from '../components/ui/Button';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card';
-import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/Table';
-import { clientsAPI, facturesAPI } from '../services/api';
+import { clientsAPI, facturesAPI, UIFacture } from '../services/api';
 
-const emptyItem = { description: '', quantity: 1, unitPrice: 0 };
+const articleVide = { description: '', quantite: 1, prixUnitaire: 0 };
+
+const Sparkline = ({ color = '#6366f1' }: { color?: string }) => (
+  <svg width="80" height="32" viewBox="0 0 80 32" fill="none">
+    <polyline points="0,24 13,18 26,22 39,10 52,16 65,8 80,14" stroke={color} strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+);
+
+const obtenirLibelleStatut = (statut: string) =>
+({
+  en_attente: 'Non payée',
+  payee: 'Payée',
+  retard: 'En retard',
+  paid: 'Payée',
+  overdue: 'En retard',
+  draft: 'Brouillon',
+}[statut?.toLowerCase()] ?? statut);
+
+const obtenirCouleurStatut = (statut: string) => {
+  const s = statut?.toLowerCase();
+  if (s === 'payee' || s === 'paid') return 'bg-green-100 text-green-700 border-green-200';
+  if (s === 'retard' || s === 'overdue') return 'bg-red-100 text-red-600 border-red-200';
+  if (s === 'draft') return 'bg-gray-100 text-gray-600 border-gray-200';
+  return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+};
+
+const estPaye = (statut: string) => ['payee', 'paid'].includes(statut?.toLowerCase());
+
+// Composant menu statut cliquable
+const MenuStatut = ({
+  facture,
+  onChanger,
+  chargement,
+}: {
+  facture: UIFacture;
+  onChanger: (id: number, statut: string, facture: UIFacture) => void;
+  chargement: boolean;
+}) => {
+  const [ouvert, setOuvert] = useState(false);
+
+  const statuts = [
+    { valeur: 'payee', label: 'Payée', couleur: 'text-green-600 hover:bg-green-50' },
+    { valeur: 'en_attente', label: 'Non payée', couleur: 'text-yellow-600 hover:bg-yellow-50' },
+    { valeur: 'retard', label: 'En retard', couleur: 'text-red-600 hover:bg-red-50' },
+    { valeur: 'draft', label: 'Brouillon', couleur: 'text-gray-600 hover:bg-gray-50' },
+  ];
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOuvert(!ouvert)}
+        disabled={chargement}
+        className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border ${obtenirCouleurStatut(facture.status)} disabled:opacity-50`}
+      >
+        {obtenirLibelleStatut(facture.status)}
+        {ouvert ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+      </button>
+
+      {ouvert && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOuvert(false)} />
+          <div className="absolute z-20 mt-1 left-0 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[130px]">
+            {statuts.map((s) => (
+              <button
+                key={s.valeur}
+                className={`w-full text-left px-3 py-2 text-xs font-medium transition-colors ${s.couleur}`}
+                onClick={() => {
+                  onChanger(facture.numericId, s.valeur, facture);
+                  setOuvert(false);
+                }}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
 
 export const Factures: React.FC = () => {
   const qc = useQueryClient();
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [newFacture, setNewFacture] = useState({
+  const [modalOuvert, setModalOuvert] = useState(false);
+  const [recherche, setRecherche] = useState('');
+  const [filtreStatut, setFiltreStatut] = useState('Tous');
+  const [dateDebut, setDateDebut] = useState('');
+  const [dateFin, setDateFin] = useState('');
+  const [page, setPage] = useState(1);
+  const parPage = 10;
+
+  const [nouvelleFacture, setNouvelleFacture] = useState({
     clientId: '',
-    dueAt: '',
-    items: [emptyItem],
-    taxRate: 19,
+    echeance: '',
+    articles: [articleVide],
+    tauxTaxe: 19,
   });
 
-  const { data: factures = [] } = useQuery({ queryKey: ['factures'], queryFn: facturesAPI.getAll });
-  const { data: clients = [] } = useQuery({ queryKey: ['clients'], queryFn: clientsAPI.getAll });
+  const { data: factures = [] } = useQuery({
+    queryKey: ['factures'],
+    queryFn: facturesAPI.getAll,
+  });
 
-  const createMutation = useMutation({
+  const { data: clients = [] } = useQuery({
+    queryKey: ['clients'],
+    queryFn: clientsAPI.getAll,
+  });
+
+  const mutationCreer = useMutation({
     mutationFn: facturesAPI.create,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['factures'] });
-      toast.success('Facture créée');
-      setIsAddModalOpen(false);
-      setNewFacture({ clientId: '', dueAt: '', items: [emptyItem], taxRate: 19 });
+      toast.success('Facture créée avec succès');
+      setModalOuvert(false);
+      setNouvelleFacture({ clientId: '', echeance: '', articles: [articleVide], tauxTaxe: 19 });
     },
+    onError: (err: any) => toast.error(`Erreur création: ${err?.response?.data?.message ?? err?.message ?? 'inconnue'}`),
   });
 
-  const payMutation = useMutation({
-    mutationFn: (id: number) => facturesAPI.update(String(id), { status: 'payee', paidAt: new Date().toISOString().slice(0, 10) }),
+  // ✅ CORRECTION PRINCIPALE : on récupère la facture complète et on envoie tout le payload
+  const mutationChangerStatut = useMutation({
+    mutationFn: async ({ id, statut, facture }: { id: number; statut: string; facture: UIFacture }) => {
+      // On construit le payload complet avec le nouveau statut
+      const payload: Partial<UIFacture> = {
+        clientId: facture.clientId,
+        status: statut,
+        issuedAt: facture.issuedAt,
+        dueAt: facture.dueAt,
+        taxRate: facture.taxRate,
+        items: facture.items,
+        amount: facture.amount,
+        paidAt: statut === 'payee' ? new Date().toISOString().slice(0, 10) : facture.paidAt,
+      };
+      return facturesAPI.update(String(id), payload);
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['factures'] });
-      toast.success('Facture marquée payée');
+      toast.success('Statut mis à jour');
     },
+    onError: (err: any) => toast.error(`Erreur: ${err?.response?.data?.message ?? err?.message ?? 'mise à jour échouée'}`),
   });
 
-  const getStatusLabel = (status: string) =>
-    ({
-      en_attente: 'Non payée',
-      payee: 'Payée',
-      retard: 'En retard',
-      paid: 'Payée',
-      overdue: 'En retard',
-    }[status.toLowerCase()] || status);
-
-  const getStatusVariant = (status: string) => {
-    const s = status.toLowerCase();
-    if (s === 'payee' || s === 'paid') return 'success';
-    if (s === 'retard' || s === 'overdue') return 'danger';
-    return 'warning';
+  const changerStatut = (id: number, statut: string, facture: UIFacture) => {
+    if (!id) return toast.error('ID introuvable');
+    mutationChangerStatut.mutate({ id, statut, facture });
   };
 
-  const totalDraft = useMemo(
-    () => newFacture.items.reduce((sum, item) => sum + Number(item.quantity) * Number(item.unitPrice), 0),
-    [newFacture.items]
+  const totalBrouillon = useMemo(
+    () => nouvelleFacture.articles.reduce((sum, a) => sum + Number(a.quantite) * Number(a.prixUnitaire), 0),
+    [nouvelleFacture.articles]
   );
 
-  const totals = useMemo(() => {
-    const totalRevenue = factures.reduce((sum, inv) => sum + inv.amount, 0);
-    const paidRevenue = factures.filter((inv) => ['payee', 'paid'].includes(inv.status.toLowerCase())).reduce((sum, inv) => sum + inv.amount, 0);
-    const unpaidRevenue = factures.filter((inv) => !['payee', 'paid'].includes(inv.status.toLowerCase())).reduce((sum, inv) => sum + inv.amount, 0);
-    return { totalRevenue, paidRevenue, unpaidRevenue };
+  const totaux = useMemo(() => {
+    const totalRevenu = factures.reduce((s, f) => s + (f.amount ?? 0), 0);
+    const totalPaye = factures.filter((f) => estPaye(f.status)).reduce((s, f) => s + (f.amount ?? 0), 0);
+    const totalNonPaye = factures.filter((f) => !estPaye(f.status)).reduce((s, f) => s + (f.amount ?? 0), 0);
+    return { totalRevenu, totalPaye, totalNonPaye };
   }, [factures]);
 
-  const handleDownload = (facture: any) => {
-    const content = `FACTURE ${facture.id}\nClient: ${facture.clientName}\nMontant: ${facture.amount}\nStatut: ${getStatusLabel(facture.status)}`;
-    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+  const facturesFiltrees = useMemo(() => {
+    return factures.filter((f) => {
+      const correspondRecherche =
+        !recherche ||
+        f.id?.toLowerCase().includes(recherche.toLowerCase()) ||
+        f.clientName?.toLowerCase().includes(recherche.toLowerCase());
+      const correspondStatut = filtreStatut === 'Tous' || obtenirLibelleStatut(f.status) === filtreStatut;
+      const dateFacture = f.issuedAt ?? '';
+      const correspondDateDebut = !dateDebut || dateFacture >= dateDebut;
+      const correspondDateFin = !dateFin || dateFacture <= dateFin;
+      return correspondRecherche && correspondStatut && correspondDateDebut && correspondDateFin;
+    });
+  }, [factures, recherche, filtreStatut, dateDebut, dateFin]);
+
+  const totalPages = Math.max(1, Math.ceil(facturesFiltrees.length / parPage));
+  const facturesPage = facturesFiltrees.slice((page - 1) * parPage, page * parPage);
+
+  const telecharger = (facture: UIFacture) => {
+    const symbole = facture.devise === 'EUR' ? '€' : facture.devise === 'USD' ? '$' : 'DT';
+    const contenu = `FACTURE ${facture.id}\nClient: ${facture.clientName}\nMontant: ${facture.amount} ${symbole}\nStatut: ${obtenirLibelleStatut(facture.status)}`;
+    const blob = new Blob([contenu], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -83,85 +194,302 @@ export const Factures: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
-  const handleCreate = () => {
-    const client = clients.find((c) => c.id === newFacture.clientId);
-    if (!client) return toast.error('Client invalide');
-    createMutation.mutate({
+  const creerFacture = () => {
+    const client = clients.find((c) => c.id === nouvelleFacture.clientId);
+    if (!client) return toast.error('Veuillez sélectionner un client');
+    mutationCreer.mutate({
       clientId: client.id,
       status: 'en_attente',
       issuedAt: new Date().toISOString().slice(0, 10),
-      dueAt: newFacture.dueAt,
-      taxRate: newFacture.taxRate,
-      items: newFacture.items,
-      amount: totalDraft,
+      dueAt: nouvelleFacture.echeance,
+      taxRate: nouvelleFacture.tauxTaxe,
+      items: nouvelleFacture.articles.map((a) => ({
+        description: a.description,
+        quantity: a.quantite,
+        unitPrice: a.prixUnitaire,
+      })),
+      amount: totalBrouillon,
     } as any);
   };
 
+  const mettreAJourArticle = (index: number, champ: string, valeur: any) => {
+    const articles = [...nouvelleFacture.articles];
+    (articles[index] as any)[champ] = valeur;
+    setNouvelleFacture({ ...nouvelleFacture, articles });
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6 bg-gray-50 min-h-screen">
+
+      {/* En-tête */}
       <div className="flex items-center justify-between">
-        <div><h1 className="text-3xl font-bold">Factures</h1><p className="text-muted-foreground">Gestion backend des factures</p></div>
-        <Button onClick={() => setIsAddModalOpen(true)}><Plus className="w-4 h-4 mr-2" />Créer une facture</Button>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card><CardHeader><CardTitle className="text-sm text-muted-foreground">CA total</CardTitle></CardHeader><CardContent><div className="flex justify-between"><p className="text-3xl font-bold">{totals.totalRevenue.toLocaleString()} €</p><DollarSign className="w-6 h-6 text-purple-600" /></div></CardContent></Card>
-        <Card><CardHeader><CardTitle className="text-sm text-muted-foreground">Payées</CardTitle></CardHeader><CardContent><p className="text-3xl font-bold text-green-600">{totals.paidRevenue.toLocaleString()} €</p></CardContent></Card>
-        <Card><CardHeader><CardTitle className="text-sm text-muted-foreground">Non payées</CardTitle></CardHeader><CardContent><p className="text-3xl font-bold text-red-600">{totals.unpaidRevenue.toLocaleString()} €</p></CardContent></Card>
-      </div>
-
-      <Card>
-        <div className="p-6">
-          <Table>
-            <TableHeader><TableRow><TableHead>N°</TableHead><TableHead>Client</TableHead><TableHead>Montant</TableHead><TableHead>Statut</TableHead><TableHead>Émise le</TableHead><TableHead>Échéance</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
-            <TableBody>
-              {factures.map((facture) => (
-                <TableRow key={facture.numericId}>
-                  <TableCell className="font-medium">{facture.id}</TableCell>
-                  <TableCell>{facture.clientName}</TableCell>
-                  <TableCell>{facture.amount.toLocaleString()} €</TableCell>
-                  <TableCell><Badge variant={getStatusVariant(facture.status)}>{getStatusLabel(facture.status)}</Badge></TableCell>
-                  <TableCell>{facture.issuedAt}</TableCell>
-                  <TableCell>{facture.dueAt}</TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button size="sm" variant="outline" onClick={() => handleDownload(facture)}><Download className="w-4 h-4" /></Button>
-                      {!['payee', 'paid'].includes(facture.status.toLowerCase()) && <Button size="sm" onClick={() => payMutation.mutate(facture.numericId)}>Marquer payée</Button>}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Factures</h1>
+          <p className="text-sm text-gray-500 mt-0.5">Gestion backend des factures</p>
         </div>
-      </Card>
+        <button
+          onClick={() => setModalOuvert(true)}
+          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-4 py-2 rounded-lg text-sm transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          Créer une facture
+        </button>
+      </div>
 
-      <Modal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title="Créer une facture" size="lg">
-        <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); handleCreate(); }}>
+      {/* Cartes statistiques */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+          <p className="text-sm text-gray-500 font-medium mb-2">CA total</p>
+          <div className="flex items-center justify-between">
+            <p className="text-3xl font-bold text-gray-900">{totaux.totalRevenu.toLocaleString('fr-FR')}</p>
+            <DollarSign className="w-6 h-6 text-purple-600" />
+          </div>
+          <Sparkline color="#7c3aed" />
+        </div>
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+          <p className="text-sm text-gray-500 font-medium mb-2">Payées</p>
+          <p className="text-3xl font-bold text-green-600">{totaux.totalPaye.toLocaleString('fr-FR')}</p>
+          <Sparkline color="#16a34a" />
+        </div>
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+          <p className="text-sm text-gray-500 font-medium mb-2">Non payées</p>
+          <p className="text-3xl font-bold text-red-600">{totaux.totalNonPaye.toLocaleString('fr-FR')}</p>
+          <Sparkline color="#dc2626" />
+        </div>
+      </div>
+
+      {/* Tableau */}
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
+
+        {/* Filtres */}
+        <div className="flex flex-wrap items-center gap-3 p-4 border-b border-gray-100">
+          <div className="relative flex-1 min-w-[180px] max-w-xs">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              placeholder="Rechercher..."
+              value={recherche}
+              onChange={(e) => { setRecherche(e.target.value); setPage(1); }}
+            />
+          </div>
+
+          <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-3 py-2 bg-gray-50">
+            <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
+            <input
+              type="date"
+              className="text-sm bg-transparent focus:outline-none text-gray-600 w-32 cursor-pointer"
+              value={dateDebut}
+              onChange={(e) => { setDateDebut(e.target.value); setPage(1); }}
+            />
+            <span className="text-gray-400">–</span>
+            <input
+              type="date"
+              className="text-sm bg-transparent focus:outline-none text-gray-600 w-32 cursor-pointer"
+              value={dateFin}
+              onChange={(e) => { setDateFin(e.target.value); setPage(1); }}
+            />
+            {(dateDebut || dateFin) && (
+              <button onClick={() => { setDateDebut(''); setDateFin(''); }} className="text-gray-400 hover:text-red-500 text-xs font-bold">✕</button>
+            )}
+          </div>
+
+          <div className="relative">
+            <select
+              className="appearance-none border border-gray-200 rounded-lg pl-3 pr-8 py-2 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-pointer"
+              value={filtreStatut}
+              onChange={(e) => { setFiltreStatut(e.target.value); setPage(1); }}
+            >
+              <option value="Tous">Statut</option>
+              <option value="Payée">Payée</option>
+              <option value="Non payée">Non payée</option>
+              <option value="En retard">En retard</option>
+              <option value="Brouillon">Brouillon</option>
+            </select>
+            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+          </div>
+        </div>
+
+        {/* Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-gray-500 font-medium border-b border-gray-100">
+                <th className="px-4 py-3">N°</th>
+                <th className="px-4 py-3">Client</th>
+                <th className="px-4 py-3">Montant</th>
+                <th className="px-4 py-3">Statut</th>
+                <th className="px-4 py-3">Émise le</th>
+                <th className="px-4 py-3">Échéance</th>
+                <th className="px-4 py-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {facturesPage.length === 0 && (
+                <tr><td colSpan={7} className="text-center py-10 text-gray-400">Aucune facture trouvée</td></tr>
+              )}
+              {facturesPage.map((facture) => (
+                <tr key={facture.numericId} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                  <td className="px-4 py-3 font-medium text-gray-800">{facture.id}</td>
+                  <td className="px-4 py-3 text-gray-700">{facture.clientName}</td>
+                  <td className="px-4 py-3 text-gray-800 font-medium">{facture.amount?.toLocaleString('fr-FR')} {facture.devise === 'EUR' ? '€' : facture.devise === 'USD' ? '$' : 'DT'}</td>
+                  <td className="px-4 py-3">
+                    <MenuStatut
+                      facture={facture}
+                      onChanger={changerStatut}
+                      chargement={mutationChangerStatut.isPending}
+                    />
+                  </td>
+                  <td className="px-4 py-3 text-gray-600">{facture.issuedAt}</td>
+                  <td className="px-4 py-3 text-gray-600">{facture.dueAt}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        onClick={() => telecharger(facture)}
+                        className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+                        title="Télécharger"
+                      >
+                        <Download className="w-4 h-4" />
+                      </button>
+                      {!estPaye(facture.status) && (
+                        <button
+                          onClick={() => changerStatut(facture.numericId, 'payee', facture)}
+                          disabled={mutationChangerStatut.isPending}
+                          className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition-colors whitespace-nowrap"
+                        >
+                          {mutationChangerStatut.isPending ? '...' : 'Marquer payée'}
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-center gap-1 p-4">
+            <button onClick={() => setPage(1)} disabled={page === 1} className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-30"><ChevronsLeft className="w-4 h-4 text-gray-500" /></button>
+            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-30"><ChevronLeft className="w-4 h-4 text-gray-500" /></button>
+            <span className="px-3 py-1 rounded bg-indigo-600 text-white text-sm font-medium min-w-[32px] text-center">{page}</span>
+            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-30"><ChevronRight className="w-4 h-4 text-gray-500" /></button>
+            <button onClick={() => setPage(totalPages)} disabled={page === totalPages} className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-30"><ChevronsRight className="w-4 h-4 text-gray-500" /></button>
+          </div>
+        )}
+      </div>
+
+      {/* Modal création */}
+      <Modal isOpen={modalOuvert} onClose={() => setModalOuvert(false)} title="Créer une facture" size="lg">
+        <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); creerFacture(); }}>
+
           <div>
-            <label className="block text-sm font-medium mb-1">Client</label>
-            <select className="w-full border border-input rounded-lg p-2 bg-background" value={newFacture.clientId} onChange={(e) => setNewFacture({ ...newFacture, clientId: e.target.value })} required>
+            <label className="block text-sm font-medium mb-1 text-gray-700">Client</label>
+            <select
+              className="w-full border border-gray-200 rounded-lg p-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              value={nouvelleFacture.clientId}
+              onChange={(e) => setNouvelleFacture({ ...nouvelleFacture, clientId: e.target.value })}
+              required
+            >
               <option value="">Sélectionner un client</option>
               {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </div>
-          <Input label="Date d'échéance" type="date" value={newFacture.dueAt} onChange={(e) => setNewFacture({ ...newFacture, dueAt: e.target.value })} required />
-          <Input label="Taux de taxe (%)" type="number" value={String(newFacture.taxRate)} onChange={(e) => setNewFacture({ ...newFacture, taxRate: Number(e.target.value) })} />
+
           <div>
-            <div className="flex justify-between mb-2"><label className="text-sm font-medium">Articles</label><button type="button" className="text-primary text-sm" onClick={() => setNewFacture({ ...newFacture, items: [...newFacture.items, { ...emptyItem }] })}>+ Ajouter</button></div>
+            <label className="block text-sm font-medium mb-1 text-gray-700">Date d'échéance</label>
+            <input
+              type="date"
+              className="w-full border border-gray-200 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              value={nouvelleFacture.echeance}
+              onChange={(e) => setNouvelleFacture({ ...nouvelleFacture, echeance: e.target.value })}
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1 text-gray-700">Taux de taxe (%)</label>
+            <input
+              type="number"
+              className="w-full border border-gray-200 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              value={nouvelleFacture.tauxTaxe}
+              onChange={(e) => setNouvelleFacture({ ...nouvelleFacture, tauxTaxe: Number(e.target.value) })}
+            />
+          </div>
+
+          <div>
+            <div className="flex justify-between items-center mb-2">
+              <label className="text-sm font-medium text-gray-700">Articles</label>
+              <button
+                type="button"
+                className="text-indigo-600 text-sm font-medium hover:text-indigo-700"
+                onClick={() => setNouvelleFacture({ ...nouvelleFacture, articles: [...nouvelleFacture.articles, { ...articleVide }] })}
+              >
+                + Ajouter un article
+              </button>
+            </div>
+            <div className="grid grid-cols-12 gap-2 text-xs text-gray-400 px-1 mb-1">
+              <span className="col-span-5">Description</span>
+              <span className="col-span-2">Qté</span>
+              <span className="col-span-3">Prix unitaire</span>
+            </div>
             <div className="space-y-2">
-              {newFacture.items.map((item, index) => (
+              {nouvelleFacture.articles.map((article, index) => (
                 <div key={index} className="grid grid-cols-12 gap-2">
-                  <input className="col-span-5 border border-input rounded-lg p-2 bg-background text-sm" placeholder="Description" value={item.description} onChange={(e) => { const items = [...newFacture.items]; items[index].description = e.target.value; setNewFacture({ ...newFacture, items }); }} required />
-                  <input className="col-span-2 border border-input rounded-lg p-2 bg-background text-sm" type="number" value={item.quantity} onChange={(e) => { const items = [...newFacture.items]; items[index].quantity = Number(e.target.value); setNewFacture({ ...newFacture, items }); }} />
-                  <input className="col-span-3 border border-input rounded-lg p-2 bg-background text-sm" type="number" value={item.unitPrice} onChange={(e) => { const items = [...newFacture.items]; items[index].unitPrice = Number(e.target.value); setNewFacture({ ...newFacture, items }); }} />
-                  <button type="button" className="col-span-2 text-red-500 text-sm" onClick={() => setNewFacture({ ...newFacture, items: newFacture.items.filter((_, i) => i !== index) })}>Retirer</button>
+                  <input
+                    className="col-span-5 border border-gray-200 rounded-lg p-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                    placeholder="Description"
+                    value={article.description}
+                    onChange={(e) => mettreAJourArticle(index, 'description', e.target.value)}
+                    required
+                  />
+                  <input
+                    className="col-span-2 border border-gray-200 rounded-lg p-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                    type="number" min="1"
+                    value={article.quantite}
+                    onChange={(e) => mettreAJourArticle(index, 'quantite', Number(e.target.value))}
+                  />
+                  <input
+                    className="col-span-3 border border-gray-200 rounded-lg p-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                    type="number" min="0"
+                    value={article.prixUnitaire}
+                    onChange={(e) => mettreAJourArticle(index, 'prixUnitaire', Number(e.target.value))}
+                  />
+                  <button
+                    type="button"
+                    className="col-span-2 text-red-400 text-sm hover:text-red-600 font-medium"
+                    onClick={() => setNouvelleFacture({ ...nouvelleFacture, articles: nouvelleFacture.articles.filter((_, i) => i !== index) })}
+                  >
+                    Retirer
+                  </button>
                 </div>
               ))}
             </div>
           </div>
-          <div className="border-t border-border pt-3 flex justify-between"><span className="font-semibold">Total HT</span><span className="text-xl font-bold">{totalDraft.toLocaleString()} €</span></div>
-          <div className="flex justify-end gap-3 pt-2"><Button variant="outline" type="button" onClick={() => setIsAddModalOpen(false)}>Annuler</Button><Button type="submit">Créer</Button></div>
+
+          <div className="border-t border-gray-100 pt-3 flex justify-between items-center">
+            <span className="font-semibold text-gray-700">Total HT</span>
+            <span className="text-xl font-bold text-indigo-600">
+              {totalBrouillon.toLocaleString('fr-FR')} {nouvelleFacture.clientId ? (clients.find(c => c.id === nouvelleFacture.clientId)?.devise === 'EUR' ? '€' : clients.find(c => c.id === nouvelleFacture.clientId)?.devise === 'USD' ? '$' : 'DT') : ''}
+            </span>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => setModalOuvert(false)}
+              className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              Annuler
+            </button>
+            <button
+              type="submit"
+              disabled={mutationCreer.isPending}
+              className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+            >
+              {mutationCreer.isPending ? 'Création...' : 'Créer la facture'}
+            </button>
+          </div>
         </form>
       </Modal>
     </div>

@@ -68,6 +68,7 @@ class ProjetRead(ProjetBase):
     createdAt: datetime
     dateMaj: datetime
     clientNom: str | None = None
+    clientDevise: str | None = None
     assignedUsers: list[str] = []
 
     class Config:

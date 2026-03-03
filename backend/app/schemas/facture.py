@@ -62,6 +62,7 @@ class FactureUpdate(BaseModel):
 class FactureRead(FactureBase):
     factureID: int
     clientNom: str | None = None
+    clientDevise: str | None = None
     items: list[FactureItemRead] = Field(default_factory=list)
 
     class Config:

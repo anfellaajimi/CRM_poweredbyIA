@@ -184,8 +184,8 @@ export const ProjectDetails: React.FC = () => {
             <CardContent className="space-y-4">
               <div><p className="text-sm text-muted-foreground">Date de début</p><p className="font-medium">{project.startDate}</p></div>
               <div><p className="text-sm text-muted-foreground">Échéance</p><p className="font-medium">{project.deadline}</p></div>
-              <div><p className="text-sm text-muted-foreground">Budget</p><p className="font-medium">${project.budget.toLocaleString()}</p></div>
-              <div><p className="text-sm text-muted-foreground">Dépensé</p><p className="font-medium">${project.spent.toLocaleString()}</p></div>
+              <div><p className="text-sm text-muted-foreground">Budget</p><p className="font-medium">{project.budget.toLocaleString()} {project.devise === 'EUR' ? '€' : project.devise === 'USD' ? '$' : 'DT'}</p></div>
+              <div><p className="text-sm text-muted-foreground">Dépensé</p><p className="font-medium">{project.spent.toLocaleString()} {project.devise === 'EUR' ? '€' : project.devise === 'USD' ? '$' : 'DT'}</p></div>
               <div><p className="text-sm text-muted-foreground">Avancement</p><p className="font-medium">{project.progress}%</p></div>
             </CardContent>
           </Card>
@@ -313,7 +313,7 @@ export const ProjectDetails: React.FC = () => {
             <Select value={editProject?.priority || ''} onChange={(e) => setEditProject({ ...editProject, priority: e.target.value })} options={[{ value: 'haute', label: 'Haute' }, { value: 'moyenne', label: 'Moyenne' }, { value: 'basse', label: 'Basse' }]} />
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <Input label="Budget (€)" type="number" value={String(editProject?.budget ?? 0)} onChange={(e) => setEditProject({ ...editProject, budget: Number(e.target.value) })} />
+            <Input label={`Budget (${project?.devise === 'EUR' ? '€' : project?.devise === 'USD' ? '$' : 'DT'})`} type="number" value={String(editProject?.budget ?? 0)} onChange={(e) => setEditProject({ ...editProject, budget: Number(e.target.value) })} />
             <Input label="Avancement (%)" type="number" value={String(editProject?.progress ?? 0)} onChange={(e) => setEditProject({ ...editProject, progress: Number(e.target.value) })} />
           </div>
           <div className="grid grid-cols-2 gap-4">

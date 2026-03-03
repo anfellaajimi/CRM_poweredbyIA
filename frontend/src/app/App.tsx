@@ -23,6 +23,11 @@ import { AIMonitoring } from '../pages/AIMonitoring';
 import { Rappels } from '../pages/Rappels';
 import { Users } from '../pages/Users';
 import { NotFound } from '../pages/NotFound';
+import { Profile } from '../pages/Profile';
+import { Security } from '../pages/Security';
+import { Settings } from '../pages/Settings';
+import { Billing } from '../pages/Billing';
+import { Support } from '../pages/Support';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -73,6 +78,11 @@ export default function App() {
             <Route path="/ai-monitoring" element={<AIMonitoring />} />
             <Route path="/rappels" element={<Rappels />} />
             <Route path="/users" element={<Users />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/security" element={<Security />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/billing" element={<Billing />} />
+            <Route path="/support" element={<Support />} />
           </Route>
 
           <Route path="/404" element={<NotFound />} />

@@ -19,6 +19,7 @@ class ClientBase(BaseModel):
     entreprise: str | None = None
     avatarUrl: str | None = None
     status: str = "actif"
+    devise: str = "TND"
 
     @model_validator(mode="after")
     def validate_type_specific_fields(self):
@@ -51,6 +52,7 @@ class ClientUpdate(BaseModel):
     entreprise: str | None = None
     avatarUrl: str | None = None
     status: str | None = None
+    devise: str | None = None
 
 
 class ClientRead(ClientBase):

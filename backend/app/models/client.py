@@ -24,6 +24,7 @@ class Client(Base):
     entreprise: Mapped[str | None] = mapped_column(String(255))
     avatarUrl: Mapped[str | None] = mapped_column(String(500))
     status: Mapped[str] = mapped_column(String(50), default="actif", nullable=False)
+    devise: Mapped[str] = mapped_column(String(10), default="TND", nullable=False)
     dateCreation: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
 
     projets = relationship("Projet", back_populates="client", cascade="all, delete-orphan")

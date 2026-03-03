@@ -41,5 +41,9 @@ class Projet(Base):
         return self.client.nom if self.client else None
 
     @property
+    def clientDevise(self) -> str | None:
+        return self.client.devise if self.client else None
+
+    @property
     def assignedUsers(self) -> list[str]:
         return [user.nom for user in self.utilisateurs]

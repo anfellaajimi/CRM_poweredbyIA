@@ -56,6 +56,7 @@ class ContratUpdate(BaseModel):
 class ContratRead(ContratBase):
     contratID: int
     clientNom: str | None = None
+    clientDevise: str | None = None
 
     class Config:
         from_attributes = True

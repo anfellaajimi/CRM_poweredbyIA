@@ -28,3 +28,7 @@ class Facture(Base):
     @property
     def clientNom(self) -> str | None:
         return self.client.nom if self.client else None
+
+    @property
+    def clientDevise(self) -> str | None:
+        return self.client.devise if self.client else None

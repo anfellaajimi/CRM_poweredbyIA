@@ -98,7 +98,7 @@ export const Projects: React.FC = () => {
                     <div className="w-full bg-secondary rounded-full h-2"><div className="bg-gradient-to-r from-purple-600 to-indigo-600 h-2 rounded-full transition-all" style={{ width: `${project.progress}%` }} /></div>
                   </div>
                   <div className="grid grid-cols-2 gap-4 pt-4 border-t border-border">
-                    <div><p className="text-xs text-muted-foreground">Budget</p><p className="font-medium">${project.budget.toLocaleString()}</p></div>
+                    <div><p className="text-xs text-muted-foreground">Budget</p><p className="font-medium">{project.budget.toLocaleString()} {project.devise === 'EUR' ? '€' : project.devise === 'USD' ? '$' : 'DT'}</p></div>
                     <div><p className="text-xs text-muted-foreground">Échéance</p><p className="font-medium">{project.deadline}</p></div>
                   </div>
                 </CardContent>
@@ -145,8 +145,10 @@ export const Projects: React.FC = () => {
             <Input label="Échéance" type="date" value={newProject.deadline || ''} onChange={(e) => setNewProject({ ...newProject, deadline: e.target.value })} />
           </div>
 
-          <Input label="Budget (€)" type="number" value={newProject.budget?.toString() || '0'} onChange={(e) => setNewProject({ ...newProject, budget: Number(e.target.value) })} required />
-          <Input label="Description" value={newProject.description || ''} onChange={(e) => setNewProject({ ...newProject, description: e.target.value })} />
+          <div className="grid grid-cols-2 gap-4">
+            <Input label={`Budget (${newProject.clientId ? (clients.find(c => c.id === newProject.clientId)?.devise || 'DT') : 'DT/€/$'})`} type="number" value={newProject.budget?.toString() || '0'} onChange={(e) => setNewProject({ ...newProject, budget: Number(e.target.value) })} required />
+            <Input label="Description" value={newProject.description || ''} onChange={(e) => setNewProject({ ...newProject, description: e.target.value })} />
+          </div>
 
           <div className="flex justify-end space-x-3 pt-4">
             <Button variant="outline" type="button" onClick={() => setIsAddModalOpen(false)}>Annuler</Button>

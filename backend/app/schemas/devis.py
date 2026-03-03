@@ -58,6 +58,7 @@ class DevisUpdate(BaseModel):
 class DevisRead(DevisBase):
     devisID: int
     clientNom: str | None = None
+    clientDevise: str | None = None
     items: list[DevisItemRead] = Field(default_factory=list)
 
     class Config:
