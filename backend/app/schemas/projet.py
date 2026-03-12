@@ -13,6 +13,7 @@ class ProjetBase(BaseModel):
     budget: float | None = None
     depense: float = 0
     progression: int = 0
+    scoring: str = "Moyen"
     dateDebut: date | None = None
     dateFin: date | None = None
 
@@ -44,6 +45,7 @@ class ProjetUpdate(BaseModel):
     budget: float | None = None
     depense: float | None = None
     progression: int | None = None
+    scoring: str | None = None
     dateDebut: date | None = None
     dateFin: date | None = None
     dateMaj: datetime | None = None

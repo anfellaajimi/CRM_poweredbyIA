@@ -9,7 +9,7 @@ import { clientsAPI, UIClient } from '../services/api';
 const initialClient: Partial<UIClient> = {
   type: 'Physique', name: '', prenom: '', email: '', phone: '',
   company: '', dateNaissance: '', cin: '', raisonSociale: '',
-  matriculeFiscale: '', secteurActivite: '', status: 'actif', devise: 'TND'
+  matriculeFiscale: '', secteurActivite: '', status: 'actif', devise: 'TND', scoring: 'Moyen'
 };
 
 const TABS = [
@@ -28,6 +28,25 @@ const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
     inactif: { bg: '#fee2e2', color: '#dc2626', label: 'Inactif' },
   };
   const c = cfg[s] || { bg: '#f3f4f6', color: '#6b7280', label: status };
+  return (
+    <span style={{
+      background: c.bg, color: c.color, fontSize: 12, fontWeight: 600,
+      padding: '3px 10px', borderRadius: 20, whiteSpace: 'nowrap'
+    }}>
+      {c.label}
+    </span>
+  );
+};
+
+const ScoringBadge: React.FC<{ scoring?: string }> = ({ scoring }) => {
+  const s = (scoring || 'Moyen').toLowerCase();
+  const cfg: Record<string, { bg: string; color: string; label: string }> = {
+    'hot 🔥': { bg: '#fee2e2', color: '#dc2626', label: 'Hot 🔥' },
+    'hot': { bg: '#fee2e2', color: '#dc2626', label: 'Hot 🔥' },
+    'moyen': { bg: '#fef3c7', color: '#d97706', label: 'Moyen' },
+    'faible': { bg: '#f3f4f6', color: '#6b7280', label: 'Faible' },
+  };
+  const c = cfg[s] || cfg['moyen'];
   return (
     <span style={{
       background: c.bg, color: c.color, fontSize: 12, fontWeight: 600,
@@ -184,7 +203,7 @@ export const Clients: React.FC = () => {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: '#f8fafc' }}>
-                {['Client', 'Type', 'Email', 'Téléphone', 'Statut', 'Créé le', ''].map((h, i) => (
+                {['Client', 'Type', 'Email', 'Téléphone', 'Statut', 'Scoring', 'Créé le', ''].map((h, i) => (
                   <th key={i} style={{
                     padding: '12px 20px', textAlign: 'left', fontSize: 12,
                     fontWeight: 600, color: '#64748b', textTransform: 'uppercase',
@@ -219,6 +238,7 @@ export const Clients: React.FC = () => {
                   <td style={{ padding: '14px 20px', fontSize: 13, color: '#475569' }}>{client.email}</td>
                   <td style={{ padding: '14px 20px', fontSize: 13, color: '#475569' }}>{client.phone}</td>
                   <td style={{ padding: '14px 20px' }}><StatusBadge status={client.status || ''} /></td>
+                  <td style={{ padding: '14px 20px' }}><ScoringBadge scoring={client.scoring} /></td>
                   <td style={{ padding: '14px 20px', fontSize: 13, color: '#94a3b8' }}>{client.createdAt}</td>
                   <td style={{ padding: '14px 20px' }} onClick={e => e.stopPropagation()}>
                     <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 4 }}>
@@ -284,14 +304,25 @@ export const Clients: React.FC = () => {
             <Inp label="Email" type="email" value={newClient.email || ''} onChange={v => setNewClient({ ...newClient, email: v })} required />
             <Inp label="Téléphone" value={newClient.phone || ''} onChange={v => setNewClient({ ...newClient, phone: v })} required />
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <label style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>Devise *</label>
-            <select value={newClient.devise || 'TND'} onChange={e => setNewClient({ ...newClient, devise: e.target.value })}
-              style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: '9px 12px', fontSize: 14, color: '#111827', outline: 'none', background: '#fff' }}>
-              <option value="TND">Dinar Tunisien (DT)</option>
-              <option value="EUR">Euro (€)</option>
-              <option value="USD">Dollar ($)</option>
-            </select>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <label style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>Devise *</label>
+              <select value={newClient.devise || 'TND'} onChange={e => setNewClient({ ...newClient, devise: e.target.value })}
+                style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: '9px 12px', fontSize: 14, color: '#111827', outline: 'none', background: '#fff' }}>
+                <option value="TND">Dinar Tunisien (DT)</option>
+                <option value="EUR">Euro (€)</option>
+                <option value="USD">Dollar ($)</option>
+              </select>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <label style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>Scoring *</label>
+              <select value={newClient.scoring || 'Moyen'} onChange={e => setNewClient({ ...newClient, scoring: e.target.value })}
+                style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: '9px 12px', fontSize: 14, color: '#111827', outline: 'none', background: '#fff' }}>
+                <option value="Hot 🔥">Hot 🔥</option>
+                <option value="Moyen">Moyen</option>
+                <option value="Faible">Faible</option>
+              </select>
+            </div>
           </div>
           {newClient.type === 'Physique' ? (<>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>

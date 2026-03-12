@@ -18,6 +18,7 @@ class Projet(Base):
     budget: Mapped[float | None] = mapped_column(Numeric(12, 2))
     depense: Mapped[float] = mapped_column(Numeric(12, 2), default=0, nullable=False)
     progression: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    scoring: Mapped[str] = mapped_column(String(20), default="Moyen", server_default="Moyen", nullable=False)
     dateDebut: Mapped[date | None] = mapped_column(Date)
     dateFin: Mapped[date | None] = mapped_column(Date)
     createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)

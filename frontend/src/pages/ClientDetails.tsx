@@ -20,6 +20,22 @@ const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
   );
 };
 
+const ScoringBadge: React.FC<{ scoring?: string }> = ({ scoring }) => {
+  const s = (scoring || 'Moyen').toLowerCase();
+  const cfg: Record<string, { bg: string; color: string; label: string }> = {
+    'hot 🔥': { bg: '#fee2e2', color: '#dc2626', label: 'Hot 🔥' },
+    'hot': { bg: '#fee2e2', color: '#dc2626', label: 'Hot 🔥' },
+    'moyen': { bg: '#fef3c7', color: '#d97706', label: 'Moyen' },
+    'faible': { bg: '#f3f4f6', color: '#6b7280', label: 'Faible' },
+  };
+  const c = cfg[s] || cfg['moyen'];
+  return (
+    <span style={{ background: c.bg, color: c.color, fontSize: 12, fontWeight: 600, padding: '4px 12px', borderRadius: 20 }}>
+      {c.label}
+    </span>
+  );
+};
+
 const TypeBadge: React.FC<{ type: string }> = ({ type }) => (
   <span style={{
     background: type === 'Moral' ? '#ede9fe' : '#e0f2fe',
@@ -144,6 +160,7 @@ export const ClientDetails: React.FC = () => {
               <div style={{ display: 'flex', gap: 8 }}>
                 <StatusBadge status={client.status || ''} />
                 <TypeBadge type={client.type || ''} />
+                <ScoringBadge scoring={client.scoring} />
               </div>
             </div>
           </div>
@@ -257,14 +274,25 @@ export const ClientDetails: React.FC = () => {
           <Inp label="Nom complet" value={editClient.name || ''} onChange={v => setEditClient({ ...editClient, name: v })} required />
           <Inp label="Email" type="email" value={editClient.email || ''} onChange={v => setEditClient({ ...editClient, email: v })} />
           <Inp label="Téléphone" value={editClient.phone || ''} onChange={v => setEditClient({ ...editClient, phone: v })} />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <label style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>Devise</label>
-            <select value={editClient.devise || 'TND'} onChange={e => setEditClient({ ...editClient, devise: e.target.value })}
-              style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: '9px 12px', fontSize: 14, color: '#111827', outline: 'none', background: '#fff' }}>
-              <option value="TND">Dinar Tunisien (DT)</option>
-              <option value="EUR">Euro (€)</option>
-              <option value="USD">Dollar ($)</option>
-            </select>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <label style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>Devise</label>
+              <select value={editClient.devise || 'TND'} onChange={e => setEditClient({ ...editClient, devise: e.target.value })}
+                style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: '9px 12px', fontSize: 14, color: '#111827', outline: 'none', background: '#fff' }}>
+                <option value="TND">Dinar Tunisien (DT)</option>
+                <option value="EUR">Euro (€)</option>
+                <option value="USD">Dollar ($)</option>
+              </select>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <label style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>Scoring</label>
+              <select value={editClient.scoring || 'Moyen'} onChange={e => setEditClient({ ...editClient, scoring: e.target.value })}
+                style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: '9px 12px', fontSize: 14, color: '#111827', outline: 'none', background: '#fff' }}>
+                <option value="Hot 🔥">Hot 🔥</option>
+                <option value="Moyen">Moyen</option>
+                <option value="Faible">Faible</option>
+              </select>
+            </div>
           </div>
           <Inp label="Entreprise" value={editClient.company || ''} onChange={v => setEditClient({ ...editClient, company: v })} />
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, paddingTop: 8 }}>

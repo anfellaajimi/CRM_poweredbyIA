@@ -12,6 +12,22 @@ import { Modal } from '../components/ui/Modal';
 import { Select } from '../components/ui/Select';
 import { clientsAPI, projectsAPI, UIProject } from '../services/api';
 
+const ScoringBadge: React.FC<{ scoring?: string }> = ({ scoring }) => {
+  const s = (scoring || 'Moyen').toLowerCase();
+  const cfg: Record<string, { bg: string; color: string; label: string }> = {
+    'hot 🔥': { bg: '#fee2e2', color: '#dc2626', label: 'Hot 🔥' },
+    'hot': { bg: '#fee2e2', color: '#dc2626', label: 'Hot 🔥' },
+    'moyen': { bg: '#fef3c7', color: '#d97706', label: 'Moyen' },
+    'faible': { bg: '#f3f4f6', color: '#6b7280', label: 'Faible' },
+  };
+  const c = cfg[s] || cfg['moyen'];
+  return (
+    <span style={{ background: c.bg, color: c.color, fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 20 }}>
+      {c.label}
+    </span>
+  );
+};
+
 export const Projects: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -28,6 +44,7 @@ export const Projects: React.FC = () => {
     description: '',
     progress: 0,
     spent: 0,
+    scoring: 'Moyen',
   });
 
   const { data: projects = [], isLoading } = useQuery({
@@ -90,7 +107,10 @@ export const Projects: React.FC = () => {
                       <h3 className="font-semibold text-lg mb-1">{project.name}</h3>
                       <p className="text-sm text-muted-foreground">{project.clientName}</p>
                     </div>
-                    <Badge>{project.status}</Badge>
+                    <div className="flex flex-col gap-2 items-end">
+                      <Badge>{project.status}</Badge>
+                      <ScoringBadge scoring={project.scoring} />
+                    </div>
                   </div>
                   <p className="text-sm text-muted-foreground mb-4">{project.description}</p>
                   <div className="mb-4">
@@ -114,7 +134,7 @@ export const Projects: React.FC = () => {
               <div className="space-y-3">
                 {statusProjects.map((project) => (
                   <div key={project.id} onClick={() => navigate(`/projects/${project.id}`)} className="cursor-pointer">
-                    <Card><CardContent className="pt-4"><h4 className="font-medium mb-2">{project.name}</h4><p className="text-sm text-muted-foreground mb-3">{project.clientName}</p><div className="flex items-center justify-between text-xs"><Badge>{project.priority}</Badge><span className="text-muted-foreground">{project.progress}%</span></div></CardContent></Card>
+                    <Card><CardContent className="pt-4"><h4 className="font-medium mb-2">{project.name}</h4><p className="text-sm text-muted-foreground mb-3">{project.clientName}</p><div className="flex items-center justify-between text-xs"><div className="flex gap-2 items-center"><Badge>{project.priority}</Badge><ScoringBadge scoring={project.scoring} /></div><span className="text-muted-foreground">{project.progress}%</span></div></CardContent></Card>
                   </div>
                 ))}
               </div>
@@ -135,9 +155,10 @@ export const Projects: React.FC = () => {
             </select>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <Select value={newProject.status || ''} onChange={(e) => setNewProject({ ...newProject, status: e.target.value })} options={[{ value: 'planification', label: 'Planification' }, { value: 'en_cours', label: 'En cours' }, { value: 'en_attente', label: 'En attente' }, { value: 'termine', label: 'Terminé' }]} />
             <Select value={newProject.priority || ''} onChange={(e) => setNewProject({ ...newProject, priority: e.target.value })} options={[{ value: 'haute', label: 'Haute' }, { value: 'moyenne', label: 'Moyenne' }, { value: 'basse', label: 'Basse' }]} />
+            <Select value={newProject.scoring || 'Moyen'} onChange={(e) => setNewProject({ ...newProject, scoring: e.target.value })} options={[{ value: 'Hot 🔥', label: 'Hot 🔥' }, { value: 'Moyen', label: 'Moyen' }, { value: 'Faible', label: 'Faible' }]} />
           </div>
 
           <div className="grid grid-cols-2 gap-4">

@@ -49,6 +49,7 @@ export type UIClient = {
   matriculeFiscale?: string;
   secteurActivite?: string;
   devise?: string;
+  scoring?: string;
 };
 
 export type UIProject = {
@@ -66,6 +67,7 @@ export type UIProject = {
   description?: string;
   assignedTeam: string[];
   devise?: string;
+  scoring?: string;
 };
 
 const toUIClient = (item: any): UIClient => ({
@@ -85,6 +87,7 @@ const toUIClient = (item: any): UIClient => ({
   matriculeFiscale: item.matriculeFiscale || '',
   secteurActivite: item.secteurActivite || '',
   devise: item.devise || 'TND',
+  scoring: item.scoring || 'Moyen',
 });
 
 const toClientPayload = (client: Partial<UIClient>) => ({
@@ -103,6 +106,7 @@ const toClientPayload = (client: Partial<UIClient>) => ({
   avatarUrl: client.avatar || null,
   status: client.status?.toLowerCase() || 'actif',
   devise: client.devise || 'TND',
+  scoring: client.scoring || 'Moyen',
 });
 
 const toUIProject = (item: any): UIProject => ({
@@ -120,6 +124,7 @@ const toUIProject = (item: any): UIProject => ({
   description: item.description || '',
   assignedTeam: item.assignedUsers || [],
   devise: item.clientDevise || 'TND',
+  scoring: item.scoring || 'Moyen',
 });
 
 const toProjectPayload = (project: Partial<UIProject>) => ({
@@ -133,6 +138,7 @@ const toProjectPayload = (project: Partial<UIProject>) => ({
   progression: project.progress ?? 0,
   dateDebut: project.startDate || null,
   dateFin: project.deadline || null,
+  scoring: project.scoring || 'Moyen',
 });
 
 export const authAPI = {

@@ -21,6 +21,22 @@ import {
   usersAPI,
 } from '../services/api';
 
+const ScoringBadge: React.FC<{ scoring?: string }> = ({ scoring }) => {
+  const s = (scoring || 'Moyen').toLowerCase();
+  const cfg: Record<string, { bg: string; color: string; label: string }> = {
+    'hot 🔥': { bg: '#fee2e2', color: '#dc2626', label: 'Hot 🔥' },
+    'hot': { bg: '#fee2e2', color: '#dc2626', label: 'Hot 🔥' },
+    'moyen': { bg: '#fef3c7', color: '#d97706', label: 'Moyen' },
+    'faible': { bg: '#f3f4f6', color: '#6b7280', label: 'Faible' },
+  };
+  const c = cfg[s] || cfg['moyen'];
+  return (
+    <span style={{ background: c.bg, color: c.color, fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 20 }}>
+      {c.label}
+    </span>
+  );
+};
+
 const defaultCahier = {
   version: '1.0',
   objectif: '',
@@ -174,7 +190,7 @@ export const ProjectDetails: React.FC = () => {
             <CardHeader><CardTitle>Détails du projet</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <div><p className="text-sm text-muted-foreground">Client</p><p className="font-medium">{project.clientName}</p></div>
-              <div><p className="text-sm text-muted-foreground">Statut</p><Badge>{project.status}</Badge></div>
+              <div><p className="text-sm text-muted-foreground">Statut</p><div className="flex gap-2 items-center mt-1"><Badge>{project.status}</Badge><ScoringBadge scoring={project.scoring} /></div></div>
               <div><p className="text-sm text-muted-foreground">Priorité</p><Badge>{project.priority}</Badge></div>
               <div><p className="text-sm text-muted-foreground">Description</p><p className="font-medium">{project.description}</p></div>
             </CardContent>
@@ -308,9 +324,10 @@ export const ProjectDetails: React.FC = () => {
         <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); updateProject.mutate(editProject); }}>
           <Input label="Nom du projet" value={editProject?.name || ''} onChange={(e) => setEditProject({ ...editProject, name: e.target.value })} required />
           <Input label="Description" value={editProject?.description || ''} onChange={(e) => setEditProject({ ...editProject, description: e.target.value })} />
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <Select value={editProject?.status || ''} onChange={(e) => setEditProject({ ...editProject, status: e.target.value })} options={[{ value: 'planification', label: 'Planification' }, { value: 'en_cours', label: 'En cours' }, { value: 'en_attente', label: 'En attente' }, { value: 'termine', label: 'Terminé' }]} />
             <Select value={editProject?.priority || ''} onChange={(e) => setEditProject({ ...editProject, priority: e.target.value })} options={[{ value: 'haute', label: 'Haute' }, { value: 'moyenne', label: 'Moyenne' }, { value: 'basse', label: 'Basse' }]} />
+            <Select value={editProject?.scoring || 'Moyen'} onChange={(e) => setEditProject({ ...editProject, scoring: e.target.value })} options={[{ value: 'Hot 🔥', label: 'Hot 🔥' }, { value: 'Moyen', label: 'Moyen' }, { value: 'Faible', label: 'Faible' }]} />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <Input label={`Budget (${project?.devise === 'EUR' ? '€' : project?.devise === 'USD' ? '$' : 'DT'})`} type="number" value={String(editProject?.budget ?? 0)} onChange={(e) => setEditProject({ ...editProject, budget: Number(e.target.value) })} />
