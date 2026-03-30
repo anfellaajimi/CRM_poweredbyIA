@@ -17,6 +17,9 @@ class CahierDeChargeBase(BaseModel):
     contraintes: str | None = None
     delais: str | None = None
     budgetTexte: str | None = None
+    userStories: str | None = None
+    reglesMetier: str | None = None
+    documentsReference: str | None = None
 
 
 class CahierDeChargeCreate(CahierDeChargeBase):
@@ -37,6 +40,9 @@ class CahierDeChargeUpdate(BaseModel):
     contraintes: str | None = None
     delais: str | None = None
     budgetTexte: str | None = None
+    userStories: str | None = None
+    reglesMetier: str | None = None
+    documentsReference: str | None = None
 
 
 class CahierDeChargeRead(CahierDeChargeBase):

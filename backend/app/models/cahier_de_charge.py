@@ -23,5 +23,8 @@ class CahierDeCharge(Base):
     contraintes: Mapped[str | None] = mapped_column(Text)
     delais: Mapped[str | None] = mapped_column(Text)
     budgetTexte: Mapped[str | None] = mapped_column(Text)
+    userStories: Mapped[str | None] = mapped_column(Text)
+    reglesMetier: Mapped[str | None] = mapped_column(Text)
+    documentsReference: Mapped[str | None] = mapped_column(Text)
 
     projet = relationship("Projet", back_populates="cahierDeCharge")

@@ -1,7 +1,8 @@
-import React, { useMemo, useState } from 'react';
+﻿import React, { useMemo, useState } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, MoreHorizontal, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Search, MoreHorizontal, ChevronLeft, ChevronRight, Edit2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Modal } from '../components/ui/Modal';
 import { clientsAPI, UIClient } from '../services/api';
@@ -41,8 +42,8 @@ const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
 const ScoringBadge: React.FC<{ scoring?: string }> = ({ scoring }) => {
   const s = (scoring || 'Moyen').toLowerCase();
   const cfg: Record<string, { bg: string; color: string; label: string }> = {
-    'hot 🔥': { bg: '#fee2e2', color: '#dc2626', label: 'Hot 🔥' },
-    'hot': { bg: '#fee2e2', color: '#dc2626', label: 'Hot 🔥' },
+    'hot ðŸ”¥': { bg: '#fee2e2', color: '#dc2626', label: 'Hot ðŸ”¥' },
+    'hot': { bg: '#fee2e2', color: '#dc2626', label: 'Hot ðŸ”¥' },
     'moyen': { bg: '#fef3c7', color: '#d97706', label: 'Moyen' },
     'faible': { bg: '#f3f4f6', color: '#6b7280', label: 'Faible' },
   };
@@ -91,6 +92,8 @@ export const Clients: React.FC = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newClient, setNewClient] = useState<Partial<UIClient>>(initialClient);
   const [page, setPage] = useState(1);
+  const [openActionsFor, setOpenActionsFor] = useState<string | null>(null);
+  const [clientToDelete, setClientToDelete] = useState<UIClient | null>(null);
 
   const { data: clients = [], isLoading } = useQuery({ queryKey: ['clients'], queryFn: clientsAPI.getAll });
 
@@ -98,12 +101,48 @@ export const Clients: React.FC = () => {
     mutationFn: clientsAPI.create,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
-      toast.success('Client ajouté');
+      toast.success('Client ajoutÃ©');
       setIsAddModalOpen(false);
       setNewClient(initialClient);
     },
     onError: () => toast.error("Impossible d'ajouter le client"),
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => clientsAPI.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      toast.success('Client supprimÃ©');
+      setClientToDelete(null);
+    },
+    onError: () => toast.error('Suppression impossible'),
+  });
+
+  useEffect(() => {
+    if (!openActionsFor) return;
+
+    const onMouseDown = (e: MouseEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (!el) return;
+      const inside = el.closest(`[data-client-actions="${openActionsFor}"]`);
+      if (!inside) setOpenActionsFor(null);
+    };
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpenActionsFor(null);
+    };
+
+    document.addEventListener('mousedown', onMouseDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', onMouseDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [openActionsFor]);
+
+  useEffect(() => {
+    setOpenActionsFor(null);
+  }, [activeTab, page, searchTerm, isAddModalOpen]);
 
   const filtered = useMemo(() => clients.filter(c => {
     const s = searchTerm.toLowerCase();
@@ -130,7 +169,7 @@ export const Clients: React.FC = () => {
       ...newClient, name: fullName,
       company: type === 'Moral' ? newClient.raisonSociale : fullName,
       avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(fullName)}&background=random`,
-      status: 'actif',
+      status: (newClient.status || 'actif').toLowerCase(),
     });
   };
 
@@ -139,7 +178,7 @@ export const Clients: React.FC = () => {
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#94a3b8', marginBottom: 20 }}>
         <span style={{ cursor: 'pointer', color: '#7c3aed' }} onClick={() => navigate('/')}>Accueil</span>
-        <span>›</span>
+        <span>â€º</span>
         <span style={{ color: '#1e293b', fontWeight: 500 }}>Clients</span>
       </div>
 
@@ -194,7 +233,7 @@ export const Clients: React.FC = () => {
           </div>
           {filtered.length > 0 && (
             <span style={{ fontSize: 12, color: '#94a3b8', marginLeft: 'auto' }}>
-              {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} sur {filtered.length} résultats
+              {(page - 1) * PAGE_SIZE + 1}â€“{Math.min(page * PAGE_SIZE, filtered.length)} sur {filtered.length} rÃ©sultats
             </span>
           )}
         </div>
@@ -203,7 +242,7 @@ export const Clients: React.FC = () => {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: '#f8fafc' }}>
-                {['Client', 'Type', 'Email', 'Téléphone', 'Statut', 'Scoring', 'Créé le', ''].map((h, i) => (
+                {['Client', 'Type', 'Email', 'TÃ©lÃ©phone', 'Statut', 'Scoring', 'CrÃ©Ã© le', ''].map((h, i) => (
                   <th key={i} style={{
                     padding: '12px 20px', textAlign: 'left', fontSize: 12,
                     fontWeight: 600, color: '#64748b', textTransform: 'uppercase',
@@ -216,9 +255,9 @@ export const Clients: React.FC = () => {
             </thead>
             <tbody>
               {isLoading ? (
-                <tr><td colSpan={7} style={{ padding: 40, textAlign: 'center', color: '#94a3b8', fontSize: 14 }}>Chargement...</td></tr>
+                <tr><td colSpan={8} style={{ padding: 40, textAlign: 'center', color: '#94a3b8', fontSize: 14 }}>Chargement...</td></tr>
               ) : paginated.length === 0 ? (
-                <tr><td colSpan={7} style={{ padding: 48, textAlign: 'center', color: '#94a3b8', fontSize: 14 }}>Aucun client trouvé.</td></tr>
+                <tr><td colSpan={8} style={{ padding: 48, textAlign: 'center', color: '#94a3b8', fontSize: 14 }}>Aucun client trouvÃ©.</td></tr>
               ) : paginated.map(client => (
                 <tr key={client.id} onClick={() => navigate(`/clients/${client.id}`)}
                   style={{ cursor: 'pointer', borderBottom: '1px solid #f1f5f9', background: '#fff', transition: 'background .15s' }}
@@ -241,9 +280,93 @@ export const Clients: React.FC = () => {
                   <td style={{ padding: '14px 20px' }}><ScoringBadge scoring={client.scoring} /></td>
                   <td style={{ padding: '14px 20px', fontSize: 13, color: '#94a3b8' }}>{client.createdAt}</td>
                   <td style={{ padding: '14px 20px' }} onClick={e => e.stopPropagation()}>
-                    <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 4 }}>
-                      <MoreHorizontal size={16} />
-                    </button>
+                    <div style={{ position: 'relative', display: 'inline-block' }} data-client-actions={client.id}>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setOpenActionsFor(prev => (prev === client.id ? null : client.id));
+                        }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: 4 }}
+                        aria-haspopup="menu"
+                        aria-expanded={openActionsFor === client.id}
+                        title="Actions"
+                      >
+                        <MoreHorizontal size={16} />
+                      </button>
+
+                      {openActionsFor === client.id && (
+                        <div
+                          onClick={e => e.stopPropagation()}
+                          style={{
+                            position: 'absolute',
+                            right: 0,
+                            top: 28,
+                            width: 180,
+                            background: '#fff',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: 12,
+                            boxShadow: '0 12px 30px rgba(15, 23, 42, 0.12)',
+                            overflow: 'hidden',
+                            zIndex: 20,
+                          }}
+                          role="menu"
+                        >
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenActionsFor(null);
+                              navigate(`/clients/${client.id}?edit=1`);
+                            }}
+                            style={{
+                              width: '100%',
+                              background: 'none',
+                              border: 'none',
+                              padding: '10px 12px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 8,
+                              cursor: 'pointer',
+                              fontSize: 13,
+                              color: '#0f172a',
+                            }}
+                            onMouseEnter={e => (e.currentTarget.style.background = '#f8fafc')}
+                            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                            role="menuitem"
+                          >
+                            <Edit2 size={14} color="#64748b" />
+                            Modifier
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenActionsFor(null);
+                              setClientToDelete(client);
+                            }}
+                            style={{
+                              width: '100%',
+                              background: 'none',
+                              border: 'none',
+                              padding: '10px 12px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 8,
+                              cursor: 'pointer',
+                              fontSize: 13,
+                              color: '#dc2626',
+                            }}
+                            onMouseEnter={e => (e.currentTarget.style.background = '#fef2f2')}
+                            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                            role="menuitem"
+                          >
+                            <Trash2 size={14} color="#dc2626" />
+                            Supprimer
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -285,6 +408,60 @@ export const Clients: React.FC = () => {
         </div>
       </div>
 
+      <Modal
+        isOpen={!!clientToDelete}
+        onClose={() => {
+          if (deleteMutation.isPending) return;
+          setClientToDelete(null);
+        }}
+        title="Confirmer la suppression"
+        size="sm"
+      >
+        <p style={{ fontSize: 14, color: '#475569', margin: 0, lineHeight: 1.5 }}>
+          Supprimer le client <span style={{ fontWeight: 700, color: '#0f172a' }}>{clientToDelete?.name}</span> ?
+          <br />
+          Cette action est irrÃ©versible.
+        </p>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, paddingTop: 18 }}>
+          <button
+            type="button"
+            onClick={() => setClientToDelete(null)}
+            disabled={deleteMutation.isPending}
+            style={{
+              padding: '9px 18px',
+              borderRadius: 8,
+              border: '1px solid #e2e8f0',
+              background: '#fff',
+              color: '#374151',
+              fontSize: 14,
+              fontWeight: 500,
+              cursor: 'pointer',
+              opacity: deleteMutation.isPending ? 0.7 : 1
+            }}
+          >
+            Annuler
+          </button>
+          <button
+            type="button"
+            onClick={() => clientToDelete && deleteMutation.mutate(clientToDelete.id)}
+            disabled={deleteMutation.isPending}
+            style={{
+              padding: '9px 18px',
+              borderRadius: 8,
+              border: 'none',
+              background: '#dc2626',
+              color: '#fff',
+              fontSize: 14,
+              fontWeight: 700,
+              cursor: 'pointer',
+              opacity: deleteMutation.isPending ? 0.7 : 1
+            }}
+          >
+            {deleteMutation.isPending ? 'Suppression...' : 'Supprimer'}
+          </button>
+        </div>
+      </Modal>
+
       <Modal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title="Ajouter un Client">
         <form style={{ display: 'flex', flexDirection: 'column', gap: 14 }} onSubmit={e => { e.preventDefault(); handleAddClient(); }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
@@ -302,7 +479,7 @@ export const Clients: React.FC = () => {
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <Inp label="Email" type="email" value={newClient.email || ''} onChange={v => setNewClient({ ...newClient, email: v })} required />
-            <Inp label="Téléphone" value={newClient.phone || ''} onChange={v => setNewClient({ ...newClient, phone: v })} required />
+            <Inp label="TÃ©lÃ©phone" value={newClient.phone || ''} onChange={v => setNewClient({ ...newClient, phone: v })} required />
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -310,7 +487,7 @@ export const Clients: React.FC = () => {
               <select value={newClient.devise || 'TND'} onChange={e => setNewClient({ ...newClient, devise: e.target.value })}
                 style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: '9px 12px', fontSize: 14, color: '#111827', outline: 'none', background: '#fff' }}>
                 <option value="TND">Dinar Tunisien (DT)</option>
-                <option value="EUR">Euro (€)</option>
+                <option value="EUR">Euro (â‚¬)</option>
                 <option value="USD">Dollar ($)</option>
               </select>
             </div>
@@ -318,23 +495,34 @@ export const Clients: React.FC = () => {
               <label style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>Scoring *</label>
               <select value={newClient.scoring || 'Moyen'} onChange={e => setNewClient({ ...newClient, scoring: e.target.value })}
                 style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: '9px 12px', fontSize: 14, color: '#111827', outline: 'none', background: '#fff' }}>
-                <option value="Hot 🔥">Hot 🔥</option>
+                <option value="Hot ðŸ”¥">Hot ðŸ”¥</option>
                 <option value="Moyen">Moyen</option>
                 <option value="Faible">Faible</option>
               </select>
             </div>
           </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <label style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>Statut *</label>
+            <select
+              value={(newClient.status || 'actif').toLowerCase()}
+              onChange={e => setNewClient({ ...newClient, status: e.target.value })}
+              style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: '9px 12px', fontSize: 14, color: '#111827', outline: 'none', background: '#fff' }}
+            >
+              <option value="actif">Actif</option>
+              <option value="inactif">Inactif</option>
+            </select>
+          </div>
           {newClient.type === 'Physique' ? (<>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <Inp label="Nom" value={newClient.name || ''} onChange={v => setNewClient({ ...newClient, name: v })} required />
-              <Inp label="Prénom" value={newClient.prenom || ''} onChange={v => setNewClient({ ...newClient, prenom: v })} required />
+              <Inp label="PrÃ©nom" value={newClient.prenom || ''} onChange={v => setNewClient({ ...newClient, prenom: v })} required />
             </div>
             <Inp label="Date de naissance" type="date" value={newClient.dateNaissance || ''} onChange={v => setNewClient({ ...newClient, dateNaissance: v })} required />
             <Inp label="CIN" value={newClient.cin || ''} onChange={v => setNewClient({ ...newClient, cin: v })} required />
           </>) : (<>
             <Inp label="Raison Sociale" value={newClient.raisonSociale || ''} onChange={v => setNewClient({ ...newClient, raisonSociale: v })} required />
             <Inp label="Matricule Fiscale" value={newClient.matriculeFiscale || ''} onChange={v => setNewClient({ ...newClient, matriculeFiscale: v })} />
-            <Inp label="Secteur d'activité" value={newClient.secteurActivite || ''} onChange={v => setNewClient({ ...newClient, secteurActivite: v })} />
+            <Inp label="Secteur d'activitÃ©" value={newClient.secteurActivite || ''} onChange={v => setNewClient({ ...newClient, secteurActivite: v })} />
           </>)}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, paddingTop: 8 }}>
             <button type="button" onClick={() => setIsAddModalOpen(false)}

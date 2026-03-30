@@ -14,6 +14,12 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    // Let the browser set multipart boundaries automatically.
+    if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
+      const headers: any = config.headers;
+      if (headers?.delete) headers.delete('Content-Type');
+      else if (headers) delete headers['Content-Type'];
+    }
     return config;
   },
   (error) => Promise.reject(error)
@@ -31,6 +37,26 @@ api.interceptors.response.use(
 );
 
 export default api;
+
+export const downloadPDF = async (url: string, filename: string, viewOnly = false) => {
+  const { data } = await api.get(url, { responseType: 'blob' });
+  const blob = new Blob([data], { type: 'application/pdf' });
+  const blobUrl = window.URL.createObjectURL(blob);
+  
+  if (viewOnly) {
+    window.open(blobUrl, '_blank');
+  } else {
+    const link = document.createElement('a');
+    link.href = blobUrl;
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  }
+  
+  // Clean up the URL after a small delay to ensure the browser has time to start the action
+  setTimeout(() => window.URL.revokeObjectURL(blobUrl), 100);
+};
 
 export type UIClient = {
   id: string;
@@ -62,6 +88,7 @@ export type UIProject = {
   budget: number;
   spent: number;
   progress: number;
+  isPinned?: boolean;
   startDate?: string;
   deadline?: string;
   description?: string;
@@ -119,6 +146,7 @@ const toUIProject = (item: any): UIProject => ({
   budget: Number(item.budget || 0),
   spent: Number(item.depense || 0),
   progress: Number(item.progression || 0),
+  isPinned: Boolean(item.isPinned),
   startDate: item.dateDebut || '',
   deadline: item.dateFin || '',
   description: item.description || '',
@@ -136,6 +164,7 @@ const toProjectPayload = (project: Partial<UIProject>) => ({
   budget: project.budget ?? 0,
   depense: project.spent ?? 0,
   progression: project.progress ?? 0,
+  isPinned: project.isPinned ?? false,
   dateDebut: project.startDate || null,
   dateFin: project.deadline || null,
   scoring: project.scoring || 'Moyen',
@@ -220,9 +249,59 @@ export const projectCahierAPI = {
   upsert: async (projectId: string, payload: any) => (await api.put(`/projets/${projectId}/cahier`, payload)).data,
 };
 
+export type UIProjetMilestone = {
+  id: number;
+  projetID: number;
+  title: string;
+  description?: string | null;
+  dueDate?: string | null;
+  status: 'open' | 'done' | string;
+  completedAt?: string | null;
+  createdAt?: string;
+};
+
+const toUIMilestone = (item: any): UIProjetMilestone => ({
+  id: Number(item.id),
+  projetID: Number(item.projetID),
+  title: item.title || '',
+  description: item.description ?? null,
+  dueDate: item.dueDate ? String(item.dueDate) : null,
+  status: item.status || 'open',
+  completedAt: item.completedAt ? String(item.completedAt) : null,
+  createdAt: item.createdAt ? String(item.createdAt) : '',
+});
+
+const toMilestonePayload = (item: Partial<UIProjetMilestone>) => ({
+  title: item.title,
+  description: item.description ?? null,
+  dueDate: item.dueDate ? new Date(item.dueDate).toISOString() : null,
+  status: item.status ?? undefined,
+  completedAt: item.completedAt ? new Date(item.completedAt).toISOString() : undefined,
+});
+
+export const milestonesAPI = {
+  list: async (projectId: string): Promise<UIProjetMilestone[]> => {
+    const { data } = await api.get(`/projets/${projectId}/milestones`);
+    return data.map(toUIMilestone);
+  },
+  create: async (projectId: string, payload: Partial<UIProjetMilestone>): Promise<UIProjetMilestone> => {
+    const { data } = await api.post(`/projets/${projectId}/milestones`, toMilestonePayload(payload));
+    return toUIMilestone(data);
+  },
+  update: async (projectId: string, milestoneId: number, payload: Partial<UIProjetMilestone>): Promise<UIProjetMilestone> => {
+    const { data } = await api.put(`/projets/${projectId}/milestones/${milestoneId}`, toMilestonePayload(payload));
+    return toUIMilestone(data);
+  },
+  delete: (projectId: string, milestoneId: number) => api.delete(`/projets/${projectId}/milestones/${milestoneId}`),
+};
+
 export type UIRappel = {
   id: number;
   clientID: number;
+  projetID?: number;
+  devisID?: number;
+  factureID?: number;
+  milestoneID?: number;
   titre: string;
   typeRappel?: string;
   description?: string;
@@ -230,6 +309,9 @@ export type UIRappel = {
   statut: string;
   priorite: string;
   createdAt?: string;
+  systemKey?: string | null;
+  emailSentAt?: string | null;
+  emailLastError?: string | null;
 };
 
 export type UICahier = {
@@ -247,11 +329,18 @@ export type UICahier = {
   contraintes?: string;
   delais?: string;
   budgetTexte?: string;
+  userStories?: string;
+  reglesMetier?: string;
+  documentsReference?: string;
 };
 
 const toUIRappel = (item: any): UIRappel => ({
   id: Number(item.id),
   clientID: Number(item.clientID),
+  projetID: item.projetID != null ? Number(item.projetID) : undefined,
+  devisID: item.devisID != null ? Number(item.devisID) : undefined,
+  factureID: item.factureID != null ? Number(item.factureID) : undefined,
+  milestoneID: item.milestoneID != null ? Number(item.milestoneID) : undefined,
   titre: item.titre || 'Rappel',
   typeRappel: item.typeRappel || '',
   description: item.message || '',
@@ -259,10 +348,17 @@ const toUIRappel = (item: any): UIRappel => ({
   statut: item.statut || 'en_attente',
   priorite: item.priorite || 'moyenne',
   createdAt: item.createdAt ? String(item.createdAt).slice(0, 10) : '',
+  systemKey: item.systemKey ?? null,
+  emailSentAt: item.emailSentAt ? String(item.emailSentAt) : null,
+  emailLastError: item.emailLastError ?? null,
 });
 
 const toRappelPayload = (item: Partial<UIRappel>) => ({
-  clientID: Number(item.clientID),
+  clientID: item.clientID != null ? Number(item.clientID) : undefined,
+  projetID: item.projetID != null ? Number(item.projetID) : undefined,
+  devisID: item.devisID != null ? Number(item.devisID) : undefined,
+  factureID: item.factureID != null ? Number(item.factureID) : undefined,
+  milestoneID: item.milestoneID != null ? Number(item.milestoneID) : undefined,
   titre: item.titre || 'Rappel',
   typeRappel: item.typeRappel || null,
   dateRappel: item.dateLimite ? new Date(item.dateLimite).toISOString() : null,
@@ -286,6 +382,9 @@ const toUICahier = (item: any): UICahier => ({
   contraintes: item.contraintes || '',
   delais: item.delais || '',
   budgetTexte: item.budgetTexte || '',
+  userStories: item.userStories || '',
+  reglesMetier: item.reglesMetier || '',
+  documentsReference: item.documentsReference || '',
 });
 
 const toCahierPayload = (item: Partial<UICahier>) => ({
@@ -302,13 +401,22 @@ const toCahierPayload = (item: Partial<UICahier>) => ({
   contraintes: item.contraintes || null,
   delais: item.delais || null,
   budgetTexte: item.budgetTexte || null,
+  userStories: item.userStories || null,
+  reglesMetier: item.reglesMetier || null,
+  documentsReference: item.documentsReference || null,
 });
 
 export const rappelsAPI = {
-  getAll: async (): Promise<UIRappel[]> => {
-    const { data } = await api.get('/rappels');
+  getAll: async (filters?: { projetID?: number | string; clientID?: number | string; statut?: string; source?: 'system' | 'manual' }): Promise<UIRappel[]> => {
+    const params: any = {};
+    if (filters?.projetID != null) params.projetID = filters.projetID;
+    if (filters?.clientID != null) params.clientID = filters.clientID;
+    if (filters?.statut) params.statut = filters.statut;
+    if (filters?.source) params.source = filters.source;
+    const { data } = await api.get('/rappels', { params });
     return data.map(toUIRappel);
   },
+  generate: () => api.post('/rappels/generate'),
   getById: async (id: number): Promise<UIRappel> => {
     const { data } = await api.get(`/rappels/${id}`);
     return toUIRappel(data);
@@ -342,6 +450,18 @@ export const cahierAPI = {
     return toUICahier(data);
   },
   delete: (id: number) => api.delete(`/cahier-de-charge/${id}`),
+  exportPDF: async (id: number) => {
+    const response = await api.get(`/cahier-de-charge/${id}/pdf`, {
+      responseType: 'blob',
+    });
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `cahier_${id}.pdf`);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  },
 };
 
 export type UIService = {
@@ -694,6 +814,8 @@ export const devisAPI = {
     return toUIDevis(res);
   },
   delete: (id: string) => api.delete(`/devis/${id}`),
+  exportPDF: (id: number, filename: string, viewOnly = false) => 
+    downloadPDF(`/devis/${id}/pdf`, filename, viewOnly),
 };
 
 export const facturesAPI = {
@@ -714,6 +836,8 @@ export const facturesAPI = {
     return toUIFacture(res);
   },
   delete: (id: string) => api.delete(`/factures/${id}`),
+  exportPDF: (id: number, filename: string, viewOnly = false) => 
+    downloadPDF(`/factures/${id}/pdf`, filename, viewOnly),
 };
 
 export const contratsAPI = {
@@ -734,4 +858,63 @@ export const contratsAPI = {
     return toUIContrat(res);
   },
   delete: (id: string) => api.delete(`/contrats/${id}`),
+  exportPDF: (id: number, filename: string, viewOnly = false) => 
+    downloadPDF(`/contrats/${id}/pdf`, filename, viewOnly),
+};
+
+// ─── Chat ────────────────────────────────────────────────────────────────────
+
+export type UIChatMessage = {
+  id: number;
+  expediteurID: number;
+  destinataireID: number;
+  contenu: string;
+  type?: 'text' | 'audio';
+  mediaUrl?: string | null;
+  mediaMimeType?: string | null;
+  mediaDurationSec?: number | null;
+  lu: boolean;
+  createdAt: string;
+};
+
+export type UIContact = {
+  userID: number;
+  nom: string;
+  role: string;
+  lastMessage: string | null;
+  lastMessageTime: string | null;
+  unreadCount: number;
+};
+
+export const chatAPI = {
+  getContacts: async (): Promise<UIContact[]> => {
+    const { data } = await api.get('/messages/contacts');
+    return data;
+  },
+  getConversation: async (userId: number): Promise<UIChatMessage[]> => {
+    const { data } = await api.get(`/messages/conversation/${userId}`);
+    return data;
+  },
+  deleteConversation: async (userId: number): Promise<void> => {
+    await api.delete(`/messages/conversation/${userId}`);
+  },
+  sendMessage: async (destinataireID: number, contenu: string): Promise<UIChatMessage> => {
+    const { data } = await api.post('/messages', { destinataireID, contenu });
+    return data;
+  },
+  sendAudioMessage: async (
+    destinataireID: number,
+    audio: Blob,
+    durationSec?: number
+  ): Promise<UIChatMessage> => {
+    const form = new FormData();
+    form.append('destinataireID', String(destinataireID));
+    form.append('file', audio, 'voice.webm');
+    if (durationSec != null) form.append('durationSec', String(durationSec));
+    const { data } = await api.post('/messages/audio', form);
+    return data;
+  },
+  markRead: async (messageId: number): Promise<void> => {
+    await api.put(`/messages/${messageId}/read`);
+  },
 };

@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { AlertCircle, Eye, FileText, Plus, Trash2, Search, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ChevronUp, Pencil } from 'lucide-react';
+import { AlertCircle, Eye, FileText, Plus, Trash2, Search, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ChevronUp, Pencil, Download } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Modal } from '../components/ui/Modal';
@@ -277,24 +277,8 @@ export const Contrats: React.FC = () => {
     }
   };
 
-  const imprimerContrat = (contrat: UIContrat) => {
-    const win = window.open('', '_blank');
-    if (!win) return;
-    win.document.write(`
-      <html><head><title>${contrat.id}</title>
-      <style>body{font-family:Arial,sans-serif;padding:40px;color:#111} h1{color:#4f46e5} .row{display:flex;gap:40px;margin:12px 0} .label{color:#666;font-size:13px} .value{font-weight:600}</style>
-      </head><body>
-      <h1>Contrat — ${contrat.id}</h1>
-      <div class="row"><div><div class="label">Client</div><div class="value">${contrat.clientName}</div></div><div><div class="label">Titre</div><div class="value">${contrat.titre}</div></div></div>
-      <div class="row"><div><div class="label">Type</div><div class="value">${contrat.type}</div></div><div><div class="label">Valeur</div><div class="value">${Number(contrat.value).toLocaleString('fr-FR')} ${contrat.devise === 'EUR' ? '€' : contrat.devise === 'USD' ? '$' : 'DT'}</div></div></div>
-      <div class="row"><div><div class="label">Date début</div><div class="value">${contrat.dateDebut}</div></div><div><div class="label">Date fin</div><div class="value">${contrat.dateFin}</div></div></div>
-      ${contrat.objet ? `<p><span class="label">Objet:</span> ${contrat.objet}</p>` : ''}
-      ${contrat.obligations ? `<p><span class="label">Obligations:</span> ${contrat.obligations}</p>` : ''}
-      ${contrat.conditions ? `<p><span class="label">Conditions:</span> ${contrat.conditions}</p>` : ''}
-      </body></html>
-    `);
-    win.document.close();
-    win.onload = () => win.print();
+  const telecharger = (contrat: UIContrat, viewOnly = false) => {
+    contratsAPI.exportPDF(contrat.numericId, `${contrat.id}.pdf`, viewOnly);
   };
 
   const expirantCount = useMemo(
@@ -437,29 +421,20 @@ export const Contrats: React.FC = () => {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-1">
-                      {/* Voir */}
+                      {/* Visualiser */}
                       <button
-                        onClick={() => { setContratSelectionne(contrat); setModalVoirOuvert(true); }}
-                        className="p-1.5 rounded-lg hover:bg-indigo-50 text-indigo-500 hover:text-indigo-700 transition-colors"
-                        title="Voir"
+                        onClick={() => telecharger(contrat, true)}
+                        className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+                        title="Visualiser"
                       >
                         <Eye className="w-4 h-4" />
                       </button>
-                      {/* Modifier */}
                       <button
-                        onClick={() => ouvrirModification(contrat)}
+                        onClick={() => telecharger(contrat)}
                         className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
-                        title="Modifier"
+                        title="Télécharger PDF"
                       >
-                        <Pencil className="w-4 h-4" />
-                      </button>
-                      {/* Imprimer */}
-                      <button
-                        onClick={() => imprimerContrat(contrat)}
-                        className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
-                        title="Imprimer"
-                      >
-                        <FileText className="w-4 h-4" />
+                        <Download className="w-4 h-4" />
                       </button>
                       {/* Supprimer */}
                       <button
@@ -558,9 +533,13 @@ export const Contrats: React.FC = () => {
             )}
 
             <div className="flex justify-end gap-3 pt-2">
-              <button onClick={() => imprimerContrat(contratSelectionne)} className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-                <FileText className="w-4 h-4" />
-                Imprimer
+              <button onClick={() => telecharger(contratSelectionne, true)} className="flex items-center gap-2 px-4 py-2 rounded-lg border border-indigo-200 text-sm font-medium text-indigo-600 hover:bg-indigo-50 transition-colors">
+                <Eye className="w-4 h-4" />
+                Visualiser
+              </button>
+              <button onClick={() => telecharger(contratSelectionne)} className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                <Download className="w-4 h-4" />
+                Télécharger PDF
               </button>
               <button onClick={() => { setModalVoirOuvert(false); ouvrirModification(contratSelectionne); }} className="flex items-center gap-2 px-4 py-2 rounded-lg border border-indigo-200 text-sm font-medium text-indigo-600 hover:bg-indigo-50 transition-colors">
                 <Pencil className="w-4 h-4" />

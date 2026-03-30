@@ -1,8 +1,12 @@
+from pathlib import Path
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from sqlalchemy.engine import URL
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    _BACKEND_ENV = Path(__file__).resolve().parents[2] / ".env"
+    model_config = SettingsConfigDict(env_file=(str(_BACKEND_ENV), ".env"), env_file_encoding="utf-8", extra="ignore")
 
     APP_NAME: str = "CRM Professional API"
     API_V1_PREFIX: str = "/api/v1"
@@ -14,12 +18,30 @@ class Settings(BaseSettings):
     POSTGRES_PORT: int = 5432
     POSTGRES_DB: str = "crmDb"
 
+    # SMTP (optional)
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM: str = ""
+    SMTP_TLS: bool = True
+    SMTP_SSL: bool = False
+
+    # Reminder scheduler
+    ENABLE_REMINDER_SCHEDULER: bool = True
+
     @property
     def DATABASE_URL(self) -> str:
-        return (
-            f"postgresql+psycopg2://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
-            f"@{self.POSTGRES_HOST}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
+        # Use SQLAlchemy URL builder to properly escape credentials (accents/special chars).
+        url = URL.create(
+            drivername="postgresql+psycopg2",
+            username=self.POSTGRES_USER,
+            password=self.POSTGRES_PASSWORD,
+            host=self.POSTGRES_HOST,
+            port=self.POSTGRES_PORT,
+            database=self.POSTGRES_DB,
         )
+        return url.render_as_string(hide_password=False)
 
     @property
     def cors_origins(self) -> list[str]:

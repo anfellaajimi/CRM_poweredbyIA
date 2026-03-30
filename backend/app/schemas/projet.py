@@ -14,6 +14,7 @@ class ProjetBase(BaseModel):
     depense: float = 0
     progression: int = 0
     scoring: str = "Moyen"
+    isPinned: bool = False
     dateDebut: date | None = None
     dateFin: date | None = None
 
@@ -46,6 +47,7 @@ class ProjetUpdate(BaseModel):
     depense: float | None = None
     progression: int | None = None
     scoring: str | None = None
+    isPinned: bool | None = None
     dateDebut: date | None = None
     dateFin: date | None = None
     dateMaj: datetime | None = None

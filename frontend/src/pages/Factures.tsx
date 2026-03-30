@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Download, Plus, Calendar, Search, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, DollarSign, ChevronUp } from 'lucide-react';
+import { Download, Plus, Calendar, Search, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, DollarSign, ChevronUp, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Modal } from '../components/ui/Modal';
@@ -182,16 +182,8 @@ export const Factures: React.FC = () => {
   const totalPages = Math.max(1, Math.ceil(facturesFiltrees.length / parPage));
   const facturesPage = facturesFiltrees.slice((page - 1) * parPage, page * parPage);
 
-  const telecharger = (facture: UIFacture) => {
-    const symbole = facture.devise === 'EUR' ? '€' : facture.devise === 'USD' ? '$' : 'DT';
-    const contenu = `FACTURE ${facture.id}\nClient: ${facture.clientName}\nMontant: ${facture.amount} ${symbole}\nStatut: ${obtenirLibelleStatut(facture.status)}`;
-    const blob = new Blob([contenu], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${facture.id}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const telecharger = (facture: UIFacture, viewOnly = false) => {
+    facturesAPI.exportPDF(facture.numericId, `${facture.id}.pdf`, viewOnly);
   };
 
   const creerFacture = () => {
@@ -343,6 +335,13 @@ export const Factures: React.FC = () => {
                   <td className="px-4 py-3 text-gray-600">{facture.dueAt}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-2">
+                      <button
+                        onClick={() => telecharger(facture, true)}
+                        className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+                        title="Visualiser"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
                       <button
                         onClick={() => telecharger(facture)}
                         className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"

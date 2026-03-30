@@ -1,4 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import StreamingResponse
+import io
+from fpdf import FPDF
 from sqlalchemy.orm import Session
 
 from app.api.v1.endpoints._activity import log_activity
@@ -74,6 +77,58 @@ def update_cahier(cahier_id: int, payload: CahierDeChargeUpdate, db: Session = D
     db.commit()
     db.refresh(item)
     return item
+
+
+@router.get("/{cahier_id}/pdf")
+def export_cahier_pdf(cahier_id: int, db: Session = Depends(get_db)):
+    item = db.get(CahierDeCharge, cahier_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="CahierDeCharge not found")
+
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("helvetica", "B", 16)
+    pdf.cell(0, 10, f"Cahier des Charges - {item.objet}", border=False, ln=True, align="C")
+    pdf.ln(5)
+
+    pdf.set_font("helvetica", "B", 12)
+    pdf.cell(0, 10, f"Projet: {item.projet.nomProjet}", ln=True)
+    pdf.set_font("helvetica", "", 10)
+    pdf.cell(0, 10, f"Version: {item.version}", ln=True)
+    pdf.ln(5)
+
+    sections = [
+        ("Description", item.description),
+        ("Objectif", item.objectif),
+        ("P\u00e9rim\u00e8tre", item.perimetre),
+        ("Fonctionnalit\u00e9s", item.fonctionnalites),
+        ("Contraintes", item.contraintes),
+        ("User Stories", item.userStories),
+        ("R\u00e8gles M\u00e9tier", item.reglesMetier),
+        ("Documents de R\u00e9f\u00e9rence", item.documentsReference),
+    ]
+
+    for title, content in sections:
+        if content:
+            pdf.set_font("helvetica", "B", 12)
+            pdf.cell(0, 10, title, ln=True)
+            pdf.set_font("helvetica", "", 10)
+            # Try to write as HTML if it looks like HTML, else multi_cell
+            if "<" in content and ">" in content:
+                try:
+                    pdf.write_html(content)
+                except:
+                    pdf.multi_cell(0, 5, content)
+            else:
+                pdf.multi_cell(0, 5, content)
+            pdf.ln(5)
+
+    pdf_bytes = pdf.output()
+    return StreamingResponse(
+        io.BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=cahier_{cahier_id}.pdf"},
+    )
 
 
 @router.delete("/{cahier_id}", status_code=status.HTTP_204_NO_CONTENT)

@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Building2, Calendar, Mail, Phone, Trash2, Edit2, Briefcase } from 'lucide-react';
 import { toast } from 'sonner';
@@ -94,6 +94,8 @@ const TABS = ['Vue générale', 'Projets'];
 export const ClientDetails: React.FC = () => {
   const { id = '' } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const edit = searchParams.get('edit');
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState('Vue générale');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -104,6 +106,17 @@ export const ClientDetails: React.FC = () => {
   });
 
   const { data: allProjects = [] } = useQuery({ queryKey: ['projects'], queryFn: projectsAPI.getAll });
+
+  useEffect(() => {
+    if (edit !== '1') return;
+    if (!client) return;
+    setEditClient(client);
+    setIsEditModalOpen(true);
+    setSearchParams(prev => {
+      prev.delete('edit');
+      return prev;
+    }, { replace: true });
+  }, [client, edit, setSearchParams]);
 
   const updateMutation = useMutation({
     mutationFn: (payload: Partial<UIClient>) => clientsAPI.update(id, payload),

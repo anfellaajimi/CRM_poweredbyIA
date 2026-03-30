@@ -11,10 +11,16 @@ from app.db.session import get_db
 from app.models.cahier_de_charge import CahierDeCharge
 from app.models.projet import Projet
 from app.models.projet_file import ProjetFile
+from app.models.projet_milestone import ProjetMilestone
 from app.models.projet_note import ProjetNote
 from app.models.utilisateur import Utilisateur
 from app.schemas.cahier_de_charge import CahierDeChargeRead, CahierDeChargeUpdate
 from app.schemas.projet_file import ProjetFileRead
+from app.schemas.projet_milestone import (
+    ProjetMilestoneCreate,
+    ProjetMilestoneRead,
+    ProjetMilestoneUpdate,
+)
 from app.schemas.projet_note import ProjetNoteCreate, ProjetNoteRead
 from app.schemas.utilisateur import UtilisateurRead
 
@@ -236,3 +242,97 @@ def upsert_project_cahier(projet_id: int, payload: CahierDeChargeUpdate, db: Ses
     db.commit()
     db.refresh(item)
     return item
+
+
+# --- Milestones ---
+
+@router.get("/{projet_id}/milestones", response_model=list[ProjetMilestoneRead])
+def list_milestones(projet_id: int, db: Session = Depends(get_db)):
+    _get_project_or_404(db, projet_id)
+    return (
+        db.query(ProjetMilestone)
+        .filter(ProjetMilestone.projetID == projet_id)
+        .order_by(ProjetMilestone.dueDate.asc().nullslast(), ProjetMilestone.id.desc())
+        .all()
+    )
+
+
+@router.post("/{projet_id}/milestones", response_model=ProjetMilestoneRead, status_code=status.HTTP_201_CREATED)
+def create_milestone(projet_id: int, payload: ProjetMilestoneCreate, db: Session = Depends(get_db)):
+    projet = _get_project_or_404(db, projet_id)
+    item = ProjetMilestone(
+        projetID=projet_id,
+        title=payload.title,
+        description=payload.description,
+        dueDate=payload.dueDate,
+        status="open",
+    )
+    db.add(item)
+    projet.dateMaj = datetime.utcnow()
+    log_activity(
+        db,
+        entity_type="milestone",
+        entity_id=projet.id,
+        action="create",
+        message=f"Milestone created for project {projet.nomProjet}",
+    )
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+@router.put("/{projet_id}/milestones/{milestone_id}", response_model=ProjetMilestoneRead)
+def update_milestone(
+    projet_id: int,
+    milestone_id: int,
+    payload: ProjetMilestoneUpdate,
+    db: Session = Depends(get_db),
+):
+    projet = _get_project_or_404(db, projet_id)
+    item = db.get(ProjetMilestone, milestone_id)
+    if not item or item.projetID != projet_id:
+        raise HTTPException(status_code=404, detail="Milestone not found")
+
+    data = payload.model_dump(exclude_unset=True)
+    if "status" in data:
+        status_val = (data.get("status") or "").lower()
+        if status_val in {"done", "termine", "terminÃ©"}:
+            data["status"] = "done"
+            data.setdefault("completedAt", datetime.utcnow())
+        elif status_val in {"open", "todo", "en_attente"}:
+            data["status"] = "open"
+            data["completedAt"] = None
+
+    for k, v in data.items():
+        setattr(item, k, v)
+
+    projet.dateMaj = datetime.utcnow()
+    log_activity(
+        db,
+        entity_type="milestone",
+        entity_id=projet.id,
+        action="update",
+        message=f"Milestone {item.id} updated for project {projet.nomProjet}",
+    )
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+@router.delete("/{projet_id}/milestones/{milestone_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_milestone(projet_id: int, milestone_id: int, db: Session = Depends(get_db)):
+    projet = _get_project_or_404(db, projet_id)
+    item = db.get(ProjetMilestone, milestone_id)
+    if not item or item.projetID != projet_id:
+        raise HTTPException(status_code=404, detail="Milestone not found")
+    db.delete(item)
+    projet.dateMaj = datetime.utcnow()
+    log_activity(
+        db,
+        entity_type="milestone",
+        entity_id=projet.id,
+        action="delete",
+        message=f"Milestone deleted for project {projet.nomProjet}",
+    )
+    db.commit()
+    return None

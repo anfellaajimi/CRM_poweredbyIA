@@ -16,6 +16,7 @@ from app.api.v1.endpoints.rappels import router as rappels_router
 from app.api.v1.endpoints.ressources import router as ressources_router
 from app.api.v1.endpoints.services import router as services_router
 from app.api.v1.endpoints.utilisateurs import router as utilisateurs_router
+from app.api.v1.endpoints.messages import router as messages_router
 
 api_router = APIRouter()
 api_router.include_router(health_router)
@@ -34,3 +35,4 @@ api_router.include_router(devis_router)
 api_router.include_router(factures_router)
 api_router.include_router(contrats_router)
 api_router.include_router(cahier_router)
+api_router.include_router(messages_router)

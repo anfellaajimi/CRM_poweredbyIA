@@ -12,7 +12,8 @@ import {
   Bell,
   Settings,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  MessageSquare
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { useSidebarStore } from '../store/sidebarStore';
@@ -27,6 +28,7 @@ const menuItems = [
   { icon: ClipboardList, label: 'Cahier de Charge', path: '/cahier-de-charge' },
   { icon: Activity, label: 'AI Monitoring', path: '/ai-monitoring' },
   { icon: Bell, label: 'Rappels', path: '/rappels' },
+  { icon: MessageSquare, label: 'Chat', path: '/chat' },
   { icon: Settings, label: 'Users', path: '/users' }
 ];
 

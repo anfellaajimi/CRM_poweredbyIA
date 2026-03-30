@@ -1,4 +1,5 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Edit, Plus, Power, Trash2, Search, ChevronDown, Users as UsersIcon, Activity } from 'lucide-react';
 import { toast } from 'sonner';
@@ -33,6 +34,8 @@ const obtenirCouleurAvatar = (nom: string) => {
 export const Users: React.FC = () => {
   const { user: utilisateurCourant } = useAuthStore();
   const qc = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const editId = searchParams.get('edit');
   const [modalModifierOuvert, setModalModifierOuvert] = useState(false);
   const [modalCreerOuvert, setModalCreerOuvert] = useState(false);
   const [utilisateurSelectionne, setUtilisateurSelectionne] = useState<UIUser | null>(null);
@@ -46,6 +49,20 @@ export const Users: React.FC = () => {
   });
 
   const { data: utilisateurs = [] } = useQuery({ queryKey: ['users'], queryFn: usersAPI.getAll });
+
+  useEffect(() => {
+    if (!editId) return;
+
+    const u = utilisateurs.find(x => String(x.id) === String(editId));
+    if (!u) return;
+
+    setUtilisateurSelectionne({ ...u });
+    setModalModifierOuvert(true);
+    setSearchParams(prev => {
+      prev.delete('edit');
+      return prev;
+    }, { replace: true });
+  }, [editId, setSearchParams, utilisateurs]);
 
   const mutationCreer = useMutation({
     mutationFn: usersAPI.create,

@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import desc
 from sqlalchemy.orm import Session
 
 from app.api.v1.endpoints._activity import log_activity
@@ -14,7 +15,7 @@ router = APIRouter(prefix="/projets", tags=["Projets"])
 
 @router.get("", response_model=list[ProjetRead])
 def list_projets(db: Session = Depends(get_db)):
-    return db.query(Projet).order_by(Projet.id.desc()).all()
+    return db.query(Projet).order_by(desc(Projet.isPinned), Projet.id.desc()).all()
 
 
 @router.get("/{projet_id}", response_model=ProjetRead)

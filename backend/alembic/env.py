@@ -4,6 +4,7 @@ import getpass
 from alembic import context
 from sqlalchemy import create_engine, engine_from_config, pool
 from sqlalchemy.exc import OperationalError
+from sqlalchemy.engine import URL
 
 from app.core.config import settings
 from app.db.base_class import Base
@@ -59,9 +60,13 @@ def run_migrations_online() -> None:
             "Set POSTGRES_PASSWORD in backend/.env and rerun `alembic upgrade head`."
         ) from exc
 
-    retry_url = (
-        f"postgresql+psycopg2://{settings.POSTGRES_USER}:{password}"
-        f"@{settings.POSTGRES_HOST}:{settings.POSTGRES_PORT}/{settings.POSTGRES_DB}"
+    retry_url = URL.create(
+        drivername="postgresql+psycopg2",
+        username=settings.POSTGRES_USER,
+        password=password,
+        host=settings.POSTGRES_HOST,
+        port=settings.POSTGRES_PORT,
+        database=settings.POSTGRES_DB,
     )
     retry_engine = create_engine(retry_url, poolclass=pool.NullPool)
 

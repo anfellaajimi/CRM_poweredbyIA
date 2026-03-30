@@ -1,4 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import StreamingResponse
+import io
+from fpdf import FPDF
 from sqlalchemy.orm import Session
 
 from app.api.v1.endpoints._activity import log_activity
@@ -119,3 +122,79 @@ def delete_devis(devis_id: int, db: Session = Depends(get_db)):
     db.delete(item)
     db.commit()
     return None
+
+
+@router.get("/{devis_id}/pdf")
+def export_devis_pdf(devis_id: int, db: Session = Depends(get_db)):
+    item = db.get(Devis, devis_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="Devis not found")
+
+    pdf = FPDF()
+    pdf.add_page()
+
+    # Header
+    pdf.set_font("helvetica", "B", 20)
+    pdf.set_text_color(79, 70, 229)  # Indigo-600
+    pdf.cell(0, 10, "DEVIS", ln=True, align="R")
+    pdf.set_font("helvetica", "", 10)
+    pdf.set_text_color(107, 114, 128)  # Gray-500
+    pdf.cell(0, 5, f"Référence: DEV-{item.devisID}", ln=True, align="R")
+    pdf.cell(0, 5, f"Date: {item.dateDevis.strftime('%d/%m/%Y')}", ln=True, align="R")
+    if item.validUntil:
+        pdf.cell(0, 5, f"Valide jusqu'au: {item.validUntil.strftime('%d/%m/%Y')}", ln=True, align="R")
+    pdf.ln(10)
+
+    # Client Info
+    pdf.set_font("helvetica", "B", 12)
+    pdf.set_text_color(31, 41, 55)  # Gray-800
+    pdf.cell(0, 7, "Client:", ln=True)
+    pdf.set_font("helvetica", "", 12)
+    pdf.cell(0, 7, item.client.nom, ln=True)
+    if item.client.email:
+        pdf.cell(0, 7, item.client.email, ln=True)
+    pdf.ln(10)
+
+    # Title
+    pdf.set_font("helvetica", "B", 14)
+    pdf.cell(0, 10, item.notes or "Détail des prestations", ln=True)
+    pdf.ln(5)
+
+    # Table Header
+    pdf.set_fill_color(243, 244, 246)  # Gray-100
+    pdf.set_font("helvetica", "B", 10)
+    pdf.cell(110, 10, "Description", border=1, fill=True)
+    pdf.cell(20, 10, "Qté", border=1, fill=True, align="C")
+    pdf.cell(30, 10, "Prix Unitaire", border=1, fill=True, align="R")
+    pdf.cell(30, 10, "Total", border=1, fill=True, align="R")
+    pdf.ln()
+
+    # Table Body
+    pdf.set_font("helvetica", "", 10)
+    devise = item.client.devise or "DT"
+    for line in item.items:
+        # Multi-cell for description to handle wrapping
+        x = pdf.get_x()
+        y = pdf.get_y()
+        pdf.multi_cell(110, 10, line.description, border=1)
+        new_y = pdf.get_y()
+        # Move back to top-right of the multi-cell to draw other cells
+        pdf.set_xy(x + 110, y)
+        height = new_y - y
+        pdf.cell(20, height, str(line.quantity), border=1, align="C")
+        pdf.cell(30, height, f"{line.unitPrice:,.2f}", border=1, align="R")
+        pdf.cell(30, height, f"{line.lineTotal:,.2f}", border=1, align="R")
+        pdf.ln()
+
+    # Totals
+    pdf.ln(5)
+    pdf.set_font("helvetica", "B", 12)
+    pdf.cell(160, 10, "TOTAL HT", border=0, align="R")
+    pdf.cell(30, 10, f"{item.totalAmount:,.2f} {devise}", border=0, align="R")
+
+    pdf_bytes = pdf.output()
+    return StreamingResponse(
+        io.BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"inline; filename=devis_{item.devisID}.pdf"},
+    )

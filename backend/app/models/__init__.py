@@ -10,6 +10,7 @@ from app.models.facture import Facture
 from app.models.facture_item import FactureItem
 from app.models.monitoring import AIMonitoring
 from app.models.projet_file import ProjetFile
+from app.models.projet_milestone import ProjetMilestone
 from app.models.projet_note import ProjetNote
 from app.models.projet import Projet
 from app.models.rappel import Rappel
@@ -17,6 +18,7 @@ from app.models.ressource import Ressource
 from app.models.service import Service
 from app.models.user import User
 from app.models.utilisateur import Utilisateur
+from app.models.message import Message
 
 __all__ = [
     "User",
@@ -35,9 +37,11 @@ __all__ = [
     "FactureItem",
     "ProjetNote",
     "ProjetFile",
+    "ProjetMilestone",
     "Contrat",
     "CahierDeCharge",
     "ProjetUtilisateur",
     "DevisProjet",
     "FactureProjet",
+    "Message",
 ]

@@ -28,6 +28,7 @@ import { Security } from '../pages/Security';
 import { Settings } from '../pages/Settings';
 import { Billing } from '../pages/Billing';
 import { Support } from '../pages/Support';
+import { Chat } from '../pages/Chat';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -83,6 +84,7 @@ export default function App() {
             <Route path="/settings" element={<Settings />} />
             <Route path="/billing" element={<Billing />} />
             <Route path="/support" element={<Support />} />
+            <Route path="/chat" element={<Chat />} />
           </Route>
 
           <Route path="/404" element={<NotFound />} />

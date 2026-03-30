@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { LayoutGrid, List, Plus } from 'lucide-react';
+import { LayoutGrid, List, Pin, PinOff, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Badge } from '../components/ui/Badge';
@@ -66,14 +66,28 @@ export const Projects: React.FC = () => {
     },
   });
 
+  const pinMutation = useMutation({
+    mutationFn: (project: UIProject) =>
+      projectsAPI.update(project.id, { ...project, isPinned: !project.isPinned }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      toast.success('Projet mis à jour');
+    },
+    onError: (err: any) => toast.error(`Erreur: ${err?.response?.data?.detail ?? err?.message}`),
+  });
+
+  const sortedProjects = useMemo(() => {
+    return [...projects].sort((a, b) => Number(Boolean(b.isPinned)) - Number(Boolean(a.isPinned)));
+  }, [projects]);
+
   const projectsByStatus = useMemo(
     () => ({
-      Planification: projects.filter((p) => p.status === 'planification'),
-      'En cours': projects.filter((p) => p.status === 'en_cours' || p.status === 'In Progress'),
-      'Terminé': projects.filter((p) => p.status === 'termine' || p.status === 'Completed'),
-      'En attente': projects.filter((p) => p.status === 'en_attente' || p.status === 'On Hold'),
+      Planification: sortedProjects.filter((p) => p.status === 'planification'),
+      'En cours': sortedProjects.filter((p) => p.status === 'en_cours' || p.status === 'In Progress'),
+      'Terminé': sortedProjects.filter((p) => p.status === 'termine' || p.status === 'Completed'),
+      'En attente': sortedProjects.filter((p) => p.status === 'en_attente' || p.status === 'On Hold'),
     }),
-    [projects]
+    [sortedProjects]
   );
 
   const handleAddProject = () => {
@@ -98,7 +112,7 @@ export const Projects: React.FC = () => {
 
       {isLoading ? <Card><CardContent className="pt-6">Chargement...</CardContent></Card> : viewMode === 'grid' ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {projects.map((project) => (
+          {sortedProjects.map((project) => (
             <div key={project.id} onClick={() => navigate(`/projects/${project.id}`)} className="cursor-pointer">
               <Card>
                 <CardContent className="pt-6">
@@ -108,6 +122,17 @@ export const Projects: React.FC = () => {
                       <p className="text-sm text-muted-foreground">{project.clientName}</p>
                     </div>
                     <div className="flex flex-col gap-2 items-end">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          pinMutation.mutate(project);
+                        }}
+                        className="p-2 rounded-lg border border-border hover:bg-secondary transition-colors"
+                        title={project.isPinned ? 'Désépingler' : 'Épingler'}
+                      >
+                        {project.isPinned ? <PinOff className="w-4 h-4" /> : <Pin className="w-4 h-4" />}
+                      </button>
                       <Badge>{project.status}</Badge>
                       <ScoringBadge scoring={project.scoring} />
                     </div>
@@ -134,7 +159,34 @@ export const Projects: React.FC = () => {
               <div className="space-y-3">
                 {statusProjects.map((project) => (
                   <div key={project.id} onClick={() => navigate(`/projects/${project.id}`)} className="cursor-pointer">
-                    <Card><CardContent className="pt-4"><h4 className="font-medium mb-2">{project.name}</h4><p className="text-sm text-muted-foreground mb-3">{project.clientName}</p><div className="flex items-center justify-between text-xs"><div className="flex gap-2 items-center"><Badge>{project.priority}</Badge><ScoringBadge scoring={project.scoring} /></div><span className="text-muted-foreground">{project.progress}%</span></div></CardContent></Card>
+                    <Card>
+                      <CardContent className="pt-4">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <h4 className="font-medium mb-2 truncate">{project.name}</h4>
+                            <p className="text-sm text-muted-foreground mb-3 truncate">{project.clientName}</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              pinMutation.mutate(project);
+                            }}
+                            className="p-2 rounded-lg border border-border hover:bg-secondary transition-colors flex-shrink-0"
+                            title={project.isPinned ? 'Désépingler' : 'Épingler'}
+                          >
+                            {project.isPinned ? <PinOff className="w-4 h-4" /> : <Pin className="w-4 h-4" />}
+                          </button>
+                        </div>
+                        <div className="flex items-center justify-between text-xs">
+                          <div className="flex gap-2 items-center">
+                            <Badge>{project.priority}</Badge>
+                            <ScoringBadge scoring={project.scoring} />
+                          </div>
+                          <span className="text-muted-foreground">{project.progress}%</span>
+                        </div>
+                      </CardContent>
+                    </Card>
                   </div>
                 ))}
               </div>

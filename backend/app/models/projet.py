@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from sqlalchemy import Date, DateTime, ForeignKey, Integer, Numeric, String, Text
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base_class import Base
@@ -19,6 +19,7 @@ class Projet(Base):
     depense: Mapped[float] = mapped_column(Numeric(12, 2), default=0, nullable=False)
     progression: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     scoring: Mapped[str] = mapped_column(String(20), default="Moyen", server_default="Moyen", nullable=False)
+    isPinned: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false", nullable=False, index=True)
     dateDebut: Mapped[date | None] = mapped_column(Date)
     dateFin: Mapped[date | None] = mapped_column(Date)
     createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
@@ -36,6 +37,7 @@ class Projet(Base):
     cahierDeCharge = relationship("CahierDeCharge", back_populates="projet", uselist=False, cascade="all, delete-orphan")
     notes = relationship("ProjetNote", back_populates="projet", cascade="all, delete-orphan")
     files = relationship("ProjetFile", back_populates="projet", cascade="all, delete-orphan")
+    milestones = relationship("ProjetMilestone", back_populates="projet", cascade="all, delete-orphan")
 
     @property
     def clientNom(self) -> str | None:

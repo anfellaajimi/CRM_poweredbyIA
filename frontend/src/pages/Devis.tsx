@@ -182,16 +182,8 @@ export const Devis: React.FC = () => {
   const totalPages = Math.max(1, Math.ceil(devisFiltres.length / parPage));
   const devisPage = devisFiltres.slice((page - 1) * parPage, page * parPage);
 
-  const telecharger = (devis: UIDevis) => {
-    const symbole = devis.devise === 'EUR' ? '€' : devis.devise === 'USD' ? '$' : 'DT';
-    const contenu = `DEVIS ${devis.id}\nClient: ${devis.clientName}\nTitre: ${devis.title}\nMontant: ${devis.amount} ${symbole}\nStatut: ${obtenirLibelleStatut(devis.status)}`;
-    const blob = new Blob([contenu], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${devis.id}.txt`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const telecharger = (devis: UIDevis, viewOnly = false) => {
+    devisAPI.exportPDF(devis.numericId, `${devis.id}.pdf`, viewOnly);
   };
 
   const creerDevis = () => {
@@ -319,9 +311,9 @@ export const Devis: React.FC = () => {
                     <div className="flex items-center justify-end gap-1">
                       {/* Aperçu */}
                       <button
-                        onClick={() => { setDevisSelectionne(devis); setAperçuOuvert(true); }}
+                        onClick={() => telecharger(devis, true)}
                         className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
-                        title="Aperçu"
+                        title="Visualiser"
                       >
                         <Eye className="w-4 h-4" />
                       </button>
@@ -528,7 +520,11 @@ export const Devis: React.FC = () => {
             <div className="flex justify-end gap-3">
               <button onClick={() => telecharger(devisSelectionne)} className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
                 <Download className="w-4 h-4" />
-                Télécharger
+                Télécharger PDF
+              </button>
+              <button onClick={() => telecharger(devisSelectionne, true)} className="flex items-center gap-2 px-4 py-2 rounded-lg border border-indigo-200 text-sm font-medium text-indigo-600 hover:bg-indigo-50 transition-colors">
+                <Eye className="w-4 h-4" />
+                Visualiser
               </button>
               <button onClick={() => setAperçuOuvert(false)} className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition-colors">
                 Fermer

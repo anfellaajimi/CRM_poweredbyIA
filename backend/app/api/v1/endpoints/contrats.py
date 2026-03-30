@@ -1,6 +1,9 @@
 from datetime import date, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import StreamingResponse
+import io
+from fpdf import FPDF
 from sqlalchemy.orm import Session
 
 from app.api.v1.endpoints._activity import log_activity
@@ -92,3 +95,76 @@ def delete_contrat(contrat_id: int, db: Session = Depends(get_db)):
     db.delete(item)
     db.commit()
     return None
+
+
+@router.get("/{contrat_id}/pdf")
+def export_contrat_pdf(contrat_id: int, db: Session = Depends(get_db)):
+    item = db.get(Contrat, contrat_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="Contrat not found")
+
+    pdf = FPDF()
+    pdf.add_page()
+
+    # Header
+    pdf.set_font("helvetica", "B", 20)
+    pdf.set_text_color(79, 70, 229)  # Indigo-600
+    pdf.cell(0, 10, "CONTRAT", ln=True, align="R")
+    pdf.set_font("helvetica", "", 10)
+    pdf.set_text_color(107, 114, 128)  # Gray-500
+    pdf.cell(0, 5, f"Référence: CTR-{item.contratID}", ln=True, align="R")
+    pdf.cell(0, 5, f"Type: {item.typeContrat}", ln=True, align="R")
+    pdf.ln(10)
+
+    # Client Info
+    pdf.set_font("helvetica", "B", 12)
+    pdf.set_text_color(31, 41, 55)  # Gray-800
+    pdf.cell(0, 7, "Client:", ln=True)
+    pdf.set_font("helvetica", "", 12)
+    pdf.cell(0, 7, item.client.nom, ln=True)
+    if item.client.email:
+        pdf.cell(0, 7, item.client.email, ln=True)
+    pdf.ln(10)
+
+    # Contract Details
+    pdf.set_font("helvetica", "B", 14)
+    pdf.cell(0, 10, item.titre or item.typeContrat, ln=True)
+    pdf.ln(5)
+
+    details = [
+        ("Valeur du contrat", f"{item.montant:,.2f} {item.client.devise or 'DT'}"),
+        ("Date de début", item.dateDebut.strftime('%d/%m/%Y') if item.dateDebut else "—"),
+        ("Date de fin", item.dateFin.strftime('%d/%m/%Y') if item.dateFin else "—"),
+        ("Statut", item.status.upper()),
+    ]
+
+    for label, value in details:
+        pdf.set_font("helvetica", "B", 10)
+        pdf.cell(40, 7, f"{label}:", ln=False)
+        pdf.set_font("helvetica", "", 10)
+        pdf.cell(0, 7, value, ln=True)
+
+    pdf.ln(10)
+
+    # Sections
+    sections = [
+        ("Objet", item.objet),
+        ("Obligations", item.obligations),
+        ("Responsabilités", item.responsabilites),
+        ("Conditions", item.conditions),
+    ]
+
+    for title, content in sections:
+        if content:
+            pdf.set_font("helvetica", "B", 12)
+            pdf.cell(0, 10, title, ln=True)
+            pdf.set_font("helvetica", "", 10)
+            pdf.multi_cell(0, 5, content)
+            pdf.ln(5)
+
+    pdf_bytes = pdf.output()
+    return StreamingResponse(
+        io.BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"inline; filename=contrat_{item.contratID}.pdf"},
+    )

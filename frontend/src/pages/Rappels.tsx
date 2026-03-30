@@ -4,10 +4,11 @@ import { Calendar as CalendarIcon, CheckCircle, Pencil, Plus, Trash2, X, Clock, 
 import { toast } from 'sonner';
 
 import { Modal } from '../components/ui/Modal';
-import { clientsAPI, rappelsAPI, UIRappel } from '../services/api';
+import { clientsAPI, projectsAPI, rappelsAPI, UIRappel } from '../services/api';
 
 const rappelVide: Partial<UIRappel> = {
   clientID: 0,
+  projetID: undefined,
   titre: '',
   typeRappel: '',
   description: '',
@@ -57,9 +58,23 @@ export const Rappels: React.FC = () => {
   const [enEdition, setEnEdition] = useState<UIRappel | null>(null);
   const [rappelSelectionne, setRappelSelectionne] = useState<UIRappel | null>(null);
   const [formulaire, setFormulaire] = useState<Partial<UIRappel>>(rappelVide);
+  const [filtreProjet, setFiltreProjet] = useState<string>('');
+  const [filtreSource, setFiltreSource] = useState<'all' | 'system' | 'manual'>('all');
 
-  const { data: rappels = [] } = useQuery({ queryKey: ['rappels'], queryFn: rappelsAPI.getAll });
   const { data: clients = [] } = useQuery({ queryKey: ['clients'], queryFn: clientsAPI.getAll });
+  const { data: projects = [] } = useQuery({ queryKey: ['projects'], queryFn: projectsAPI.getAll });
+
+  const rappelFilters = useMemo(() => {
+    const f: any = {};
+    if (filtreProjet) f.projetID = Number(filtreProjet);
+    if (filtreSource !== 'all') f.source = filtreSource;
+    return f;
+  }, [filtreProjet, filtreSource]);
+
+  const { data: rappels = [] } = useQuery({
+    queryKey: ['rappels', rappelFilters],
+    queryFn: () => rappelsAPI.getAll(rappelFilters),
+  });
 
   const mutationCreer = useMutation({
     mutationFn: rappelsAPI.create,
@@ -99,6 +114,15 @@ export const Rappels: React.FC = () => {
     onError: (err: any) => toast.error(`Erreur: ${err?.response?.data?.message ?? err?.message}`),
   });
 
+  const mutationGenerer = useMutation({
+    mutationFn: () => rappelsAPI.generate(),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['rappels'] });
+      toast.success('Rappels générés');
+    },
+    onError: (err: any) => toast.error(`Erreur: ${err?.response?.data?.detail ?? err?.message}`),
+  });
+
   const marquerTermine = (r: UIRappel) => {
     mutationModifier.mutate({ id: r.id, payload: { ...r, statut: 'termine' } });
     if (rappelSelectionne?.id === r.id) {
@@ -119,8 +143,8 @@ export const Rappels: React.FC = () => {
   };
 
   const soumettre = () => {
-    if (!formulaire.clientID || !formulaire.titre) {
-      toast.error('Client et titre sont obligatoires');
+    if ((!formulaire.clientID && !formulaire.projetID) || !formulaire.titre) {
+      toast.error('Client (ou projet) et titre sont obligatoires');
       return;
     }
     if (enEdition) {
@@ -138,6 +162,11 @@ export const Rappels: React.FC = () => {
 
   const nomClient = (clientID: number) =>
     clients.find((c) => Number(c.id) === clientID)?.name || `Client ${clientID}`;
+
+  const nomProjet = (projetID?: number) => {
+    if (!projetID) return '';
+    return projects.find((p: any) => Number(p.id) === Number(projetID))?.name || `Projet ${projetID}`;
+  };
 
   // Groupement par urgence
   const urgents = useMemo(() =>
@@ -169,6 +198,19 @@ export const Rappels: React.FC = () => {
         <p className={`font-semibold text-sm text-gray-800 ${estFait ? 'line-through' : ''}`}>{r.titre}</p>
         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border whitespace-nowrap ${obtenirCouleurPriorite(r.priorite)}`}>
           {obtenirLibellePriorite(r.priorite)}
+        </span>
+      </div>
+      <div className="flex flex-wrap items-center gap-2 mb-2">
+        <span className="text-[10px] px-2 py-0.5 rounded-full border bg-gray-50 text-gray-600 border-gray-200">
+          {nomClient(r.clientID)}
+        </span>
+        {r.projetID && (
+          <span className="text-[10px] px-2 py-0.5 rounded-full border bg-indigo-50 text-indigo-700 border-indigo-200">
+            {nomProjet(r.projetID)}
+          </span>
+        )}
+        <span className={`text-[10px] px-2 py-0.5 rounded-full border ${r.systemKey ? 'bg-purple-50 text-purple-700 border-purple-200' : 'bg-white text-gray-600 border-gray-200'}`}>
+          {r.systemKey ? 'System' : 'Manual'}
         </span>
       </div>
       {r.description && <p className="text-xs text-gray-500 mb-2 line-clamp-1">{r.description}</p>}
@@ -231,6 +273,43 @@ export const Rappels: React.FC = () => {
             Ajouter un Rappel
           </button>
         </div>
+      </div>
+
+      {/* Filtres */}
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-gray-500 font-medium">Projet</span>
+          <select
+            className="border border-gray-200 rounded-lg px-3 py-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            value={filtreProjet || ''}
+            onChange={(e) => setFiltreProjet(e.target.value)}
+          >
+            <option value="">Tous</option>
+            {projects.map((p: any) => (
+              <option key={p.id} value={p.id}>{p.name}</option>
+            ))}
+          </select>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-gray-500 font-medium">Source</span>
+          <select
+            className="border border-gray-200 rounded-lg px-3 py-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            value={filtreSource}
+            onChange={(e) => setFiltreSource(e.target.value as any)}
+          >
+            <option value="all">Toutes</option>
+            <option value="system">System</option>
+            <option value="manual">Manual</option>
+          </select>
+        </div>
+        <div className="flex-1" />
+        <button
+          onClick={() => mutationGenerer.mutate()}
+          disabled={mutationGenerer.isPending}
+          className="flex items-center gap-2 border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 font-medium px-4 py-2 rounded-lg text-sm transition-colors disabled:opacity-50"
+        >
+          {mutationGenerer.isPending ? 'Génération...' : 'Générer rappels'}
+        </button>
       </div>
 
       {vueMode === 'list' ? (
@@ -431,12 +510,31 @@ export const Rappels: React.FC = () => {
       <Modal isOpen={modalOuvert} onClose={() => setModalOuvert(false)} title={enEdition ? 'Modifier le rappel' : 'Créer un rappel'}>
         <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); soumettre(); }}>
           <div>
+            <label className="block text-sm font-medium mb-1 text-gray-700">Projet (optionnel)</label>
+            <select
+              className="w-full border border-gray-200 rounded-lg p-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              value={formulaire.projetID || 0}
+              onChange={(e) => {
+                const pid = Number(e.target.value) || undefined;
+                const proj: any = pid ? projects.find((p: any) => Number(p.id) === pid) : undefined;
+                setFormulaire((prev) => ({
+                  ...prev,
+                  projetID: pid,
+                  clientID: pid && proj?.clientId ? Number(proj.clientId) : prev.clientID,
+                }));
+              }}
+            >
+              <option value={0}>Aucun</option>
+              {projects.map((p: any) => <option key={p.id} value={Number(p.id)}>{p.name}</option>)}
+            </select>
+          </div>
+
+          <div>
             <label className="block text-sm font-medium mb-1 text-gray-700">Client *</label>
             <select
               className="w-full border border-gray-200 rounded-lg p-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
               value={formulaire.clientID || 0}
               onChange={(e) => setFormulaire({ ...formulaire, clientID: Number(e.target.value) })}
-              required
             >
               <option value={0}>Sélectionner un client</option>
               {clients.map((c) => <option key={c.id} value={Number(c.id)}>{c.name}</option>)}
