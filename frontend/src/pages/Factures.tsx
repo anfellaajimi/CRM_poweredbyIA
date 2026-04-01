@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 
 import { Modal } from '../components/ui/Modal';
 import { clientsAPI, facturesAPI, UIFacture } from '../services/api';
+import { cn } from '../utils/cn';
 
 const articleVide = { description: '', quantite: 1, prixUnitaire: 0 };
 
@@ -90,6 +91,8 @@ const MenuStatut = ({
 export const Factures: React.FC = () => {
   const qc = useQueryClient();
   const [modalOuvert, setModalOuvert] = useState(false);
+  const [aperçuOuvert, setAperçuOuvert] = useState(false);
+  const [factureSelectionnee, setFactureSelectionnee] = useState<UIFacture | null>(null);
   const [recherche, setRecherche] = useState('');
   const [filtreStatut, setFiltreStatut] = useState('Tous');
   const [dateDebut, setDateDebut] = useState('');
@@ -302,7 +305,7 @@ export const Factures: React.FC = () => {
         </div>
 
         {/* Table */}
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto pb-48">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-gray-500 font-medium border-b border-gray-100">
@@ -336,8 +339,8 @@ export const Factures: React.FC = () => {
                   <td className="px-4 py-3">
                     <div className="flex items-center justify-end gap-2">
                       <button
-                        onClick={() => telecharger(facture, true)}
-                        className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+                        onClick={() => { setFactureSelectionnee(facture); setAperçuOuvert(true); }}
+                        className="p-1.5 rounded-lg hover:bg-indigo-50 text-indigo-600 hover:text-indigo-700 transition-colors"
                         title="Visualiser"
                       >
                         <Eye className="w-4 h-4" />
@@ -490,6 +493,87 @@ export const Factures: React.FC = () => {
             </button>
           </div>
         </form>
+      </Modal>
+  
+      {/* Modal aperçu facture */}
+      <Modal isOpen={aperçuOuvert} onClose={() => setAperçuOuvert(false)} title="Aperçu de la facture" size="lg">
+        {factureSelectionnee && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-start border-b border-gray-100 pb-4">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">{factureSelectionnee.id}</h2>
+                <p className="text-gray-500 text-sm mt-0.5">Émise le {factureSelectionnee.issuedAt}</p>
+              </div>
+              <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${obtenirCouleurStatut(factureSelectionnee.status)}`}>
+                {obtenirLibelleStatut(factureSelectionnee.status)}
+              </span>
+            </div>
+  
+            <div className="grid grid-cols-2 gap-6 text-sm bg-gray-50 rounded-xl p-4">
+              <div>
+                <p className="text-gray-400 text-xs mb-1 uppercase tracking-wider font-bold">Client</p>
+                <p className="font-semibold text-gray-800">{factureSelectionnee.clientName}</p>
+              </div>
+              <div>
+                <p className="text-gray-400 text-xs mb-1 uppercase tracking-wider font-bold">Échéance</p>
+                <p className={cn("font-semibold", !factureSelectionnee.dueAt ? "text-gray-400" : "text-gray-800")}>
+                  {factureSelectionnee.dueAt || 'Non spécifiée'}
+                </p>
+              </div>
+              <div>
+                <p className="text-gray-400 text-xs mb-1 uppercase tracking-wider font-bold">Montant HT</p>
+                <p className="font-semibold text-gray-800">{factureSelectionnee.amount?.toLocaleString('fr-FR')} {factureSelectionnee.devise === 'EUR' ? '€' : factureSelectionnee.devise === 'USD' ? '$' : 'DT'}</p>
+              </div>
+              <div>
+                <p className="text-gray-400 text-xs mb-1 uppercase tracking-wider font-bold">Taxe (TVA)</p>
+                <p className="font-semibold text-gray-800">{factureSelectionnee.taxRate}%</p>
+              </div>
+            </div>
+  
+            <div>
+              <p className="text-sm font-bold text-gray-900 mb-3 uppercase tracking-widest flex items-center gap-2">
+                 <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+                 Détail des prestations
+              </p>
+              <div className="space-y-2">
+                {factureSelectionnee.items.map((item, i) => (
+                  <div key={i} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg text-sm group hover:bg-indigo-50/30 transition-colors">
+                    <div>
+                      <p className="font-medium text-gray-800">{item.description}</p>
+                      <p className="text-gray-400 text-xs">Qté: {item.quantity} × {Number(item.unitPrice).toLocaleString('fr-FR')} {factureSelectionnee.devise === 'EUR' ? '€' : factureSelectionnee.devise === 'USD' ? '$' : 'DT'}</p>
+                    </div>
+                    <p className="font-bold text-gray-900">{(item.lineTotal || item.quantity * item.unitPrice).toLocaleString('fr-FR')} {factureSelectionnee.devise === 'EUR' ? '€' : factureSelectionnee.devise === 'USD' ? '$' : 'DT'}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+  
+            <div className="flex flex-col items-end pt-4 border-t border-gray-100 space-y-1">
+              <div className="flex justify-between w-full max-w-[200px] text-sm text-gray-500">
+                <span>Total HT:</span>
+                <span>{factureSelectionnee.amount?.toLocaleString('fr-FR')} {factureSelectionnee.devise === 'EUR' ? '€' : factureSelectionnee.devise === 'USD' ? '$' : 'DT'}</span>
+              </div>
+              <div className="flex justify-between w-full max-w-[200px] text-lg font-bold text-indigo-600 mt-2">
+                <span>TOTAL TTC:</span>
+                <span>{(factureSelectionnee.amount * (1 + (factureSelectionnee.taxRate || 0) / 100)).toLocaleString('fr-FR')} {factureSelectionnee.devise === 'EUR' ? '€' : factureSelectionnee.devise === 'USD' ? '$' : 'DT'}</span>
+              </div>
+            </div>
+  
+            <div className="flex justify-end gap-3 pt-4">
+              <button onClick={() => telecharger(factureSelectionnee)} className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                <Download className="w-4 h-4" />
+                Télécharger PDF
+              </button>
+              <button onClick={() => telecharger(factureSelectionnee, true)} className="flex items-center gap-2 px-4 py-2 rounded-lg border border-indigo-200 text-sm font-medium text-indigo-600 hover:bg-indigo-50 transition-colors">
+                <Eye className="w-4 h-4" />
+                Visualiser
+              </button>
+              <button onClick={() => setAperçuOuvert(false)} className="px-5 py-2.5 rounded-lg bg-gray-900 text-white text-sm font-bold hover:bg-gray-800 transition-colors">
+                Fermer
+              </button>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );

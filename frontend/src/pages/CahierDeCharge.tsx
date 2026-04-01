@@ -1,4 +1,4 @@
-﻿import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Download, Plus, Trash2, Search, Pencil, Share2, Eye, X, FileText } from 'lucide-react';
 import { toast } from 'sonner';
@@ -45,7 +45,7 @@ export const CahierDeCharge: React.FC = () => {
     mutationFn: cahierAPI.create,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['cahiers'] });
-      toast.success('Cahier crÃ©Ã© avec succÃ¨s');
+      toast.success('Cahier créé avec succès');
       setModalCreerOuvert(false);
       setBrouillon(cahierVide);
     },
@@ -57,7 +57,7 @@ export const CahierDeCharge: React.FC = () => {
       cahierAPI.update(id, payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['cahiers'] });
-      toast.success('Cahier modifiÃ© avec succÃ¨s');
+      toast.success('Cahier modifié avec succès');
       setModalModifierOuvert(false);
     },
     onError: (err: any) => toast.error(`Erreur: ${err?.response?.data?.message ?? err?.message}`),
@@ -67,7 +67,7 @@ export const CahierDeCharge: React.FC = () => {
     mutationFn: (id: number) => cahierAPI.delete(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['cahiers'] });
-      toast.success('Cahier supprimÃ©');
+      toast.success('Cahier supprimé');
     },
     onError: (err: any) => toast.error(`Erreur: ${err?.response?.data?.message ?? err?.message}`),
   });
@@ -86,9 +86,9 @@ export const CahierDeCharge: React.FC = () => {
 
   const exporter = async (cahier: UICahier) => {
     try {
-      toast.loading('GÃ©nÃ©ration du PDF...', { id: 'pdf-export' });
+      toast.loading('Génération du PDF...', { id: 'pdf-export' });
       await cahierAPI.exportPDF(cahier.cahierID);
-      toast.success('Cahier exportÃ© en PDF', { id: 'pdf-export' });
+      toast.success('Cahier exporté en PDF', { id: 'pdf-export' });
     } catch (error) {
       toast.error('Erreur lors de lâ€™export PDF', { id: 'pdf-export' });
     }
@@ -98,7 +98,7 @@ export const CahierDeCharge: React.FC = () => {
     const texte = `Cahier de charge: ${cahier.objet} (v${cahier.version}) - Projet: ${nomProjet(cahier.projetID)}`;
     if (navigator.clipboard) {
       navigator.clipboard.writeText(texte);
-      toast.success('Lien copiÃ© dans le presse-papier');
+      toast.success('Lien copié dans le presse-papier');
     }
   };
 
@@ -119,7 +119,7 @@ export const CahierDeCharge: React.FC = () => {
     <div className="space-y-6 p-6 bg-gray-50 min-h-screen">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">ðŸ“‹ Cahier de Charge</h1>
+          <h1 className="text-2xl font-bold text-gray-900">📋 Cahier de Charge</h1>
           <p className="text-sm text-gray-500 mt-0.5">Gestion globale des cahiers par projet</p>
         </div>
         <button
@@ -136,7 +136,7 @@ export const CahierDeCharge: React.FC = () => {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             className="w-full pl-9 pr-3 py-2 rounded-lg border border-gray-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
-            placeholder="Rechercher une spÃ©cification..."
+            placeholder="Rechercher une spécification..."
             value={recherche}
             onChange={(e) => setRecherche(e.target.value)}
           />
@@ -146,7 +146,7 @@ export const CahierDeCharge: React.FC = () => {
 
       {cahiersFiltres.length === 0 ? (
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm py-20 text-center text-gray-400">
-          Aucun cahier trouvÃ©. CrÃ©ez votre premier document.
+          Aucun cahier trouvé. Créez votre premier document.
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -215,11 +215,11 @@ export const CahierDeCharge: React.FC = () => {
           onSoumettre={() => mutationCreer.mutate(brouillon as any)}
           onAnnuler={() => setModalCreerOuvert(false)}
           chargement={mutationCreer.isPending}
-          btnLabel="CrÃ©er le document"
+          btnLabel="Créer le document"
         />
       </Modal>
 
-      <Modal isOpen={modalModifierOuvert} onClose={() => setModalModifierOuvert(false)} title={`Modifier â€” ${cahierSelectionne?.objet}`} size="xl">
+      <Modal isOpen={modalModifierOuvert} onClose={() => setModalModifierOuvert(false)} title={`Modifier — ${cahierSelectionne?.objet}`} size="xl">
         <CahierForm
           valeurs={brouillonModif}
           setValeurs={setBrouillonModif}
@@ -235,7 +235,7 @@ export const CahierDeCharge: React.FC = () => {
       </Modal>
 
       {cahierSelectionne && (
-        <Modal isOpen={modalVoirOuvert} onClose={() => setModalVoirOuvert(false)} title={`Cahier â€” ${cahierSelectionne.objet}`} size="xl">
+        <Modal isOpen={modalVoirOuvert} onClose={() => setModalVoirOuvert(false)} title={`Cahier — ${cahierSelectionne.objet}`} size="xl">
           <div className="space-y-6 max-h-[75vh] overflow-y-auto pr-2">
             <div className="flex justify-between items-start border-b border-gray-100 pb-4">
               <div>
@@ -254,9 +254,9 @@ export const CahierDeCharge: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-gray-50 rounded-2xl p-5 border border-gray-100">
-              <div><p className="text-gray-400 text-xs mb-1 uppercase font-semibold">CrÃ©Ã© le</p><p className="font-medium text-gray-800">{cahierSelectionne.dateCreation || '-'}</p></div>
-              <div><p className="text-gray-400 text-xs mb-1 uppercase font-semibold">ValidÃ© le</p><p className="font-medium text-gray-800">{cahierSelectionne.dateValidation || '-'}</p></div>
-              <div><p className="text-gray-400 text-xs mb-1 uppercase font-semibold">DÃ©lais</p><p className="font-medium text-gray-800">{cahierSelectionne.delais || '-'}</p></div>
+              <div><p className="text-gray-400 text-xs mb-1 uppercase font-semibold">Créé le</p><p className="font-medium text-gray-800">{cahierSelectionne.dateCreation || '-'}</p></div>
+              <div><p className="text-gray-400 text-xs mb-1 uppercase font-semibold">Validé le</p><p className="font-medium text-gray-800">{cahierSelectionne.dateValidation || '-'}</p></div>
+              <div><p className="text-gray-400 text-xs mb-1 uppercase font-semibold">Délais</p><p className="font-medium text-gray-800">{cahierSelectionne.delais || '-'}</p></div>
               <div><p className="text-gray-400 text-xs mb-1 uppercase font-semibold">Budget</p><p className="font-medium text-gray-800">{cahierSelectionne.budgetTexte || '-'}</p></div>
             </div>
 
@@ -264,12 +264,12 @@ export const CahierDeCharge: React.FC = () => {
               {[
                 { champ: 'description', label: 'Description' },
                 { champ: 'objectif', label: 'Objectif' },
-                { champ: 'perimetre', label: 'PÃ©rimÃ¨tre' },
-                { champ: 'fonctionnalites', label: 'FonctionnalitÃ©s' },
+                { champ: 'perimetre', label: 'Périmètre' },
+                { champ: 'fonctionnalites', label: 'Fonctionnalités' },
                 { champ: 'contraintes', label: 'Contraintes' },
                 { champ: 'userStories', label: 'User Stories' },
-                { champ: 'reglesMetier', label: 'RÃ¨gles MÃ©tier' },
-                { champ: 'documentsReference', label: 'Documents de RÃ©fÃ©rence' },
+                { champ: 'reglesMetier', label: 'Règles Métier' },
+                { champ: 'documentsReference', label: 'Documents de Référence' },
               ].map(({ champ, label }) => {
                 const content = (cahierSelectionne as any)[champ];
                 if (!content || content === '<p><br></p>') return null;

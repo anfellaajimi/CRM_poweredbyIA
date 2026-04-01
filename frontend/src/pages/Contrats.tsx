@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 
 import { Modal } from '../components/ui/Modal';
 import { clientsAPI, contratsAPI, UIContrat } from '../services/api';
+import { cn } from '../utils/cn';
 
 const contratVide: Partial<UIContrat> = {
   clientId: '',
@@ -386,7 +387,7 @@ export const Contrats: React.FC = () => {
         </div>
 
         {/* Table */}
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto pb-48">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-gray-500 font-medium border-b border-gray-100">
@@ -423,8 +424,8 @@ export const Contrats: React.FC = () => {
                     <div className="flex items-center justify-end gap-1">
                       {/* Visualiser */}
                       <button
-                        onClick={() => telecharger(contrat, true)}
-                        className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+                        onClick={() => { setContratSelectionne(contrat); setModalVoirOuvert(true); }}
+                        className="p-1.5 rounded-lg hover:bg-indigo-50 text-indigo-600 hover:text-indigo-700 transition-colors"
                         title="Visualiser"
                       >
                         <Eye className="w-4 h-4" />
@@ -497,58 +498,174 @@ export const Contrats: React.FC = () => {
       {/* Modal Voir */}
       {contratSelectionne && (
         <Modal isOpen={modalVoirOuvert} onClose={() => setModalVoirOuvert(false)} title={`Contrat — ${contratSelectionne.id}`} size="lg">
-          <div className="space-y-5">
-            <div className="flex justify-between items-start">
+          <div className="bg-white p-8 rounded-lg shadow-inner border border-gray-100 space-y-8 max-h-[70vh] overflow-y-auto">
+            <div className="flex justify-between items-start border-b border-gray-100 pb-6">
               <div>
-                <h2 className="text-xl font-bold text-gray-900">{contratSelectionne.titre}</h2>
-                <p className="text-gray-500 text-sm mt-0.5">{contratSelectionne.type}</p>
+                <h2 className="text-3xl font-bold text-gray-900 tracking-tight">{contratSelectionne.titre}</h2>
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-indigo-50 text-indigo-600 border border-indigo-100">
+                    {contratSelectionne.type}
+                  </span>
+                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${obtenirCouleurStatut(contratSelectionne.status)}`}>
+                    {obtenirLibelleStatut(contratSelectionne.status)}
+                  </span>
+                </div>
               </div>
-              <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${obtenirCouleurStatut(contratSelectionne.status)}`}>
-                {obtenirLibelleStatut(contratSelectionne.status)}
-              </span>
+              <div className="text-right">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Référence</p>
+                <p className="text-lg font-mono font-bold text-indigo-600">{contratSelectionne.id}</p>
+              </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 bg-gray-50 rounded-xl p-4 text-sm">
-              <div><p className="text-gray-400 text-xs mb-1">Client</p><p className="font-semibold text-gray-800">{contratSelectionne.clientName}</p></div>
-              <div><p className="text-gray-400 text-xs mb-1">Valeur</p><p className="font-semibold text-gray-800">{Number(contratSelectionne.value).toLocaleString('fr-FR')} {contratSelectionne.devise === 'EUR' ? '€' : contratSelectionne.devise === 'USD' ? '$' : 'DT'}</p></div>
-              <div><p className="text-gray-400 text-xs mb-1">Date début</p><p className="font-semibold text-gray-800">{contratSelectionne.dateDebut || '—'}</p></div>
-              <div><p className="text-gray-400 text-xs mb-1">Date fin</p><p className="font-semibold text-gray-800">{contratSelectionne.dateFin || '—'}</p></div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 py-6 border-b border-gray-50">
+              <div className="space-y-1">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Client</p>
+                <p className="font-semibold text-gray-800">{contratSelectionne.clientName}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Valeur Contractuelle</p>
+                <p className="font-bold text-gray-900 text-lg">
+                  {Number(contratSelectionne.value).toLocaleString('fr-FR')} 
+                  <span className="text-indigo-600 ml-1">{contratSelectionne.devise === 'EUR' ? '€' : contratSelectionne.devise === 'USD' ? '$' : 'DT'}</span>
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Période du Contrat</p>
+                <p className="font-semibold text-gray-800">{contratSelectionne.dateDebut || '—'} au {contratSelectionne.dateFin || '—'}</p>
+              </div>
               {contratSelectionne.dateRenouvellement && (
-                <div><p className="text-gray-400 text-xs mb-1">Renouvellement</p><p className="font-semibold text-gray-800">{contratSelectionne.dateRenouvellement}</p></div>
+                <div className="space-y-1">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Renouvellement</p>
+                  <p className="font-semibold text-yellow-600">{contratSelectionne.dateRenouvellement}</p>
+                </div>
               )}
             </div>
 
-            {[
-              { champ: 'objet', label: 'Objet' },
-              { champ: 'obligations', label: 'Obligations' },
-              { champ: 'responsabilites', label: 'Responsabilités' },
-              { champ: 'conditions', label: 'Conditions' },
-            ].map(({ champ, label }) =>
-              (contratSelectionne as any)[champ] ? (
-                <div key={champ}>
-                  <p className="text-xs text-gray-400 mb-1">{label}</p>
-                  <p className="text-sm text-gray-700 bg-gray-50 rounded-lg p-3">{(contratSelectionne as any)[champ]}</p>
-                </div>
-              ) : null
-            )}
-
-            <div className="flex justify-end gap-3 pt-2">
-              <button onClick={() => telecharger(contratSelectionne, true)} className="flex items-center gap-2 px-4 py-2 rounded-lg border border-indigo-200 text-sm font-medium text-indigo-600 hover:bg-indigo-50 transition-colors">
-                <Eye className="w-4 h-4" />
-                Visualiser
-              </button>
-              <button onClick={() => telecharger(contratSelectionne)} className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-                <Download className="w-4 h-4" />
-                Télécharger PDF
-              </button>
-              <button onClick={() => { setModalVoirOuvert(false); ouvrirModification(contratSelectionne); }} className="flex items-center gap-2 px-4 py-2 rounded-lg border border-indigo-200 text-sm font-medium text-indigo-600 hover:bg-indigo-50 transition-colors">
-                <Pencil className="w-4 h-4" />
-                Modifier
-              </button>
-              <button onClick={() => setModalVoirOuvert(false)} className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition-colors">
-                Fermer
-              </button>
+            <div className="space-y-10">
+              {[
+                { champ: 'objet', label: 'Objet du Contrat' },
+                { champ: 'obligations', label: 'Obligations des Parties' },
+                { champ: 'responsabilites', label: 'Responsabilités et Assurances' },
+                { champ: 'conditions', label: 'Conditions Générales' },
+              ].map(({ champ, label }) =>
+                (contratSelectionne as any)[champ] ? (
+                  <div key={champ} className="group">
+                    <h3 className="text-xs font-bold text-gray-900 uppercase tracking-widest mb-3 flex items-center gap-2">
+                       <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+                       {label}
+                    </h3>
+                    <div className="text-sm text-gray-600 leading-relaxed bg-gray-50/50 p-4 rounded-xl border border-gray-100/50">
+                      {(contratSelectionne as any)[champ]}
+                    </div>
+                  </div>
+                ) : null
+              )}
             </div>
+
+            <div className="pt-12 mt-12 border-t-2 border-dashed border-gray-100">
+              <h3 className="text-sm font-bold text-gray-900 uppercase tracking-widest mb-8 text-center bg-gray-50 py-2 rounded-lg">Signatures et Approbation</h3>
+              <div className="grid grid-cols-2 gap-16">
+                {/* Client Signature */}
+                <div className="space-y-12">
+                  <div className="space-y-2">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Le Client</p>
+                    <p className="text-sm font-bold text-gray-800">{contratSelectionne.clientName}</p>
+                  </div>
+                  
+                  <button 
+                    disabled={contratSelectionne.isSignedByClient || mutationModifier.isPending}
+                    onClick={() => mutationModifier.mutate({ 
+                      id: contratSelectionne.numericId, 
+                      data: { ...contratSelectionne, isSignedByClient: true } 
+                    })}
+                    className={cn(
+                      "h-40 w-full border-2 rounded-2xl flex flex-col items-center justify-center transition-all pt-4",
+                      contratSelectionne.isSignedByClient 
+                        ? "border-green-200 bg-green-50/30" 
+                        : "border-dashed border-gray-200 bg-gray-50/30 hover:border-indigo-300 hover:bg-indigo-50/30"
+                    )}
+                  >
+                    {contratSelectionne.isSignedByClient ? (
+                      <>
+                        <p className="text-3xl font-script text-green-600 rotate-[-5deg] mb-1 opacity-80">
+                          {contratSelectionne.clientName}
+                        </p>
+                        <p className="text-[10px] font-medium text-green-500 uppercase tracking-tighter">Signé électroniquement</p>
+                        <p className="text-[9px] text-green-400 mt-1 font-mono">ID: {contratSelectionne.id}-C</p>
+                      </>
+                    ) : (
+                      <>
+                        <Pencil className="w-8 h-8 text-gray-300 mb-2" />
+                        <p className="text-[10px] font-medium text-gray-400">Signature Électronique (Client)</p>
+                      </>
+                    )}
+                  </button>
+
+                  <div className="border-t border-gray-100 pt-2">
+                    <p className="text-[10px] text-gray-400">Date et Mention "Lu et approuvé"</p>
+                  </div>
+                </div>
+
+                {/* Provider Signature */}
+                <div className="space-y-12">
+                  <div className="space-y-2">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Le Prestataire</p>
+                    <p className="text-sm font-bold text-gray-800">CRM AI Pro</p>
+                  </div>
+
+                  <button 
+                    disabled={contratSelectionne.isSignedByProvider || mutationModifier.isPending}
+                    onClick={() => mutationModifier.mutate({ 
+                      id: contratSelectionne.numericId, 
+                      data: { ...contratSelectionne, isSignedByProvider: true } 
+                    })}
+                    className={cn(
+                      "h-40 w-full border-2 rounded-2xl flex flex-col items-center justify-center transition-all pt-4",
+                      contratSelectionne.isSignedByProvider 
+                        ? "border-indigo-200 bg-indigo-50/30" 
+                        : "border-dashed border-gray-200 bg-gray-50/30 hover:border-indigo-300 hover:bg-indigo-50/30"
+                    )}
+                  >
+                    {contratSelectionne.isSignedByProvider ? (
+                      <>
+                        <p className="text-3xl font-script text-indigo-600 rotate-[-5deg] mb-1 opacity-80">
+                          CRM AI Pro
+                        </p>
+                        <p className="text-[10px] font-medium text-indigo-500 uppercase tracking-tighter">Signé électroniquement</p>
+                        <p className="text-[9px] text-indigo-400 mt-1 font-mono">ID: {contratSelectionne.id}-P</p>
+                      </>
+                    ) : (
+                      <>
+                        <Pencil className="w-8 h-8 text-gray-300 mb-2" />
+                        <p className="text-[10px] font-medium text-gray-400">Signature Électronique (SaaS)</p>
+                      </>
+                    )}
+                  </button>
+
+                  <div className="border-t border-gray-100 pt-2">
+                    <p className="text-[10px] text-gray-400">Date et Cachet de l'entreprise</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-6 border-t border-gray-100 mt-6">
+            <button onClick={() => telecharger(contratSelectionne, true)} className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-gray-200 text-sm font-bold text-gray-700 hover:bg-gray-50 transition-all active:scale-95">
+              <Eye className="w-4 h-4" />
+              Visualiser PDF
+            </button>
+            <button onClick={() => telecharger(contratSelectionne)} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-50 text-sm font-bold text-indigo-600 hover:bg-indigo-100 transition-all active:scale-95">
+              <Download className="w-4 h-4" />
+              Télécharger
+            </button>
+            <button onClick={() => { setModalVoirOuvert(false); ouvrirModification(contratSelectionne); }} className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-gray-200 text-sm font-bold text-gray-700 hover:bg-gray-50 transition-all active:scale-95">
+              <Pencil className="w-4 h-4" />
+              Modifier
+            </button>
+            <button onClick={() => setModalVoirOuvert(false)} className="px-5 py-2.5 rounded-xl bg-gray-900 text-white text-sm font-bold hover:bg-gray-800 transition-all active:scale-95">
+              Fermer
+            </button>
           </div>
         </Modal>
       )}

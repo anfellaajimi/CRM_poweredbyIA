@@ -24,6 +24,8 @@ class Contrat(Base):
     montant: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
     conditions: Mapped[str | None] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(50), default="actif", nullable=False, index=True)
+    isSignedByClient: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    isSignedByProvider: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     client = relationship("Client", back_populates="contrats")
     projet = relationship("Projet", back_populates="contrats")

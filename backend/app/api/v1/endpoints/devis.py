@@ -130,6 +130,12 @@ def export_devis_pdf(devis_id: int, db: Session = Depends(get_db)):
     if not item:
         raise HTTPException(status_code=404, detail="Devis not found")
 
+    def _clean(text):
+        if not text:
+            return ""
+        # FPDF core fonts only support latin-1. Replace unhandled chars to prevent 500 errors.
+        return str(text).encode("latin-1", "replace").decode("latin-1")
+
     pdf = FPDF()
     pdf.add_page()
 
@@ -139,10 +145,10 @@ def export_devis_pdf(devis_id: int, db: Session = Depends(get_db)):
     pdf.cell(0, 10, "DEVIS", ln=True, align="R")
     pdf.set_font("helvetica", "", 10)
     pdf.set_text_color(107, 114, 128)  # Gray-500
-    pdf.cell(0, 5, f"Référence: DEV-{item.devisID}", ln=True, align="R")
-    pdf.cell(0, 5, f"Date: {item.dateDevis.strftime('%d/%m/%Y')}", ln=True, align="R")
+    pdf.cell(0, 5, _clean(f"Référence: DEV-{item.devisID}"), ln=True, align="R")
+    pdf.cell(0, 5, _clean(f"Date: {item.dateDevis.strftime('%d/%m/%Y')}"), ln=True, align="R")
     if item.validUntil:
-        pdf.cell(0, 5, f"Valide jusqu'au: {item.validUntil.strftime('%d/%m/%Y')}", ln=True, align="R")
+        pdf.cell(0, 5, _clean(f"Valide jusqu'au: {item.validUntil.strftime('%d/%m/%Y')}"), ln=True, align="R")
     pdf.ln(10)
 
     # Client Info
@@ -150,14 +156,14 @@ def export_devis_pdf(devis_id: int, db: Session = Depends(get_db)):
     pdf.set_text_color(31, 41, 55)  # Gray-800
     pdf.cell(0, 7, "Client:", ln=True)
     pdf.set_font("helvetica", "", 12)
-    pdf.cell(0, 7, item.client.nom, ln=True)
+    pdf.cell(0, 7, _clean(item.client.nom), ln=True)
     if item.client.email:
-        pdf.cell(0, 7, item.client.email, ln=True)
+        pdf.cell(0, 7, _clean(item.client.email), ln=True)
     pdf.ln(10)
 
     # Title
     pdf.set_font("helvetica", "B", 14)
-    pdf.cell(0, 10, item.notes or "Détail des prestations", ln=True)
+    pdf.cell(0, 10, _clean(item.notes or "Détail des prestations"), ln=True)
     pdf.ln(5)
 
     # Table Header
@@ -173,18 +179,25 @@ def export_devis_pdf(devis_id: int, db: Session = Depends(get_db)):
     pdf.set_font("helvetica", "", 10)
     devise = item.client.devise or "DT"
     for line in item.items:
-        # Multi-cell for description to handle wrapping
+        # Check if we need a new page before drawing the row
+        if pdf.get_y() > 250:
+            pdf.add_page()
+            # Redraw header if needed or just continue
+        
+        description = _clean(line.description)
         x = pdf.get_x()
         y = pdf.get_y()
-        pdf.multi_cell(110, 10, line.description, border=1)
+        # Multi-cell for description
+        pdf.multi_cell(110, 10, description, border=1)
         new_y = pdf.get_y()
-        # Move back to top-right of the multi-cell to draw other cells
-        pdf.set_xy(x + 110, y)
         height = new_y - y
+        
+        # Draw remaining cells aligned with the height of the multi-cell
+        pdf.set_xy(x + 110, y)
         pdf.cell(20, height, str(line.quantity), border=1, align="C")
         pdf.cell(30, height, f"{line.unitPrice:,.2f}", border=1, align="R")
         pdf.cell(30, height, f"{line.lineTotal:,.2f}", border=1, align="R")
-        pdf.ln()
+        pdf.set_y(new_y)
 
     # Totals
     pdf.ln(5)

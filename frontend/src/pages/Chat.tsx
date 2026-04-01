@@ -368,7 +368,7 @@ export const Chat: React.FC = () => {
       setConfirmDeleteOpen(false);
       setError(null);
     } catch {
-      setError('Suppression impossible. Veuillez rÃ©essayer.');
+      setError('Suppression impossible. Veuillez réessayer.');
     } finally {
       setDeletingConversation(false);
     }
@@ -940,7 +940,7 @@ export const Chat: React.FC = () => {
           Supprimer la conversation avec{' '}
           <span className="font-semibold text-foreground">{selectedContact?.nom}</span> ?
           <br />
-          Cette action est irrÃ©versible.
+          Cette action est irréversible.
         </p>
         <div className="flex justify-end gap-2 mt-6">
           <button

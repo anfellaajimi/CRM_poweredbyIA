@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Edit, Pin, PinOff, Plus, Trash2, Upload, X } from 'lucide-react';
@@ -30,8 +30,8 @@ import {
 const ScoringBadge: React.FC<{ scoring?: string }> = ({ scoring }) => {
   const s = (scoring || 'Moyen').toLowerCase();
   const cfg: Record<string, { bg: string; color: string; label: string }> = {
-    'hot ðŸ”¥': { bg: '#fee2e2', color: '#dc2626', label: 'Hot ðŸ”¥' },
-    'hot': { bg: '#fee2e2', color: '#dc2626', label: 'Hot ðŸ”¥' },
+    'hot 🔥': { bg: '#fee2e2', color: '#dc2626', label: 'Hot 🔥' },
+    'hot': { bg: '#fee2e2', color: '#dc2626', label: 'Hot 🔥' },
     'moyen': { bg: '#fef3c7', color: '#d97706', label: 'Moyen' },
     'faible': { bg: '#f3f4f6', color: '#6b7280', label: 'Faible' },
   };
@@ -148,7 +148,7 @@ export const ProjectDetails: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['project', id] });
       queryClient.invalidateQueries({ queryKey: ['projects'] });
       setIsEditModalOpen(false);
-      toast.success('Projet modifiÃ©');
+      toast.success('Projet modifié');
     },
   });
 
@@ -156,7 +156,7 @@ export const ProjectDetails: React.FC = () => {
     mutationFn: () => projectsAPI.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['projects'] });
-      toast.success('Projet supprimÃ©');
+      toast.success('Projet supprimé');
       navigate('/projects');
     },
   });
@@ -167,7 +167,7 @@ export const ProjectDetails: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['project-team', id] });
       queryClient.invalidateQueries({ queryKey: ['project', id] });
       setSelectedUserId('');
-      toast.success('Membre ajoutÃ©');
+      toast.success('Membre ajouté');
     },
   });
 
@@ -176,7 +176,7 @@ export const ProjectDetails: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project-team', id] });
       queryClient.invalidateQueries({ queryKey: ['project', id] });
-      toast.success('Membre retirÃ©');
+      toast.success('Membre retiré');
     },
   });
 
@@ -185,7 +185,7 @@ export const ProjectDetails: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project-notes', id] });
       setNewNote('');
-      toast.success('Note ajoutÃ©e');
+      toast.success('Note ajoutée');
     },
   });
 
@@ -193,7 +193,7 @@ export const ProjectDetails: React.FC = () => {
     mutationFn: (noteId: number) => projectNotesAPI.delete(id, noteId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project-notes', id] });
-      toast.success('Note supprimÃ©e');
+      toast.success('Note supprimée');
     },
   });
 
@@ -201,7 +201,7 @@ export const ProjectDetails: React.FC = () => {
     mutationFn: (file: File) => projectFilesAPI.upload(id, file),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project-files', id] });
-      toast.success('Fichier uploadÃ©');
+      toast.success('Fichier uploadé');
     },
   });
 
@@ -209,7 +209,7 @@ export const ProjectDetails: React.FC = () => {
     mutationFn: (fileId: number) => projectFilesAPI.delete(id, fileId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project-files', id] });
-      toast.success('Fichier supprimÃ©');
+      toast.success('Fichier supprimé');
     },
   });
 
@@ -217,7 +217,7 @@ export const ProjectDetails: React.FC = () => {
     mutationFn: (payload: any) => projectCahierAPI.upsert(id, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project-cahier', id] });
-      toast.success('Cahier sauvegardÃ©');
+      toast.success('Cahier sauvegardé');
     },
   });
 
@@ -395,25 +395,25 @@ export const ProjectDetails: React.FC = () => {
   const tabs = [
     {
       id: 'overview',
-      label: 'Vue gÃ©nÃ©rale',
+      label: 'Vue générale',
       content: (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card>
-            <CardHeader><CardTitle>DÃ©tails du projet</CardTitle></CardHeader>
+            <CardHeader><CardTitle>Détails du projet</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <div><p className="text-sm text-muted-foreground">Client</p><p className="font-medium">{project.clientName}</p></div>
               <div><p className="text-sm text-muted-foreground">Statut</p><div className="flex gap-2 items-center mt-1"><Badge>{project.status}</Badge><ScoringBadge scoring={project.scoring} /></div></div>
-              <div><p className="text-sm text-muted-foreground">PrioritÃ©</p><Badge>{project.priority}</Badge></div>
+              <div><p className="text-sm text-muted-foreground">Priorité</p><Badge>{project.priority}</Badge></div>
               <div><p className="text-sm text-muted-foreground">Description</p><p className="font-medium">{project.description}</p></div>
             </CardContent>
           </Card>
           <Card>
             <CardHeader><CardTitle>Calendrier & Budget</CardTitle></CardHeader>
             <CardContent className="space-y-4">
-              <div><p className="text-sm text-muted-foreground">Date de dÃ©but</p><p className="font-medium">{project.startDate}</p></div>
-              <div><p className="text-sm text-muted-foreground">Ã‰chÃ©ance</p><p className="font-medium">{project.deadline}</p></div>
-              <div><p className="text-sm text-muted-foreground">Budget</p><p className="font-medium">{project.budget.toLocaleString()} {project.devise === 'EUR' ? 'â‚¬' : project.devise === 'USD' ? '$' : 'DT'}</p></div>
-              <div><p className="text-sm text-muted-foreground">DÃ©pensÃ©</p><p className="font-medium">{project.spent.toLocaleString()} {project.devise === 'EUR' ? 'â‚¬' : project.devise === 'USD' ? '$' : 'DT'}</p></div>
+              <div><p className="text-sm text-muted-foreground">Date de début</p><p className="font-medium">{project.startDate}</p></div>
+              <div><p className="text-sm text-muted-foreground">Échéance</p><p className="font-medium">{project.deadline}</p></div>
+              <div><p className="text-sm text-muted-foreground">Budget</p><p className="font-medium">{project.budget.toLocaleString()} {project.devise === 'EUR' ? '€' : project.devise === 'USD' ? '$' : 'DT'}</p></div>
+              <div><p className="text-sm text-muted-foreground">Dépensé</p><p className="font-medium">{project.spent.toLocaleString()} {project.devise === 'EUR' ? '€' : project.devise === 'USD' ? '$' : 'DT'}</p></div>
               <div><p className="text-sm text-muted-foreground">Avancement</p><p className="font-medium">{project.progress}%</p></div>
             </CardContent>
           </Card>
@@ -422,14 +422,14 @@ export const ProjectDetails: React.FC = () => {
     },
     {
       id: 'team',
-      label: 'Ã‰quipe',
+      label: 'Équipe',
       content: (
         <Card>
-          <CardHeader><CardTitle>Membres de l'Ã©quipe</CardTitle></CardHeader>
+          <CardHeader><CardTitle>Membres de l'équipe</CardTitle></CardHeader>
           <CardContent>
             <div className="flex gap-2 mb-6">
               <select className="flex-1 border border-input rounded-lg p-2 bg-background" value={selectedUserId} onChange={(e) => setSelectedUserId(e.target.value)}>
-                <option value="">SÃ©lectionner un membre</option>
+                <option value="">Sélectionner un membre</option>
                 {users.map((u: any) => <option key={u.id} value={u.id}>{u.name}</option>)}
               </select>
               <Button type="button" onClick={() => selectedUserId && addTeam.mutate(Number(selectedUserId))}>Ajouter</Button>
@@ -440,7 +440,7 @@ export const ProjectDetails: React.FC = () => {
                   <div><p className="font-medium">{member.nom}</p><p className="text-sm text-muted-foreground">{member.role}</p></div>
                   <button onClick={() => removeTeam.mutate(member.userID)} className="text-red-500 hover:text-red-700 text-sm">Retirer</button>
                 </div>
-              )) : <p className="text-muted-foreground">Aucun membre assignÃ©</p>}
+              )) : <p className="text-muted-foreground">Aucun membre assigné</p>}
             </div>
           </CardContent>
         </Card>
@@ -454,7 +454,7 @@ export const ProjectDetails: React.FC = () => {
           <CardHeader><CardTitle>Notes</CardTitle></CardHeader>
           <CardContent>
             <div className="flex gap-2 mb-4">
-              <Input value={newNote} onChange={(e) => setNewNote(e.target.value)} placeholder="Ã‰crire une note..." />
+              <Input value={newNote} onChange={(e) => setNewNote(e.target.value)} placeholder="Écrire une note..." />
               <Button onClick={() => newNote.trim() && createNote.mutate(newNote.trim())}>Ajouter</Button>
             </div>
             <div className="space-y-3">
@@ -484,7 +484,7 @@ export const ProjectDetails: React.FC = () => {
               lockedProjectName={project.name}
               onSoumettre={() => upsertCahier.mutate(toCahierPayload({ ...cahierDraft, objet: project.name }))}
               onAnnuler={() => setCahierDraft(readyCahier)}
-              cancelLabel="RÃ©initialiser"
+              cancelLabel="Réinitialiser"
               chargement={upsertCahier.isPending}
               btnLabel="Sauvegarder"
             />
@@ -593,7 +593,7 @@ export const ProjectDetails: React.FC = () => {
           <CardHeader><CardTitle>Fichiers du projet</CardTitle></CardHeader>
           <CardContent>
             <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 border border-border rounded-lg text-sm font-medium hover:bg-secondary transition-colors mb-4">
-              <Upload className="w-4 h-4" />TÃ©lÃ©charger des fichiers
+              <Upload className="w-4 h-4" />Télécharger des fichiers
               <input type="file" className="hidden" onChange={(e) => e.target.files?.[0] && uploadFile.mutate(e.target.files[0])} />
             </label>
             <div className="space-y-3">
@@ -601,7 +601,7 @@ export const ProjectDetails: React.FC = () => {
                 <div key={file.fileID} className="flex items-center justify-between p-3 border border-border rounded-lg bg-secondary/20">
                   <div><p className="text-sm font-medium">{file.nom}</p><p className="text-xs text-muted-foreground">{file.sizeBytes} bytes</p></div>
                   <div className="flex gap-2">
-                    <a href={projectFilesAPI.downloadUrl(id, file.fileID)} className="text-primary text-sm hover:underline">TÃ©lÃ©charger</a>
+                    <a href={projectFilesAPI.downloadUrl(id, file.fileID)} className="text-primary text-sm hover:underline">Télécharger</a>
                     <button onClick={() => removeFile.mutate(file.fileID)} className="text-red-500 hover:text-red-700"><X className="w-4 h-4" /></button>
                   </div>
                 </div>
@@ -701,17 +701,17 @@ export const ProjectDetails: React.FC = () => {
           <Input label="Nom du projet" value={editProject?.name || ''} onChange={(e) => setEditProject({ ...editProject, name: e.target.value })} required />
           <Input label="Description" value={editProject?.description || ''} onChange={(e) => setEditProject({ ...editProject, description: e.target.value })} />
           <div className="grid grid-cols-3 gap-4">
-            <Select value={editProject?.status || ''} onChange={(e) => setEditProject({ ...editProject, status: e.target.value })} options={[{ value: 'planification', label: 'Planification' }, { value: 'en_cours', label: 'En cours' }, { value: 'en_attente', label: 'En attente' }, { value: 'termine', label: 'TerminÃ©' }]} />
+            <Select value={editProject?.status || ''} onChange={(e) => setEditProject({ ...editProject, status: e.target.value })} options={[{ value: 'planification', label: 'Planification' }, { value: 'en_cours', label: 'En cours' }, { value: 'en_attente', label: 'En attente' }, { value: 'termine', label: 'Terminé' }]} />
             <Select value={editProject?.priority || ''} onChange={(e) => setEditProject({ ...editProject, priority: e.target.value })} options={[{ value: 'haute', label: 'Haute' }, { value: 'moyenne', label: 'Moyenne' }, { value: 'basse', label: 'Basse' }]} />
-            <Select value={editProject?.scoring || 'Moyen'} onChange={(e) => setEditProject({ ...editProject, scoring: e.target.value })} options={[{ value: 'Hot ðŸ”¥', label: 'Hot ðŸ”¥' }, { value: 'Moyen', label: 'Moyen' }, { value: 'Faible', label: 'Faible' }]} />
+            <Select value={editProject?.scoring || 'Moyen'} onChange={(e) => setEditProject({ ...editProject, scoring: e.target.value })} options={[{ value: 'Hot 🔥', label: 'Hot 🔥' }, { value: 'Moyen', label: 'Moyen' }, { value: 'Faible', label: 'Faible' }]} />
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <Input label={`Budget (${project?.devise === 'EUR' ? 'â‚¬' : project?.devise === 'USD' ? '$' : 'DT'})`} type="number" value={String(editProject?.budget ?? 0)} onChange={(e) => setEditProject({ ...editProject, budget: Number(e.target.value) })} />
+            <Input label={`Budget (${project?.devise === 'EUR' ? '€' : project?.devise === 'USD' ? '$' : 'DT'})`} type="number" value={String(editProject?.budget ?? 0)} onChange={(e) => setEditProject({ ...editProject, budget: Number(e.target.value) })} />
             <Input label="Avancement (%)" type="number" value={String(editProject?.progress ?? 0)} onChange={(e) => setEditProject({ ...editProject, progress: Number(e.target.value) })} />
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <Input label="Date de dÃ©but" type="date" value={editProject?.startDate || ''} onChange={(e) => setEditProject({ ...editProject, startDate: e.target.value })} />
-            <Input label="Ã‰chÃ©ance" type="date" value={editProject?.deadline || ''} onChange={(e) => setEditProject({ ...editProject, deadline: e.target.value })} />
+            <Input label="Date de début" type="date" value={editProject?.startDate || ''} onChange={(e) => setEditProject({ ...editProject, startDate: e.target.value })} />
+            <Input label="Échéance" type="date" value={editProject?.deadline || ''} onChange={(e) => setEditProject({ ...editProject, deadline: e.target.value })} />
           </div>
           <div className="flex justify-end space-x-3 pt-4">
             <Button variant="outline" type="button" onClick={() => setIsEditModalOpen(false)}>Annuler</Button>

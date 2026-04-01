@@ -278,7 +278,7 @@ export const Devis: React.FC = () => {
         </div>
 
         {/* Table */}
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto pb-48">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-gray-500 font-medium border-b border-gray-100">
@@ -311,8 +311,8 @@ export const Devis: React.FC = () => {
                     <div className="flex items-center justify-end gap-1">
                       {/* Aperçu */}
                       <button
-                        onClick={() => telecharger(devis, true)}
-                        className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+                        onClick={() => { setDevisSelectionne(devis); setAperçuOuvert(true); }}
+                        className="p-1.5 rounded-lg hover:bg-indigo-50 text-indigo-600 hover:text-indigo-700 transition-colors"
                         title="Visualiser"
                       >
                         <Eye className="w-4 h-4" />

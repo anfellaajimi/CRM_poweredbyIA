@@ -106,7 +106,7 @@ export function CahierForm({
                 onChange={(e) => setValeurs({ ...valeurs, projetID: Number(e.target.value) })}
                 required
               >
-                <option value={0}>SÃ©lectionner un projet</option>
+                <option value={0}>Sélectionner un projet</option>
                 {projets.map((p) => (
                   <option key={String(p.id)} value={Number(p.id)}>
                     {p.name}
@@ -115,7 +115,7 @@ export function CahierForm({
               </select>
             ) : (
               <div className="w-full border border-gray-200 rounded-lg p-2 bg-gray-50 text-sm text-gray-700">
-                {lockedProjectName || 'â€”'}
+                {lockedProjectName || '—'}
               </div>
             )}
           </div>
@@ -163,7 +163,7 @@ export function CahierForm({
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium mb-1 text-gray-700">DÃ©lais</label>
+            <label className="block text-sm font-medium mb-1 text-gray-700">Délais</label>
             <input
               type="text"
               className="w-full border border-gray-200 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
@@ -185,12 +185,12 @@ export function CahierForm({
         {[
           { champ: 'description', label: 'Description' },
           { champ: 'objectif', label: 'Objectif' },
-          { champ: 'perimetre', label: 'PÃ©rimÃ¨tre' },
-          { champ: 'fonctionnalites', label: 'FonctionnalitÃ©s' },
+          { champ: 'perimetre', label: 'Périmètre' },
+          { champ: 'fonctionnalites', label: 'Fonctionnalités' },
           { champ: 'contraintes', label: 'Contraintes' },
           { champ: 'userStories', label: 'User Stories' },
-          { champ: 'reglesMetier', label: 'RÃ¨gles MÃ©tier' },
-          { champ: 'documentsReference', label: 'Documents de RÃ©fÃ©rence' },
+          { champ: 'reglesMetier', label: 'Règles Métier' },
+          { champ: 'documentsReference', label: 'Documents de Référence' },
         ].map(({ champ, label }) => (
           <div key={champ}>
             <label className="block text-sm font-medium mb-2 text-gray-700">{label}</label>

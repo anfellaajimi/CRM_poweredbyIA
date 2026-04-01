@@ -1,4 +1,4 @@
-﻿import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -42,8 +42,8 @@ const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
 const ScoringBadge: React.FC<{ scoring?: string }> = ({ scoring }) => {
   const s = (scoring || 'Moyen').toLowerCase();
   const cfg: Record<string, { bg: string; color: string; label: string }> = {
-    'hot ðŸ”¥': { bg: '#fee2e2', color: '#dc2626', label: 'Hot ðŸ”¥' },
-    'hot': { bg: '#fee2e2', color: '#dc2626', label: 'Hot ðŸ”¥' },
+    'hot 🔥': { bg: '#fee2e2', color: '#dc2626', label: 'Hot 🔥' },
+    'hot': { bg: '#fee2e2', color: '#dc2626', label: 'Hot 🔥' },
     'moyen': { bg: '#fef3c7', color: '#d97706', label: 'Moyen' },
     'faible': { bg: '#f3f4f6', color: '#6b7280', label: 'Faible' },
   };
@@ -101,7 +101,7 @@ export const Clients: React.FC = () => {
     mutationFn: clientsAPI.create,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
-      toast.success('Client ajoutÃ©');
+      toast.success('Client ajouté');
       setIsAddModalOpen(false);
       setNewClient(initialClient);
     },
@@ -112,7 +112,7 @@ export const Clients: React.FC = () => {
     mutationFn: (id: string) => clientsAPI.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clients'] });
-      toast.success('Client supprimÃ©');
+      toast.success('Client supprimé');
       setClientToDelete(null);
     },
     onError: () => toast.error('Suppression impossible'),
@@ -178,7 +178,7 @@ export const Clients: React.FC = () => {
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#94a3b8', marginBottom: 20 }}>
         <span style={{ cursor: 'pointer', color: '#7c3aed' }} onClick={() => navigate('/')}>Accueil</span>
-        <span>â€º</span>
+        <span>›</span>
         <span style={{ color: '#1e293b', fontWeight: 500 }}>Clients</span>
       </div>
 
@@ -233,7 +233,7 @@ export const Clients: React.FC = () => {
           </div>
           {filtered.length > 0 && (
             <span style={{ fontSize: 12, color: '#94a3b8', marginLeft: 'auto' }}>
-              {(page - 1) * PAGE_SIZE + 1}â€“{Math.min(page * PAGE_SIZE, filtered.length)} sur {filtered.length} rÃ©sultats
+              {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} sur {filtered.length} résultats
             </span>
           )}
         </div>
@@ -242,7 +242,7 @@ export const Clients: React.FC = () => {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: '#f8fafc' }}>
-                {['Client', 'Type', 'Email', 'TÃ©lÃ©phone', 'Statut', 'Scoring', 'CrÃ©Ã© le', ''].map((h, i) => (
+                {['Client', 'Type', 'Email', 'Téléphone', 'Statut', 'Scoring', 'Créé le', ''].map((h, i) => (
                   <th key={i} style={{
                     padding: '12px 20px', textAlign: 'left', fontSize: 12,
                     fontWeight: 600, color: '#64748b', textTransform: 'uppercase',
@@ -257,7 +257,7 @@ export const Clients: React.FC = () => {
               {isLoading ? (
                 <tr><td colSpan={8} style={{ padding: 40, textAlign: 'center', color: '#94a3b8', fontSize: 14 }}>Chargement...</td></tr>
               ) : paginated.length === 0 ? (
-                <tr><td colSpan={8} style={{ padding: 48, textAlign: 'center', color: '#94a3b8', fontSize: 14 }}>Aucun client trouvÃ©.</td></tr>
+                <tr><td colSpan={8} style={{ padding: 48, textAlign: 'center', color: '#94a3b8', fontSize: 14 }}>Aucun client trouvé.</td></tr>
               ) : paginated.map(client => (
                 <tr key={client.id} onClick={() => navigate(`/clients/${client.id}`)}
                   style={{ cursor: 'pointer', borderBottom: '1px solid #f1f5f9', background: '#fff', transition: 'background .15s' }}
@@ -420,7 +420,7 @@ export const Clients: React.FC = () => {
         <p style={{ fontSize: 14, color: '#475569', margin: 0, lineHeight: 1.5 }}>
           Supprimer le client <span style={{ fontWeight: 700, color: '#0f172a' }}>{clientToDelete?.name}</span> ?
           <br />
-          Cette action est irrÃ©versible.
+          Cette action est irréversible.
         </p>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, paddingTop: 18 }}>
           <button
@@ -479,7 +479,7 @@ export const Clients: React.FC = () => {
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <Inp label="Email" type="email" value={newClient.email || ''} onChange={v => setNewClient({ ...newClient, email: v })} required />
-            <Inp label="TÃ©lÃ©phone" value={newClient.phone || ''} onChange={v => setNewClient({ ...newClient, phone: v })} required />
+            <Inp label="Téléphone" value={newClient.phone || ''} onChange={v => setNewClient({ ...newClient, phone: v })} required />
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -487,7 +487,7 @@ export const Clients: React.FC = () => {
               <select value={newClient.devise || 'TND'} onChange={e => setNewClient({ ...newClient, devise: e.target.value })}
                 style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: '9px 12px', fontSize: 14, color: '#111827', outline: 'none', background: '#fff' }}>
                 <option value="TND">Dinar Tunisien (DT)</option>
-                <option value="EUR">Euro (â‚¬)</option>
+                <option value="EUR">Euro (€)</option>
                 <option value="USD">Dollar ($)</option>
               </select>
             </div>
@@ -495,7 +495,7 @@ export const Clients: React.FC = () => {
               <label style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>Scoring *</label>
               <select value={newClient.scoring || 'Moyen'} onChange={e => setNewClient({ ...newClient, scoring: e.target.value })}
                 style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: '9px 12px', fontSize: 14, color: '#111827', outline: 'none', background: '#fff' }}>
-                <option value="Hot ðŸ”¥">Hot ðŸ”¥</option>
+                <option value="Hot 🔥">Hot 🔥</option>
                 <option value="Moyen">Moyen</option>
                 <option value="Faible">Faible</option>
               </select>
@@ -515,14 +515,14 @@ export const Clients: React.FC = () => {
           {newClient.type === 'Physique' ? (<>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <Inp label="Nom" value={newClient.name || ''} onChange={v => setNewClient({ ...newClient, name: v })} required />
-              <Inp label="PrÃ©nom" value={newClient.prenom || ''} onChange={v => setNewClient({ ...newClient, prenom: v })} required />
+              <Inp label="Prénom" value={newClient.prenom || ''} onChange={v => setNewClient({ ...newClient, prenom: v })} required />
             </div>
             <Inp label="Date de naissance" type="date" value={newClient.dateNaissance || ''} onChange={v => setNewClient({ ...newClient, dateNaissance: v })} required />
             <Inp label="CIN" value={newClient.cin || ''} onChange={v => setNewClient({ ...newClient, cin: v })} required />
           </>) : (<>
             <Inp label="Raison Sociale" value={newClient.raisonSociale || ''} onChange={v => setNewClient({ ...newClient, raisonSociale: v })} required />
             <Inp label="Matricule Fiscale" value={newClient.matriculeFiscale || ''} onChange={v => setNewClient({ ...newClient, matriculeFiscale: v })} />
-            <Inp label="Secteur d'activitÃ©" value={newClient.secteurActivite || ''} onChange={v => setNewClient({ ...newClient, secteurActivite: v })} />
+            <Inp label="Secteur d'activité" value={newClient.secteurActivite || ''} onChange={v => setNewClient({ ...newClient, secteurActivite: v })} />
           </>)}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, paddingTop: 8 }}>
             <button type="button" onClick={() => setIsAddModalOpen(false)}

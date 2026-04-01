@@ -133,6 +133,11 @@ def export_facture_pdf(facture_id: int, db: Session = Depends(get_db)):
     if not item:
         raise HTTPException(status_code=404, detail="Facture not found")
 
+    def _clean(text):
+        if not text:
+            return ""
+        return str(text).encode("latin-1", "replace").decode("latin-1")
+
     pdf = FPDF()
     pdf.add_page()
 
@@ -142,10 +147,10 @@ def export_facture_pdf(facture_id: int, db: Session = Depends(get_db)):
     pdf.cell(0, 10, "FACTURE", ln=True, align="R")
     pdf.set_font("helvetica", "", 10)
     pdf.set_text_color(107, 114, 128)  # Gray-500
-    pdf.cell(0, 5, f"Référence: FAC-{item.factureID}", ln=True, align="R")
-    pdf.cell(0, 5, f"Date: {item.dateFacture.strftime('%d/%m/%Y')}", ln=True, align="R")
+    pdf.cell(0, 5, _clean(f"Référence: FAC-{item.factureID}"), ln=True, align="R")
+    pdf.cell(0, 5, _clean(f"Date: {item.dateFacture.strftime('%d/%m/%Y')}"), ln=True, align="R")
     if item.dueDate:
-        pdf.cell(0, 5, f"Échéance: {item.dueDate.strftime('%d/%m/%Y')}", ln=True, align="R")
+        pdf.cell(0, 5, _clean(f"Échéance: {item.dueDate.strftime('%d/%m/%Y')}"), ln=True, align="R")
     pdf.ln(10)
 
     # Client Info
@@ -153,9 +158,9 @@ def export_facture_pdf(facture_id: int, db: Session = Depends(get_db)):
     pdf.set_text_color(31, 41, 55)  # Gray-800
     pdf.cell(0, 7, "Client:", ln=True)
     pdf.set_font("helvetica", "", 12)
-    pdf.cell(0, 7, item.client.nom, ln=True)
+    pdf.cell(0, 7, _clean(item.client.nom), ln=True)
     if item.client.email:
-        pdf.cell(0, 7, item.client.email, ln=True)
+        pdf.cell(0, 7, _clean(item.client.email), ln=True)
     pdf.set_font("helvetica", "B", 10)
     pdf.ln(5)
     status_label = "PAYÉE" if item.status in ["payee", "paid"] else "EN ATTENTE"
@@ -175,16 +180,20 @@ def export_facture_pdf(facture_id: int, db: Session = Depends(get_db)):
     pdf.set_font("helvetica", "", 10)
     devise = item.client.devise or "DT"
     for line in item.items:
+        if pdf.get_y() > 250:
+            pdf.add_page()
+        
+        description = _clean(line.description)
         x = pdf.get_x()
         y = pdf.get_y()
-        pdf.multi_cell(110, 10, line.description, border=1)
+        pdf.multi_cell(110, 10, description, border=1)
         new_y = pdf.get_y()
-        pdf.set_xy(x + 110, y)
         height = new_y - y
+        pdf.set_xy(x + 110, y)
         pdf.cell(20, height, str(line.quantity), border=1, align="C")
         pdf.cell(30, height, f"{line.unitPrice:,.2f}", border=1, align="R")
         pdf.cell(30, height, f"{line.lineTotal:,.2f}", border=1, align="R")
-        pdf.ln()
+        pdf.set_y(new_y)
 
     # Totals
     pdf.ln(5)

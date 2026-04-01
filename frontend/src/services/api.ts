@@ -627,6 +627,8 @@ export type UIContrat = {
   responsabilites?: string;
   conditions?: string;
   devise?: string;
+  isSignedByClient: boolean;
+  isSignedByProvider: boolean;
 };
 
 const roleToUi = (role: string): UIUser['role'] => {
@@ -735,6 +737,8 @@ const toUIContrat = (item: any): UIContrat => ({
   responsabilites: item.responsabilites || '',
   conditions: item.conditions || '',
   devise: item.clientDevise || 'TND',
+  isSignedByClient: Boolean(item.isSignedByClient),
+  isSignedByProvider: Boolean(item.isSignedByProvider),
 });
 
 const toContratPayload = (item: Partial<UIContrat>) => ({
@@ -752,6 +756,8 @@ const toContratPayload = (item: Partial<UIContrat>) => ({
   montant: Number(item.value || 0),
   conditions: item.conditions || null,
   status: item.status || 'actif',
+  isSignedByClient: Boolean(item.isSignedByClient),
+  isSignedByProvider: Boolean(item.isSignedByProvider),
 });
 
 export const usersAPI = {
