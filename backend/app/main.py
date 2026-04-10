@@ -1,3 +1,4 @@
+# Triggering reload
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -56,7 +57,8 @@ _scheduler_started = False
 
 @app.on_event("startup")
 def startup_create_tables() -> None:
-    Base.metadata.create_all(bind=engine)
+    # Base.metadata.create_all(bind=engine)  # Removed: using Alembic migrations instead
+
 
     global _scheduler, _scheduler_started
     if _scheduler_started:

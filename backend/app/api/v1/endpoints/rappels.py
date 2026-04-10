@@ -72,7 +72,7 @@ def create_rappel(payload: RappelCreate, db: Session = Depends(get_db)):
         entity_type="rappel",
         entity_id=None,
         action="create",
-        message=f"Rappel created for client {client_id}",
+        message=f"Rappel créé pour le client {client_id}",
     )
     db.commit()
     db.refresh(item)

@@ -69,7 +69,7 @@ def create_facture(payload: FactureCreate, db: Session = Depends(get_db)):
         entity_type="facture",
         entity_id=None,
         action="create",
-        message=f"Facture created for client {payload.clientID}",
+        message=f"Facture créée pour le client {payload.clientID}",
     )
     db.commit()
     db.refresh(item)

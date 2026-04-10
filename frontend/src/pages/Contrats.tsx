@@ -219,7 +219,7 @@ export const Contrats: React.FC = () => {
   const parPage = 10;
 
   const { data: contrats = [] } = useQuery({ queryKey: ['contrats'], queryFn: contratsAPI.getAll });
-  const { data: clients = [] } = useQuery({ queryKey: ['clients'], queryFn: clientsAPI.getAll });
+  const { data: clients = [] } = useQuery({ queryKey: ['clients'], queryFn: () => clientsAPI.getAll() });
 
   const mutationCreer = useMutation({
     mutationFn: contratsAPI.create,

@@ -43,7 +43,7 @@ def create_cahier(payload: CahierDeChargeCreate, db: Session = Depends(get_db)):
         entity_type="cahier",
         entity_id=item.projetID,
         action="create",
-        message=f"Cahier created for project {item.projetID}",
+        message=f"Cahier créé pour le projet {item.projetID}",
     )
     db.commit()
     db.refresh(item)

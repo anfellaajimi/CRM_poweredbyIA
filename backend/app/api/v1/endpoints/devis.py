@@ -68,7 +68,7 @@ def create_devis(payload: DevisCreate, db: Session = Depends(get_db)):
         entity_type="devis",
         entity_id=None,
         action="create",
-        message=f"Devis created for client {payload.clientID}",
+        message=f"Devis créé pour le client {payload.clientID}",
     )
     db.commit()
     db.refresh(item)

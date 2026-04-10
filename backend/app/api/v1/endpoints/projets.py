@@ -30,7 +30,7 @@ def get_projet(projet_id: int, db: Session = Depends(get_db)):
 def create_projet(payload: ProjetCreate, db: Session = Depends(get_db)):
     client = db.get(Client, payload.clientID)
     if not client:
-        raise HTTPException(status_code=400, detail="Client not found")
+        raise HTTPException(status_code=400, detail="Client non trouvé")
     item = Projet(**payload.model_dump())
     item.dateMaj = datetime.utcnow()
     db.add(item)
@@ -39,7 +39,7 @@ def create_projet(payload: ProjetCreate, db: Session = Depends(get_db)):
         entity_type="projet",
         entity_id=None,
         action="create",
-        message=f"Projet {item.nomProjet} created",
+        message=f"Projet {item.nomProjet} créé",
     )
     db.commit()
     db.refresh(item)
@@ -52,7 +52,7 @@ def update_projet(projet_id: int, payload: ProjetUpdate, db: Session = Depends(g
     if not item:
         raise HTTPException(status_code=404, detail="Projet not found")
     if payload.clientID is not None and not db.get(Client, payload.clientID):
-        raise HTTPException(status_code=400, detail="Client not found")
+        raise HTTPException(status_code=400, detail="Client non trouvé")
     for key, value in payload.model_dump(exclude_unset=True).items():
         setattr(item, key, value)
     item.dateMaj = datetime.utcnow()
@@ -61,7 +61,7 @@ def update_projet(projet_id: int, payload: ProjetUpdate, db: Session = Depends(g
         entity_type="projet",
         entity_id=item.id,
         action="update",
-        message=f"Projet {item.nomProjet} updated",
+        message=f"Projet {item.nomProjet} mis à jour",
     )
     db.commit()
     db.refresh(item)
@@ -78,7 +78,7 @@ def delete_projet(projet_id: int, db: Session = Depends(get_db)):
         entity_type="projet",
         entity_id=item.id,
         action="delete",
-        message=f"Projet {item.nomProjet} deleted",
+        message=f"Projet {item.nomProjet} supprimé",
     )
     db.delete(item)
     db.commit()

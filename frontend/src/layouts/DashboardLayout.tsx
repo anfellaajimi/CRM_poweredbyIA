@@ -7,19 +7,19 @@ import { cn } from '../utils/cn';
 import { Toaster } from 'sonner';
 
 export const DashboardLayout: React.FC = () => {
-  const { isCollapsed } = useSidebarStore();
+  const { isCollapsed, isFullScreen } = useSidebarStore();
 
   return (
     <div className="min-h-screen bg-background">
-      <Sidebar />
-      <TopBar />
+      {!isFullScreen && <Sidebar />}
+      {!isFullScreen && <TopBar />}
       <main
         className={cn(
-          'pt-16 min-h-screen transition-all duration-300',
-          isCollapsed ? 'ml-20' : 'ml-64'
+          'transition-all duration-300 min-h-screen',
+          !isFullScreen ? (isCollapsed ? 'ml-20 pt-16' : 'ml-64 pt-16') : 'ml-0 pt-0'
         )}
       >
-        <div className="p-6">
+        <div className={cn(isFullScreen ? 'p-0' : 'p-6')}>
           <Outlet />
         </div>
       </main>

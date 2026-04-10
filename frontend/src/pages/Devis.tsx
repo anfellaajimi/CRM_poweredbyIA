@@ -104,7 +104,7 @@ export const Devis: React.FC = () => {
   });
 
   const { data: listDevis = [] } = useQuery({ queryKey: ['devis'], queryFn: devisAPI.getAll });
-  const { data: clients = [] } = useQuery({ queryKey: ['clients'], queryFn: clientsAPI.getAll });
+  const { data: clients = [] } = useQuery({ queryKey: ['clients'], queryFn: () => clientsAPI.getAll() });
 
   const mutationCreer = useMutation({
     mutationFn: devisAPI.create,

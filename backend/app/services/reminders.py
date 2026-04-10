@@ -110,12 +110,13 @@ def _mark_done(db: Session, system_key: str) -> None:
 def generate_project_rappels(db: Session, now: datetime) -> dict:
     """
     Generate project-scoped system reminders idempotently (via systemKey).
-    Returns basic counts for logging/monitoring.
+    Returns basic counts and detailed logs for logging/monitoring.
     """
     today = now.date()
 
     created_or_updated = 0
     marked_done = 0
+    logs = []
 
     projects: list[Projet] = db.query(Projet).all()
     for p in projects:
@@ -141,6 +142,7 @@ def generate_project_rappels(db: Session, now: datetime) -> dict:
                     priorite="moyenne",
                 )
                 created_or_updated += 1
+                logs.append(f'Rappel de démarrage créé pour le projet "{p.nomProjet}"')
             elif target < today:
                 _mark_done(db, key)
 
@@ -161,6 +163,7 @@ def generate_project_rappels(db: Session, now: datetime) -> dict:
                         priorite="elevee" if off <= 3 else "moyenne",
                     )
                     created_or_updated += 1
+                    logs.append(f'Rappel de deadline ({off}j) créé pour le projet "{p.nomProjet}"')
                 elif target < today:
                     _mark_done(db, key)
 
@@ -182,7 +185,7 @@ def generate_project_rappels(db: Session, now: datetime) -> dict:
                 if before:
                     marked_done += 1
                 continue
-            if due < today:
+            if overdue:
                 _get_or_create_system_rappel(
                     db,
                     system_key=key,
@@ -195,6 +198,7 @@ def generate_project_rappels(db: Session, now: datetime) -> dict:
                     milestone_id=m.id,
                 )
                 created_or_updated += 1
+                logs.append(f'Alerte : Jalon "{m.title}" en retard (Projet: {p.nomProjet})')
 
         # Financial: invoice not generated when project is done
         key_invoice_missing = _mk_system_key("invoice_missing", projet_id, "done_no_invoice")
@@ -213,6 +217,7 @@ def generate_project_rappels(db: Session, now: datetime) -> dict:
                     priorite="moyenne",
                 )
                 created_or_updated += 1
+                logs.append(f'Alerte : Facture manquante pour le projet terminé "{p.nomProjet}"')
             else:
                 before = db.query(Rappel).filter(Rappel.systemKey == key_invoice_missing, Rappel.statut != "termine").count()
                 _mark_done(db, key_invoice_missing)
@@ -244,6 +249,7 @@ def generate_project_rappels(db: Session, now: datetime) -> dict:
                 priorite="elevee",
             )
             created_or_updated += 1
+            logs.append(f'Alerte : Budget dépassé pour "{p.nomProjet}" ({spent:.2f} DT)')
         else:
             before = db.query(Rappel).filter(Rappel.systemKey == key_budget, Rappel.statut != "termine").count()
             _mark_done(db, key_budget)
@@ -366,14 +372,20 @@ def generate_project_rappels(db: Session, now: datetime) -> dict:
 
     db.commit()
 
-    return {"created_or_updated": created_or_updated, "marked_done": marked_done}
+    return {
+        "created_or_updated": created_or_updated,
+        "marked_done": marked_done,
+        "logs": logs
+    }
 
 
 def send_due_reminder_emails(db: Session, now: datetime) -> dict:
     """
     Send emails for reminders that are due today and haven't been emailed yet.
+    Returns basic counts and detailed logs.
     """
     today = now.date()
+    logs = []
 
     to_send: list[Rappel] = (
         db.query(Rappel)
@@ -448,9 +460,16 @@ def send_due_reminder_emails(db: Session, now: datetime) -> dict:
             r.emailSentAt = now
             r.emailLastError = last_error
             sent += 1
+            logs.append(f"Email envoyé : {subject} à {', '.join(sorted(recipients))}")
         else:
             r.emailLastError = last_error or "Unknown error"
             failed += 1
+            logs.append(f"Échec email : {subject} (Erreur: {last_error or 'Destinataires invalides'})")
 
     db.commit()
-    return {"emails_sent": sent, "emails_failed": failed, "candidates": len(to_send)}
+    return {
+        "emails_sent": sent,
+        "emails_failed": failed,
+        "candidates": len(to_send),
+        "logs": logs
+    }

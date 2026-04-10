@@ -114,7 +114,7 @@ export const Factures: React.FC = () => {
 
   const { data: clients = [] } = useQuery({
     queryKey: ['clients'],
-    queryFn: clientsAPI.getAll,
+    queryFn: () => clientsAPI.getAll(),
   });
 
   const mutationCreer = useMutation({

@@ -59,7 +59,7 @@ def create_utilisateur(payload: UtilisateurCreate, db: Session = Depends(get_db)
         entity_type="utilisateur",
         entity_id=None,
         action="create",
-        message=f"Utilisateur {payload.email} created",
+        message=f"Utilisateur {payload.email} créé",
     )
     db.commit()
     db.refresh(item)

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Edit, Plus, Power, Trash2, Search, ChevronDown, Users as UsersIcon, Activity } from 'lucide-react';
+import { Edit, Plus, Power, Trash2, Search, ChevronDown, Users as UsersIcon, Activity, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Modal } from '../components/ui/Modal';
@@ -32,6 +32,7 @@ const obtenirCouleurAvatar = (nom: string) => {
 };
 
 export const Users: React.FC = () => {
+  const navigate = useNavigate();
   const { user: utilisateurCourant } = useAuthStore();
   const qc = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -46,6 +47,7 @@ export const Users: React.FC = () => {
   const [nouvelUtilisateur, setNouvelUtilisateur] = useState({
     name: '', email: '', telephone: '', dateNaissance: '', role: 'Developer' as UIUser['role'],
     status: 'Actif' as UIUser['status'], password: '',
+    cnssId: '',
   });
 
   const { data: utilisateurs = [] } = useQuery({ queryKey: ['users'], queryFn: usersAPI.getAll });
@@ -70,7 +72,7 @@ export const Users: React.FC = () => {
       qc.invalidateQueries({ queryKey: ['users'] });
       toast.success('Utilisateur créé avec succès');
       setModalCreerOuvert(false);
-      setNouvelUtilisateur({ name: '', email: '', telephone: '', dateNaissance: '', role: 'Developer', status: 'Actif', password: '' });
+      setNouvelUtilisateur({ name: '', email: '', telephone: '', dateNaissance: '', role: 'Developer', status: 'Actif', password: '', cnssId: '' });
     },
     onError: (err: any) => toast.error(`Erreur: ${err?.response?.data?.message ?? err?.message}`),
   });
@@ -110,6 +112,7 @@ export const Users: React.FC = () => {
       dateNaissance: utilisateurSelectionne.dateNaissance,
       role: utilisateurSelectionne.role,
       status: utilisateurSelectionne.status,
+      cnssId: utilisateurSelectionne.cnssId,
     };
     if (motDePasse.trim()) payload.password = motDePasse;
     mutationModifier.mutate({ id: utilisateurSelectionne.id, payload });
@@ -292,6 +295,13 @@ export const Users: React.FC = () => {
                     <div className="flex items-center justify-end gap-1.5">
                       {/* Modifier */}
                       <button
+                        onClick={() => navigate(`/users/${user.id}`)}
+                        className="p-1.5 rounded-lg hover:bg-indigo-50 text-indigo-600 hover:text-indigo-700 transition-colors border border-gray-200"
+                        title="Détails"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                      </button>
+                      <button
                         onClick={() => { setUtilisateurSelectionne(user); setModalModifierOuvert(true); }}
                         className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors border border-gray-200"
                         title="Modifier"
@@ -370,6 +380,10 @@ export const Users: React.FC = () => {
               </select>
             </div>
           </div>
+          <div>
+            <label className="block text-sm font-medium mb-1 text-gray-700">Identifiant CNSS</label>
+            <input type="text" className="w-full border border-gray-200 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" value={nouvelUtilisateur.cnssId} onChange={(e) => setNouvelUtilisateur({ ...nouvelUtilisateur, cnssId: e.target.value })} placeholder="Ex: 12345678" />
+          </div>
           <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
             <button type="button" onClick={() => setModalCreerOuvert(false)} className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">Annuler</button>
             <button type="submit" disabled={mutationCreer.isPending} className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors">
@@ -421,6 +435,10 @@ export const Users: React.FC = () => {
                   <option value="Inactif">Inactif</option>
                 </select>
               </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1 text-gray-700">Identifiant CNSS</label>
+              <input type="text" className="w-full border border-gray-200 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300" value={utilisateurSelectionne.cnssId || ''} onChange={(e) => setUtilisateurSelectionne({ ...utilisateurSelectionne, cnssId: e.target.value })} placeholder="Identifiant CNSS" />
             </div>
             <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
               <button type="button" onClick={() => setModalModifierOuvert(false)} className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">Annuler</button>

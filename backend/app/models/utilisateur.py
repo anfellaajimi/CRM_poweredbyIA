@@ -16,5 +16,9 @@ class Utilisateur(Base):
     role: Mapped[str] = mapped_column(String(50), default="developpeur", nullable=False)
     actif: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     dateCreation: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    avatarUrl: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    cnssId: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
     projets = relationship("Projet", secondary="projet_utilisateurs", back_populates="utilisateurs")
+    contracts = relationship("UserContract", back_populates="user", cascade="all, delete-orphan")
+    cnss_declarations = relationship("DeclarationCNSS", back_populates="user", cascade="all, delete-orphan")

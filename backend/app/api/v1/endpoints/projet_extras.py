@@ -274,7 +274,7 @@ def create_milestone(projet_id: int, payload: ProjetMilestoneCreate, db: Session
         entity_type="milestone",
         entity_id=projet.id,
         action="create",
-        message=f"Milestone created for project {projet.nomProjet}",
+        message=f"Milestone créé pour le projet {projet.nomProjet}",
     )
     db.commit()
     db.refresh(item)

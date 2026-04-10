@@ -16,7 +16,9 @@ from app.models.rappel import Rappel
 from app.models.ressource import Ressource
 from app.models.service import Service
 from app.models.user import User
+from app.models.user_contract import UserContract
 from app.models.utilisateur import Utilisateur
+from app.models.declaration_cnss import DeclarationCNSS
 
 __all__ = [
     "User",
@@ -25,6 +27,8 @@ __all__ = [
     "Ressource",
     "Utilisateur",
     "Service",
+    "UserContract",
+    "DeclarationCNSS",
     "Acces",
     "ActivityEvent",
     "Rappel",

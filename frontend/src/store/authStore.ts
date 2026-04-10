@@ -41,6 +41,7 @@ export const useAuthStore = create<AuthState>()(
           name: apiUser.name ?? '',
           email: apiUser.email ?? email,
           role: roleMap[String(apiUser.role ?? '').toLowerCase()] ?? 'Developer',
+          avatar: apiUser.avatar,
         };
         set({ user, isAuthenticated: true });
       },
@@ -67,6 +68,7 @@ export const useAuthStore = create<AuthState>()(
           name: apiUser.name ?? name,
           email: apiUser.email ?? email,
           role: roleMap[String(apiUser.role ?? '').toLowerCase()] ?? 'Developer',
+          avatar: apiUser.avatar,
         };
         set({ user, isAuthenticated: true });
       },

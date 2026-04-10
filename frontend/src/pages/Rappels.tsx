@@ -61,7 +61,7 @@ export const Rappels: React.FC = () => {
   const [filtreProjet, setFiltreProjet] = useState<string>('');
   const [filtreSource, setFiltreSource] = useState<'all' | 'system' | 'manual'>('all');
 
-  const { data: clients = [] } = useQuery({ queryKey: ['clients'], queryFn: clientsAPI.getAll });
+  const { data: clients = [] } = useQuery({ queryKey: ['clients'], queryFn: () => clientsAPI.getAll() });
   const { data: projects = [] } = useQuery({ queryKey: ['projects'], queryFn: projectsAPI.getAll });
 
   const rappelFilters = useMemo(() => {

@@ -12,6 +12,7 @@ from app.schemas.projet_note import ProjetNoteCreate, ProjetNoteRead
 from app.schemas.rappel import RappelCreate, RappelRead, RappelUpdate
 from app.schemas.ressource import RessourceCreate, RessourceRead, RessourceUpdate
 from app.schemas.service import ServiceCreate, ServiceRead, ServiceUpdate
+from app.schemas.user_contract import UserContractRead, UserContractsGroupedRead
 from app.schemas.utilisateur import UtilisateurCreate, UtilisateurRead, UtilisateurUpdate
 
 __all__ = [
@@ -20,6 +21,7 @@ __all__ = [
     "RessourceCreate", "RessourceRead", "RessourceUpdate",
     "UtilisateurCreate", "UtilisateurRead", "UtilisateurUpdate",
     "ServiceCreate", "ServiceRead", "ServiceUpdate",
+    "UserContractRead", "UserContractsGroupedRead",
     "AccesCreate", "AccesRead", "AccesUpdate",
     "RappelCreate", "RappelRead", "RappelUpdate",
     "AIMonitoringCreate", "AIMonitoringRead", "AIMonitoringUpdate",

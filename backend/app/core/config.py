@@ -30,6 +30,12 @@ class Settings(BaseSettings):
     # Reminder scheduler
     ENABLE_REMINDER_SCHEDULER: bool = True
 
+    # Cloudinary (user contracts PDFs)
+    CLOUDINARY_CLOUD_NAME: str = ""
+    CLOUDINARY_API_KEY: str = ""
+    CLOUDINARY_API_SECRET: str = ""
+    CLOUDINARY_FOLDER_USER_CONTRACTS: str = "crm-professional/user-contracts"
+
     @property
     def DATABASE_URL(self) -> str:
         # Use SQLAlchemy URL builder to properly escape credentials (accents/special chars).

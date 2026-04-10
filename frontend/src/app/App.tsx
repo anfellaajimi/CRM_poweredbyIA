@@ -22,6 +22,7 @@ import { CahierDeCharge } from '../pages/CahierDeCharge';
 import { AIMonitoring } from '../pages/AIMonitoring';
 import { Rappels } from '../pages/Rappels';
 import { Users } from '../pages/Users';
+import { UserDetails } from '../pages/UserDetails';
 import { NotFound } from '../pages/NotFound';
 import { Profile } from '../pages/Profile';
 import { Security } from '../pages/Security';
@@ -79,6 +80,7 @@ export default function App() {
             <Route path="/ai-monitoring" element={<AIMonitoring />} />
             <Route path="/rappels" element={<Rappels />} />
             <Route path="/users" element={<Users />} />
+            <Route path="/users/:id" element={<UserDetails />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/security" element={<Security />} />
             <Route path="/settings" element={<Settings />} />

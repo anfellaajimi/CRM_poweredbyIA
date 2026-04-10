@@ -54,7 +54,7 @@ export const Projects: React.FC = () => {
 
   const { data: clients = [] } = useQuery({
     queryKey: ['clients'],
-    queryFn: clientsAPI.getAll,
+    queryFn: () => clientsAPI.getAll(),
   });
 
   const createMutation = useMutation({

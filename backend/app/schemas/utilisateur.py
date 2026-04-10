@@ -8,6 +8,7 @@ class UtilisateurBase(BaseModel):
     email: EmailStr
     role: str = "developpeur"
     actif: bool = True
+    cnssId: str | None = None
 
 
 class UtilisateurCreate(UtilisateurBase):
@@ -20,6 +21,7 @@ class UtilisateurUpdate(BaseModel):
     role: str | None = None
     actif: bool | None = None
     motDePasse: str | None = None
+    cnssId: str | None = None
 
 
 class UtilisateurRead(UtilisateurBase):

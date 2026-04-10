@@ -88,6 +88,9 @@ export const Clients: React.FC = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchId, setSearchId] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [debouncedSearchId, setDebouncedSearchId] = useState('');
   const [activeTab, setActiveTab] = useState('all');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [newClient, setNewClient] = useState<Partial<UIClient>>(initialClient);
@@ -95,7 +98,18 @@ export const Clients: React.FC = () => {
   const [openActionsFor, setOpenActionsFor] = useState<string | null>(null);
   const [clientToDelete, setClientToDelete] = useState<UIClient | null>(null);
 
-  const { data: clients = [], isLoading } = useQuery({ queryKey: ['clients'], queryFn: clientsAPI.getAll });
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setDebouncedSearchId(searchId);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm, searchId]);
+
+  const { data: clients = [], isLoading } = useQuery({ 
+    queryKey: ['clients', debouncedSearch, debouncedSearchId], 
+    queryFn: () => clientsAPI.getAll(debouncedSearch, debouncedSearchId) 
+  });
 
   const createMutation = useMutation({
     mutationFn: clientsAPI.create,
@@ -145,11 +159,9 @@ export const Clients: React.FC = () => {
   }, [activeTab, page, searchTerm, isAddModalOpen]);
 
   const filtered = useMemo(() => clients.filter(c => {
-    const s = searchTerm.toLowerCase();
-    const matchSearch = c.name.toLowerCase().includes(s) || (c.email || '').toLowerCase().includes(s);
     const matchTab = activeTab === 'all' || (c.status || '').toLowerCase() === activeTab;
-    return matchSearch && matchTab;
-  }), [clients, searchTerm, activeTab]);
+    return matchTab;
+  }), [clients, activeTab]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -220,11 +232,21 @@ export const Clients: React.FC = () => {
           })}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 24px', borderBottom: '1px solid #f1f5f9' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '16px 24px', borderBottom: '1px solid #f1f5f9', flexWrap: 'wrap' }}>
           <div style={{ position: 'relative', width: 320 }}>
             <Search size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
             <input placeholder="Rechercher clients..." value={searchTerm}
               onChange={e => { setSearchTerm(e.target.value); setPage(1); }}
+              style={{
+                width: '100%', border: '1px solid #e2e8f0', borderRadius: 8,
+                padding: '8px 12px 8px 36px', fontSize: 14, color: '#374151',
+                outline: 'none', background: '#f8fafc', boxSizing: 'border-box'
+              }} />
+          </div>
+          <div style={{ position: 'relative', width: 220 }}>
+            <Search size={15} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+            <input placeholder="Filtrer par ID..." value={searchId}
+              onChange={e => { setSearchId(e.target.value); setPage(1); }}
               style={{
                 width: '100%', border: '1px solid #e2e8f0', borderRadius: 8,
                 padding: '8px 12px 8px 36px', fontSize: 14, color: '#374151',
@@ -242,7 +264,7 @@ export const Clients: React.FC = () => {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: '#f8fafc' }}>
-                {['Client', 'Type', 'Email', 'Téléphone', 'Statut', 'Scoring', 'Créé le', ''].map((h, i) => (
+                {['ID', 'Client', 'Type', 'Email', 'Téléphone', 'Statut', 'Scoring', 'Créé le', ''].map((h, i) => (
                   <th key={i} style={{
                     padding: '12px 20px', textAlign: 'left', fontSize: 12,
                     fontWeight: 600, color: '#64748b', textTransform: 'uppercase',
@@ -255,14 +277,15 @@ export const Clients: React.FC = () => {
             </thead>
             <tbody>
               {isLoading ? (
-                <tr><td colSpan={8} style={{ padding: 40, textAlign: 'center', color: '#94a3b8', fontSize: 14 }}>Chargement...</td></tr>
+                <tr><td colSpan={9} style={{ padding: 40, textAlign: 'center', color: '#94a3b8', fontSize: 14 }}>Chargement...</td></tr>
               ) : paginated.length === 0 ? (
-                <tr><td colSpan={8} style={{ padding: 48, textAlign: 'center', color: '#94a3b8', fontSize: 14 }}>Aucun client trouvé.</td></tr>
+                <tr><td colSpan={9} style={{ padding: 48, textAlign: 'center', color: '#94a3b8', fontSize: 14 }}>Aucun client trouvé.</td></tr>
               ) : paginated.map(client => (
                 <tr key={client.id} onClick={() => navigate(`/clients/${client.id}`)}
                   style={{ cursor: 'pointer', borderBottom: '1px solid #f1f5f9', background: '#fff', transition: 'background .15s' }}
                   onMouseEnter={e => (e.currentTarget.style.background = '#f5f3ff')}
                   onMouseLeave={e => (e.currentTarget.style.background = '#fff')}>
+                  <td style={{ padding: '14px 20px', fontSize: 13, fontWeight: 700, color: '#64748b' }}>#{client.id}</td>
                   <td style={{ padding: '14px 20px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <img src={client.avatar || ''} alt={client.name}

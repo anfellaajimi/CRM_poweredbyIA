@@ -5,6 +5,8 @@ import { useAuthStore } from '../store/authStore';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../utils/cn';
 import { useSidebarStore } from '../store/sidebarStore';
+import { useNotificationStore } from '../store/notificationStore';
+import { CheckCheck } from 'lucide-react';
 
 export const TopBar: React.FC = () => {
   const { theme, toggleTheme } = useThemeStore();
@@ -19,11 +21,7 @@ export const TopBar: React.FC = () => {
     navigate('/login');
   };
 
-  const notifications = [
-    { id: 1, text: 'New invoice from Acme Corp', time: '5 min ago' },
-    { id: 2, text: 'Project deadline approaching', time: '1 hour ago' },
-    { id: 3, text: 'Contract renewal reminder', time: '2 hours ago' }
-  ];
+  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotificationStore();
 
   return (
     <header
@@ -58,21 +56,47 @@ export const TopBar: React.FC = () => {
               className="p-2 rounded-lg hover:bg-accent transition-colors relative"
             >
               <Bell className="w-5 h-5" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
+              {unreadCount() > 0 && <span className="absolute top-1 right-1 w-3.5 h-3.5 text-[9px] flex items-center justify-center font-bold text-white bg-red-500 rounded-full">{unreadCount()}</span>}
             </button>
 
             {showNotifications && (
-              <div className="absolute right-0 mt-2 w-80 bg-card border border-border rounded-lg shadow-lg">
-                <div className="p-4 border-b border-border">
-                  <h3 className="font-semibold">Notifications</h3>
+              <div className="absolute right-0 mt-2 w-[380px] bg-card border border-border rounded-lg shadow-xl overflow-hidden z-50">
+                <div className="p-4 border-b border-border flex justify-between items-center bg-gray-50/50">
+                  <h3 className="font-semibold text-foreground">Notifications</h3>
+                  {unreadCount() > 0 && (
+                    <button onClick={markAllAsRead} className="text-xs text-blue-600 hover:text-blue-800 flex items-center font-medium">
+                      <CheckCheck className="w-3 h-3 mr-1" /> Tout marquer comme lu
+                    </button>
+                  )}
                 </div>
-                <div className="max-h-96 overflow-y-auto">
-                  {notifications.map((notif) => (
-                    <div key={notif.id} className="p-4 border-b border-border hover:bg-accent cursor-pointer">
-                      <p className="text-sm">{notif.text}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{notif.time}</p>
+                <div className="max-h-[400px] overflow-y-auto">
+                  {notifications.length === 0 ? (
+                    <div className="p-8 text-center text-muted-foreground text-sm flex flex-col items-center">
+                      <Bell className="w-8 h-8 opacity-20 mb-2" />
+                      Aucune notification
                     </div>
-                  ))}
+                  ) : (
+                    notifications.map((notif) => (
+                      <div 
+                        key={notif.id} 
+                        onClick={() => markAsRead(notif.id)}
+                        className={`p-4 border-b border-border hover:bg-accent cursor-pointer transition-colors ${!notif.read ? 'bg-blue-50/30 dark:bg-blue-900/10' : ''}`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className={`mt-1.5 w-2 h-2 rounded-full flex-shrink-0 ${
+                            notif.type === 'error' ? 'bg-red-500' :
+                            notif.type === 'warning' ? 'bg-yellow-500' :
+                            notif.type === 'success' ? 'bg-green-500' :
+                            'bg-blue-500'
+                          }`} />
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-sm leading-snug ${!notif.read ? 'font-semibold text-foreground' : 'text-foreground/80'}`}>{notif.message}</p>
+                            <p className="text-xs text-muted-foreground mt-1.5 font-medium">{new Date(notif.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - {new Date(notif.timestamp).toLocaleDateString()}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             )}
@@ -85,7 +109,7 @@ export const TopBar: React.FC = () => {
             >
               <div className="relative">
                 <img
-                  src={user?.avatar || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop'}
+                  src={user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'User')}&background=random`}
                   alt={user?.name}
                   className="w-8 h-8 rounded-full object-cover"
                 />

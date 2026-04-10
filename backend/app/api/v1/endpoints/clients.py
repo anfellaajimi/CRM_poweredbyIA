@@ -9,9 +9,22 @@ from app.schemas.client import ClientCreate, ClientRead, ClientUpdate
 router = APIRouter(prefix="/clients", tags=["Clients"])
 
 
+from typing import Optional
+from sqlalchemy import or_, cast, String
+
 @router.get("", response_model=list[ClientRead])
-def list_clients(db: Session = Depends(get_db)):
-    return db.query(Client).order_by(Client.id.desc()).all()
+def list_clients(q: Optional[str] = None, client_id: Optional[str] = None, db: Session = Depends(get_db)):
+    query = db.query(Client)
+    if q:
+        search_filter = or_(
+            Client.nom.ilike(f"%{q}%"),
+            Client.email.ilike(f"%{q}%"),
+            cast(Client.id, String).ilike(f"%{q}%")
+        )
+        query = query.filter(search_filter)
+    if client_id:
+        query = query.filter(cast(Client.id, String).ilike(f"%{client_id}%"))
+    return query.order_by(Client.id.desc()).all()
 
 
 @router.get("/{client_id}", response_model=ClientRead)
@@ -27,7 +40,7 @@ def create_client(payload: ClientCreate, db: Session = Depends(get_db)):
     if payload.email:
         exists = db.query(Client).filter(Client.email == payload.email).first()
         if exists:
-            raise HTTPException(status_code=400, detail="Client email already exists")
+            raise HTTPException(status_code=400, detail="L'adresse email du client existe déjà")
     item = Client(**payload.model_dump())
     if not item.entreprise and item.typeClient.lower() == "moral":
         item.entreprise = item.nom
@@ -37,7 +50,7 @@ def create_client(payload: ClientCreate, db: Session = Depends(get_db)):
         entity_type="client",
         entity_id=None,
         action="create",
-        message=f"Client {item.nom} created",
+        message=f"Client {item.nom} créé",
     )
     db.commit()
     db.refresh(item)
@@ -56,7 +69,7 @@ def update_client(client_id: int, payload: ClientUpdate, db: Session = Depends(g
         entity_type="client",
         entity_id=item.id,
         action="update",
-        message=f"Client {item.nom} updated",
+        message=f"Client {item.nom} mis à jour",
     )
     db.commit()
     db.refresh(item)
@@ -73,7 +86,7 @@ def delete_client(client_id: int, db: Session = Depends(get_db)):
         entity_type="client",
         entity_id=item.id,
         action="delete",
-        message=f"Client {item.nom} deleted",
+        message=f"Client {item.nom} supprimé",
     )
     db.delete(item)
     db.commit()

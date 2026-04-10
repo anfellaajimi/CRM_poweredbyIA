@@ -37,6 +37,7 @@ def _to_user_payload(user: Utilisateur) -> dict:
         "email": user.email,
         "role": user.role,
         "actif": user.actif,
+        "avatar": user.avatarUrl,
     }
 
 
@@ -73,6 +74,11 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
     return {"access_token": token, "token_type": "bearer", "user": _to_user_payload(user)}
 
 
+class UserUpdateRequest(BaseModel):
+    nom: str
+    email: EmailStr
+    avatar: str | None = None
+
 @router.get("/me")
 def me(authorization: str | None = None, db: Session = Depends(get_db)):
     if not authorization or not authorization.startswith("Bearer "):
@@ -86,6 +92,36 @@ def me(authorization: str | None = None, db: Session = Depends(get_db)):
     user = db.get(Utilisateur, user_id)
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+
+    return _to_user_payload(user)
+
+@router.put("/me")
+def update_me(payload: UserUpdateRequest, authorization: str | None = None, db: Session = Depends(get_db)):
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing bearer token")
+
+    token = authorization.split(" ", 1)[1].strip()
+    user_id = _TOKENS.get(token)
+    if not user_id:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+
+    user = db.get(Utilisateur, user_id)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+
+    user.nom = payload.nom
+    user.email = payload.email
+    if payload.avatar is not None:
+        user.avatarUrl = payload.avatar if payload.avatar.strip() != "" else None
+    else:
+        # If payload.avatar is explicitly None, it clears it.
+        # But wait, in Pydantic, if it is omitted it's None. We need to be careful.
+        # It's better to just set it.
+        if "avatar" in payload.model_fields_set:
+            user.avatarUrl = payload.avatar
+
+    db.commit()
+    db.refresh(user)
 
     return _to_user_payload(user)
 

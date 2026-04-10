@@ -1,0 +1,640 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+package "Backend::Domain (SQLAlchemy models)" {
+  class Base <<abstract>>
+
+  class Client {
+    -id: int
+    -typeClient: str
+    -nom: str
+    -email: str
+    -tel: str
+    -adresse: str
+    -prenom: str?
+    -dateNaissance: date?
+    -cin: str?
+    -raisonSociale: str?
+    -matriculeFiscale: str?
+    -secteurActivite: str?
+    -entreprise: str?
+    -avatarUrl: str?
+    -status: str
+    -devise: str
+    -dateCreation: datetime
+  }
+
+  class Projet {
+    -id: int
+    -clientID: int
+    -nomProjet: str
+    -description: str
+    -status: str
+    -priorite: str
+    -budget: float
+    -depense: float
+    -progression: int
+    -scoring: int?
+    -isPinned: bool
+    -dateDebut: date
+    -dateFin: date
+    -createdAt: datetime
+    -dateMaj: datetime
+
+    +clientNom(): str
+    +clientDevise(): str
+    +get_assignedUsers(): list[str]
+  }
+
+  class Utilisateur {
+    -userID: int
+    -nom: str
+    -email: str
+    -motDePasse: str
+    -role: str
+    -actif: bool
+    -dateCreation: datetime
+    -avatarUrl: str
+  }
+
+  class User {
+    -id: int
+    -email: str
+    -password_hash: str
+    -is_active: bool
+    -created_at: datetime
+  }
+
+  class Service {
+    -id: int
+    -projetID: int
+    -nom: str
+    -type: str
+    -prix: float
+    -dateRenouvellement: date
+    -statut: str
+    -url: str
+    -createdAt: datetime
+  }
+
+  class Acces {
+    -accesID: int
+    -projetID: int
+    -serviceID: int
+    -login: str
+    -motDePasse: str
+    -url: str?
+    -description: str
+    -note: str
+  }
+
+  class Ressource {
+    -ressourceID: int
+    -projetID: int
+    -nom: str
+    -type: str
+    -url: str
+    -description: str
+  }
+
+  class CahierDeCharge {
+    -cahierID: int
+    -projetID: int
+    -objet: str
+    -description: str
+    -dateCreation: datetime
+    -dateValidation: datetime
+    -fileUrl: str
+    -version: str
+    -objectif: str
+    -perimetre: str
+    -fonctionnalites: str
+    -contraintes: str
+    -delais: str
+    -budgetTexte: str
+    -userStories: str
+    -reglesMetier: str
+    -documentsReference: str
+  }
+
+  class ProjetNote {
+    -noteID: int
+    -projetID: int
+    -contenu: str
+    -createdAt: datetime
+    -createdBy: int
+  }
+
+  class ProjetFile {
+    -fileID: int
+    -projetID: int
+    -nom: str
+    -mimeType: str
+    -sizeBytes: int
+    -storagePath: str
+    -uploadedAt: datetime
+    -uploadedBy: int
+  }
+
+  class ProjetMilestone {
+    -id: int
+    -projetID: int
+    -title: str
+    -description: str?
+    -dueDate: date?
+    -status: str
+    -completedAt: datetime?
+    -createdAt: datetime
+  }
+
+  class Devis {
+    -devisID: int
+    -clientID: int
+    -projetID: int?
+    -dateDevis: datetime
+    -validUntil: datetime
+    -totalAmount: float
+    -status: str
+    -notes: str
+    +clientNom(): str
+    +clientDevise(): str
+  }
+
+  class DevisItem {
+    -itemID: int
+    -devisID: int
+    -description: str
+    -quantity: float
+    -unitPrice: float
+    lineTotal: float
+  }
+
+  class Facture {
+    -factureID: int
+    -clientID: int
+    -devisID: int
+    -dateFacture: datetime
+    -dueDate: datetime?
+    -amountHT: float
+    -amountTTC: float
+    -status: str
+    -taxRate: float
+    -paymentDate: datetime
+    +clientNom(): str
+    +clientDevise(): str
+  }
+
+  class FactureItem {
+    -itemID: int
+    -factureID: int
+    -description: str
+    -quantity: float
+    -unitPrice: float
+    -lineTotal: float
+  }
+
+  class Contrat {
+    -contratID: int
+    -clientID: int
+    -projetID: int
+    -titre: str
+    -objet: str
+    -obligations: str
+    -responsabilites: str
+    -dateDebut: date?
+    -dateFin: date?
+    -dateRenouvellement: date
+    -needsRenewal: bool
+    -typeContrat: str
+    -montant: float
+    -conditions: str
+    -status: str
+    -isSignedByClient: bool
+    -isSignedByProvider: bool
+    +clientNom(): str
+    +clientDevise(): str
+  }
+
+  class Rappel {
+    -id: int
+    -clientID: int
+    -projetID: int
+    -devisID: int
+    -factureID: int
+    -milestoneID: int
+    -titre: str
+    -typeRappel: str
+    -dateRappel: datetime
+    -message: str
+    -statut: str
+    -priorite: str
+    -systemKey: str
+    -emailSentAt: datetime
+    -emailLastError: str
+    -createdAt: datetime
+  }
+
+  class Message {
+    -id: int
+    -expediteurID: int
+    -destinataireID: int
+    -contenu: str
+    -type: str
+    -mediaUrl: str
+    -mediaMimeType: str
+    -mediaDurationSec: int
+    -lu: bool
+    -createdAt: datetime
+  }
+
+  class AIMonitoring {
+    -monitoringID: int
+    -serviceID: int
+    -status: str
+    -uptime: float
+    -responseTime: float
+    -lastCheck: datetime
+    -checks: str?
+    -alerts: str?
+  }
+
+  class ActivityEvent {
+    -eventID: int
+    -entityType: str
+    -entityID: int
+    -action: str
+    -message: str
+    -createdAt: datetime
+    -actor: str
+  }
+
+  class ProjetUtilisateur <<association>> {
+    -projetID: int
+    -userID: int
+  }
+  class DevisProjet <<association>> {
+    -devisID: int
+    -projetID: int
+  }
+  class FactureProjet <<association>> {
+    -factureID: int
+    -projetID: int
+  }
+
+  Base <|-- Client
+  Base <|-- Projet
+  Base <|-- Utilisateur
+  Base <|-- User
+  Base <|-- Service
+  Base <|-- Acces
+  Base <|-- Ressource
+  Base <|-- CahierDeCharge
+  Base <|-- ProjetNote
+  Base <|-- ProjetFile
+  Base <|-- ProjetMilestone
+  Base <|-- Devis
+  Base <|-- DevisItem
+  Base <|-- Facture
+  Base <|-- FactureItem
+  Base <|-- Contrat
+  Base <|-- Rappel
+  Base <|-- Message
+  Base <|-- AIMonitoring
+  Base <|-- ActivityEvent
+  Base <|-- ProjetUtilisateur
+  Base <|-- DevisProjet
+  Base <|-- FactureProjet
+
+  ' Client-owned aggregates
+  Client "1" -- "0..*" Projet : projets
+  Client "1" -- "0..*" Devis : devis
+  Client "1" -- "0..*" Facture : factures
+  Client "1" -- "0..*" Contrat : contrats
+  Client "1" -- "0..*" Rappel : rappels
+
+  ' Projet aggregate
+  Projet "1" -- "0..*" Service : services
+  Projet "1" -- "0..*" Ressource : ressources
+  Projet "0..1" -- "0..*" Acces : acces
+  Projet "1" -- "0..1" CahierDeCharge : cahierDeCharge
+  Projet "1" -- "0..*" ProjetNote : notes
+  Projet "1" -- "0..*" ProjetFile : files
+  Projet "1" -- "0..*" ProjetMilestone : milestones
+
+  ' Service + monitoring
+  Service "0..1" -- "0..*" Acces : service
+  Service "1" -- "0..1" AIMonitoring : aiMonitoring
+
+  ' Devis / Facture items and links
+  Devis "1" -- "0..*" DevisItem : items
+  Facture "1" -- "0..*" FactureItem : items
+
+  ' Devis principal project (nullable FK) + many-to-many projects
+  Projet "0..1" -- "0..*" Devis : devisPrincipaux
+  Devis "*" -- "*" Projet : devis_projets
+  DevisProjet .. Devis
+  DevisProjet .. Projet
+
+  ' Facture linked to devis (nullable FK) + many-to-many projects
+  Devis "0..1" -- "0..*" Facture : factures
+  Facture "*" -- "*" Projet : facture_projets
+  FactureProjet .. Facture
+  FactureProjet .. Projet
+
+  ' Contrat linked to projet (nullable FK)
+  Projet "0..1" -- "0..*" Contrat : contrats
+
+  ' Projet team (many-to-many)
+  Utilisateur "*" -- "*" Projet : projet_utilisateurs
+  ProjetUtilisateur .. Utilisateur
+  ProjetUtilisateur .. Projet
+
+  ' Rappels can target multiple entities (all nullable except client)
+  Projet "0..1" -- "0..*" Rappel : projet
+  Devis "0..1" -- "0..*" Rappel : devis
+  Facture "0..1" -- "0..*" Rappel : facture
+  ProjetMilestone "0..1" -- "0..*" Rappel : milestone
+
+  ' Messages: sender + recipient (both required)
+  Message "0..*" --> "1" Utilisateur : expediteur
+  Message "0..*" --> "1" Utilisateur : destinataire
+
+  ' Optional author/uploader
+  Utilisateur "0..1" -- "0..*" ProjetNote : auteur
+  Utilisateur "0..1" -- "0..*" ProjetFile : uploader
+}
+
+package "Backend::Services (app/services)" {
+  class EmailService <<service>> {
+    -_build_message()
+    +send_email()
+  }
+  class RemindersService <<service>> {
+    -_norm_status()
+    -_is_project_done()
+    -_is_devis_open()
+    -_is_invoice_paid()
+    -_date_only()
+    -_mk_system_key()
+    -_get_or_create_system_rappel()
+    -_mark_done()
+    +generate_project_rappels()
+    +send_due_reminder_emails()
+  }
+}
+
+package "Backend::API (FastAPI endpoints)" {
+  class AccesEndpoint <<controller>> {
+    +list_acces()
+    +get_acces()
+    +create_acces()
+    +update_acces()
+    +delete_acces()
+  }
+  class AIMonitoringEndpoint <<controller>> {
+    +list_monitoring()
+    +get_monitoring()
+    +create_monitoring()
+    +update_monitoring()
+    +delete_monitoring()
+  }
+  class AuthEndpoint <<controller>> {
+    -_to_user_payload()
+    +login()
+    +register()
+    +me()
+    +update_me()
+  }
+  class CahierDeChargeEndpoint <<controller>> {
+    +list_cahiers()
+    +get_cahier()
+    +create_cahier()
+    +update_cahier()
+    +export_cahier_pdf()
+    +delete_cahier()
+  }
+  class ClientsEndpoint <<controller>> {
+    +list_clients()
+    +get_client()
+    +create_client()
+    +update_client()
+    +delete_client()
+  }
+  class ContratsEndpoint <<controller>> {
+    -_compute_needs_renewal()
+    +list_contrats()
+    +get_contrat()
+    +create_contrat()
+    +update_contrat()
+    +delete_contrat()
+    +export_contrat_pdf()
+  }
+  class DevisEndpoint <<controller>> {
+    -_to_items()
+    +list_devis()
+    +get_devis()
+    +create_devis()
+    +update_devis()
+    +delete_devis()
+    +export_devis_pdf()
+  }
+  class FacturesEndpoint <<controller>> {
+    -_to_items()
+    +list_factures()
+    +get_facture()
+    +create_facture()
+    +update_facture()
+    +delete_facture()
+    +export_facture_pdf()
+  }
+  class MessagesEndpoint <<controller>> {
+    -_last_message_preview()
+    -_get_current_user()
+    +get_contacts()
+    +get_conversation()
+    +delete_conversation()
+    +send_message()
+    +mark_as_read()
+  }
+  class ProjetsEndpoint <<controller>> {
+    +list_projets()
+    +get_projet()
+    +create_projet()
+    +update_projet()
+    +delete_projet()
+  }
+  class ProjetExtrasEndpoint <<controller>> {
+    -_get_project_or_404()
+    +get_team()
+    +add_team_member()
+    +remove_team_member()
+    +list_notes()
+    +create_note()
+    +delete_note()
+    +list_files()
+    +delete_file()
+    +download_file()
+    +get_project_cahier()
+    +upsert_project_cahier()
+    +list_milestones()
+    +create_milestone()
+    +update_milestone()
+    +delete_milestone()
+  }
+  class RappelsEndpoint <<controller>> {
+    +list_rappels()
+    +get_rappel()
+    +create_rappel()
+    +update_rappel()
+    +generate_rappels()
+    +delete_rappel()
+  }
+  class RessourcesEndpoint <<controller>> {
+    +list_ressources()
+    +get_ressource()
+    +create_ressource()
+    +update_ressource()
+    +delete_ressource()
+  }
+  class ServicesEndpoint <<controller>> {
+    +list_services()
+    +get_service()
+    +create_service()
+    +update_service()
+    +delete_service()
+  }
+  class UtilisateursEndpoint <<controller>> {
+    +list_utilisateurs()
+    +seed_admin_utilisateur()
+    +get_utilisateur()
+    +create_utilisateur()
+    +update_utilisateur()
+    +delete_utilisateur()
+  }
+  class DashboardEndpoint <<controller>> {
+    +get_dashboard_overview()
+  }
+  class HealthEndpoint <<controller>> {
+    +health_check()
+  }
+  class ActivityEndpoint <<controller>> {
+    +log_activity()
+  }
+}
+
+package "Frontend::API client (frontend/src/services/api.ts)" {
+  class authAPI <<client>> {
+    +login()
+    +register()
+    +me()
+    +updateMe()
+  }
+  class clientsAPI <<client>> {
+    +getAll()
+    +getById()
+    +create()
+    +update()
+    +delete()
+  }
+  class projectsAPI <<client>> {
+    +getAll()
+    +getById()
+    +create()
+    +update()
+    +delete()
+  }
+  class projectTeamAPI <<client>> {
+    +get()
+    +add()
+    +remove()
+  }
+  class projectNotesAPI <<client>> {
+    +get()
+    +create()
+    +delete()
+  }
+  class projectFilesAPI <<client>> {
+    +get()
+    +upload()
+    +delete()
+    +downloadUrl()
+  }
+  class projectCahierAPI <<client>> {
+    +get()
+    +upsert()
+  }
+  class milestonesAPI <<client>> {
+    +list()
+    +create()
+    +update()
+    +delete()
+  }
+  class rappelsAPI <<client>> {
+    +getAll()
+    +generate()
+    +getById()
+    +create()
+    +update()
+    +delete()
+  }
+  class cahierAPI <<client>> {
+    +getAll()
+    +getById()
+    +create()
+    +update()
+    +delete()
+    +exportPDF()
+  }
+  class servicesAPI <<client>> {
+    +getAll()
+  }
+  class aiMonitoringAPI <<client>> {
+    +getAll()
+    +create()
+    +update()
+    +delete()
+  }
+  class dashboardAPI <<client>> {
+    +overview()
+  }
+  class usersAPI <<client>> {
+    +getAll()
+    +create()
+    +update()
+    +delete()
+  }
+  class devisAPI <<client>> {
+    +getAll()
+    +getById()
+    +create()
+    +update()
+    +delete()
+    +exportPDF()
+  }
+  class facturesAPI <<client>> {
+    +getAll()
+    +getById()
+    +create()
+    +update()
+    +delete()
+    +exportPDF()
+  }
+  class contratsAPI <<client>> {
+    +getAll()
+    +getById()
+    +create()
+    +update()
+    +delete()
+    +exportPDF()
+  }
+  class chatAPI <<client>> {
+    +getContacts()
+    +getConversation()
+    +deleteConversation()
+    +sendMessage()
+    +sendAudioMessage()
+    +markRead()
+  }
+}
+
+@enduml

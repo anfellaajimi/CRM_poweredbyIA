@@ -15,8 +15,10 @@ from app.api.v1.endpoints.projet_extras import router as projet_extras_router
 from app.api.v1.endpoints.rappels import router as rappels_router
 from app.api.v1.endpoints.ressources import router as ressources_router
 from app.api.v1.endpoints.services import router as services_router
+from app.api.v1.endpoints.user_contracts import router as user_contracts_router
 from app.api.v1.endpoints.utilisateurs import router as utilisateurs_router
 from app.api.v1.endpoints.messages import router as messages_router
+from app.api.v1.endpoints.declaration_cnss import router as declaration_cnss_router
 
 api_router = APIRouter()
 api_router.include_router(health_router)
@@ -27,6 +29,8 @@ api_router.include_router(projet_extras_router)
 api_router.include_router(dashboard_router)
 api_router.include_router(ressources_router)
 api_router.include_router(utilisateurs_router)
+api_router.include_router(user_contracts_router)
+api_router.include_router(declaration_cnss_router)
 api_router.include_router(services_router)
 api_router.include_router(acces_router)
 api_router.include_router(rappels_router)

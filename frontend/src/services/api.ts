@@ -175,11 +175,12 @@ export const authAPI = {
   register: (payload: { nom: string; email: string; motDePasse: string; role: string }) =>
     api.post('/auth/register', payload),
   me: () => api.get('/auth/me'),
+  updateMe: (payload: { nom: string; email: string; avatar?: string }) => api.put('/auth/me', payload),
 };
 
 export const clientsAPI = {
-  getAll: async (): Promise<UIClient[]> => {
-    const { data } = await api.get('/clients');
+  getAll: async (q?: string, id?: string): Promise<UIClient[]> => {
+    const { data } = await api.get('/clients', { params: { q, client_id: id } });
     return data.map(toUIClient);
   },
   getById: async (id: string): Promise<UIClient> => {
@@ -569,6 +570,48 @@ export type UIUser = {
   status: 'Actif' | 'Inactif';
   joinedAt: string;
   avatar: string;
+  cnssId?: string;
+};
+
+export type UIUserContract = {
+  id: number;
+  userID: number;
+  frontId: string;
+  name: string;
+  type: string;
+  description?: string;
+  status: 'active' | 'inactive';
+  pdfUrl: string;
+  pdfPublicId: string;
+  mimeType: string;
+  fileSize: number;
+  createdAt: string;
+  updatedAt: string;
+  activatedAt?: string | null;
+  archivedAt?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
+};
+
+export type UIDeclarationCNSS = {
+  id: number;
+  userID: number;
+  frontId: string;
+  name: string;
+  description?: string;
+  declarationDate: string;
+  pdfUrl: string;
+  pdfPublicId: string;
+  mimeType: string;
+  fileSize: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type UIUserContractsGrouped = {
+  active: UIUserContract | null;
+  history: UIUserContract[];
+  all: UIUserContract[];
 };
 
 export type UIItem = {
@@ -741,6 +784,41 @@ const toUIContrat = (item: any): UIContrat => ({
   isSignedByProvider: Boolean(item.isSignedByProvider),
 });
 
+const toUIUserContract = (item: any): UIUserContract => ({
+  id: Number(item.id),
+  userID: Number(item.userID),
+  frontId: item.frontId || '',
+  name: item.name || '',
+  type: item.type || '',
+  description: item.description || '',
+  status: (item.status || 'inactive') as 'active' | 'inactive',
+  pdfUrl: item.pdfUrl || '',
+  pdfPublicId: item.pdfPublicId || '',
+  mimeType: item.mimeType || 'application/pdf',
+  fileSize: Number(item.fileSize || 0),
+  createdAt: item.createdAt ? String(item.createdAt) : '',
+  updatedAt: item.updatedAt ? String(item.updatedAt) : '',
+  activatedAt: item.activatedAt ? String(item.activatedAt) : null,
+  archivedAt: item.archivedAt ? String(item.archivedAt) : null,
+  startDate: item.startDate ? String(item.startDate) : null,
+  endDate: item.endDate ? String(item.endDate) : null,
+});
+
+const toUIDeclCNSS = (item: any): UIDeclarationCNSS => ({
+  id: Number(item.id),
+  userID: Number(item.userID),
+  frontId: item.frontId || '',
+  name: item.name || '',
+  description: item.description || '',
+  declarationDate: item.declarationDate ? String(item.declarationDate) : '',
+  pdfUrl: item.pdfUrl || '',
+  pdfPublicId: item.pdfPublicId || '',
+  mimeType: item.mimeType || 'application/pdf',
+  fileSize: Number(item.fileSize || 0),
+  createdAt: item.createdAt ? String(item.createdAt) : '',
+  updatedAt: item.updatedAt ? String(item.updatedAt) : '',
+});
+
 const toContratPayload = (item: Partial<UIContrat>) => ({
   clientID: Number(item.clientId),
   projetID: null,
@@ -773,9 +851,25 @@ export const usersAPI = {
       status: statusToUi(Boolean(u.actif)),
       joinedAt: String(u.dateCreation || '').slice(0, 10),
       avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(u.nom)}&background=random`,
+      cnssId: u.cnssId || '',
     }));
   },
-  create: async (payload: { name: string; email: string; telephone?: string; dateNaissance?: string; role: UIUser['role']; status: UIUser['status']; password: string }) => {
+  getById: async (id: string): Promise<UIUser> => {
+    const { data } = await api.get(`/utilisateurs/${id}`);
+    return {
+      id: String(data.userID),
+      name: data.nom,
+      email: data.email,
+      telephone: data.tel || '',
+      dateNaissance: data.dateNaissance || '',
+      role: roleToUi(data.role),
+      status: statusToUi(Boolean(data.actif)),
+      joinedAt: String(data.dateCreation || '').slice(0, 10),
+      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(data.nom)}&background=random`,
+      cnssId: data.cnssId || '',
+    };
+  },
+  create: async (payload: { name: string; email: string; telephone?: string; dateNaissance?: string; role: UIUser['role']; status: UIUser['status']; password: string; cnssId?: string }) => {
     const { data } = await api.post('/utilisateurs', {
       nom: payload.name,
       email: payload.email,
@@ -784,10 +878,11 @@ export const usersAPI = {
       role: roleToApi(payload.role),
       actif: statusToApi(payload.status),
       motDePasse: payload.password,
+      cnssId: payload.cnssId || null,
     });
     return data;
   },
-  update: async (id: string, payload: { name?: string; email?: string; telephone?: string; dateNaissance?: string; role?: UIUser['role']; status?: UIUser['status']; password?: string }) => {
+  update: async (id: string, payload: { name?: string; email?: string; telephone?: string; dateNaissance?: string; role?: UIUser['role']; status?: UIUser['status']; password?: string; cnssId?: string }) => {
     const body: any = {};
     if (payload.name !== undefined) body.nom = payload.name;
     if (payload.email !== undefined) body.email = payload.email;
@@ -796,10 +891,115 @@ export const usersAPI = {
     if (payload.role !== undefined) body.role = roleToApi(payload.role);
     if (payload.status !== undefined) body.actif = statusToApi(payload.status);
     if (payload.password !== undefined) body.motDePasse = payload.password;
+    if (payload.cnssId !== undefined) body.cnssId = payload.cnssId || null;
     const { data } = await api.put(`/utilisateurs/${id}`, body);
     return data;
   },
   delete: (id: string) => api.delete(`/utilisateurs/${id}`),
+};
+
+export const userContractsAPI = {
+  list: async (userId: string): Promise<UIUserContractsGrouped> => {
+    const { data } = await api.get(`/utilisateurs/${userId}/contracts`);
+    return {
+      active: data.active ? toUIUserContract(data.active) : null,
+      history: (data.history || []).map(toUIUserContract),
+      all: (data.all || []).map(toUIUserContract),
+    };
+  },
+  getById: async (userId: string, contractId: number): Promise<UIUserContract> => {
+    const { data } = await api.get(`/utilisateurs/${userId}/contracts/${contractId}`);
+    return toUIUserContract(data);
+  },
+  create: async (
+    userId: string,
+    payload: {
+      frontId: string;
+      name: string;
+      type: string;
+      description?: string;
+      status: 'active' | 'inactive';
+      startDate?: string;
+      endDate?: string;
+      file: File;
+    }
+  ): Promise<UIUserContract> => {
+    const formData = new FormData();
+    formData.append('frontId', payload.frontId);
+    formData.append('name', payload.name);
+    formData.append('type', payload.type);
+    if (payload.description) formData.append('description', payload.description);
+    formData.append('status', payload.status);
+    if (payload.startDate) formData.append('startDate', payload.startDate);
+    if (payload.endDate) formData.append('endDate', payload.endDate);
+    formData.append('file', payload.file);
+    const { data } = await api.post(`/utilisateurs/${userId}/contracts`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return toUIUserContract(data);
+  },
+  update: async (
+    userId: string,
+    contractId: number,
+    payload: {
+      frontId?: string;
+      name?: string;
+      type?: string;
+      description?: string;
+      status?: 'active' | 'inactive';
+      startDate?: string;
+      endDate?: string;
+      file?: File;
+    }
+  ): Promise<UIUserContract> => {
+    const formData = new FormData();
+    if (payload.frontId !== undefined) formData.append('frontId', payload.frontId);
+    if (payload.name !== undefined) formData.append('name', payload.name);
+    if (payload.type !== undefined) formData.append('type', payload.type);
+    if (payload.description !== undefined) formData.append('description', payload.description);
+    if (payload.status !== undefined) formData.append('status', payload.status);
+    if (payload.startDate !== undefined) formData.append('startDate', payload.startDate || '');
+    if (payload.endDate !== undefined) formData.append('endDate', payload.endDate || '');
+    if (payload.file) formData.append('file', payload.file);
+    const { data } = await api.put(`/utilisateurs/${userId}/contracts/${contractId}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return toUIUserContract(data);
+  },
+  archive: async (userId: string, contractId: number) => {
+    await api.delete(`/utilisateurs/${userId}/contracts/${contractId}`);
+  },
+};
+
+export const declarationCNSSAPI = {
+  list: async (userId: string): Promise<UIDeclarationCNSS[]> => {
+    const { data } = await api.get(`/utilisateurs/${userId}/cnss-declarations`);
+    return (data.all || []).map(toUIDeclCNSS);
+  },
+  create: async (
+    userId: string,
+    payload: {
+      frontId: string;
+      name: string;
+      description?: string;
+      declarationDate: string;
+      file: File;
+    }
+  ): Promise<UIDeclarationCNSS> => {
+    const formData = new FormData();
+    formData.append('frontId', payload.frontId);
+    formData.append('name', payload.name);
+    if (payload.description) formData.append('description', payload.description);
+    formData.append('declarationDate', payload.declarationDate);
+    formData.append('file', payload.file);
+    const { data } = await api.post(`/utilisateurs/${userId}/cnss-declarations`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return toUIDeclCNSS(data);
+  },
+  delete: async (userId: string, declId: number) => {
+    await api.delete(`/utilisateurs/${userId}/cnss-declarations/${declId}`);
+  },
 };
 
 export const devisAPI = {

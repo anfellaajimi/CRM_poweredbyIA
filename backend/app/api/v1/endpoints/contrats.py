@@ -51,7 +51,7 @@ def create_contrat(payload: ContratCreate, db: Session = Depends(get_db)):
         entity_type="contrat",
         entity_id=None,
         action="create",
-        message=f"Contrat created for client {payload.clientID}",
+        message=f"Contrat créé pour le client {payload.clientID}",
     )
     db.commit()
     db.refresh(item)

@@ -188,3 +188,27 @@ CREATE TABLE ai_monitoring (
 CREATE INDEX ix_ai_monitoring_monitoringID ON ai_monitoring ("monitoringID");
 CREATE INDEX ix_ai_monitoring_serviceID ON ai_monitoring ("serviceID");
 CREATE INDEX ix_ai_monitoring_status ON ai_monitoring (status);
+
+CREATE TABLE user_contracts (
+    id SERIAL PRIMARY KEY,
+    "userID" INTEGER NOT NULL REFERENCES utilisateurs("userID") ON DELETE CASCADE,
+    "frontId" VARCHAR(120) NOT NULL UNIQUE,
+    name VARCHAR(255) NOT NULL,
+    type VARCHAR(120) NOT NULL,
+    description TEXT,
+    status VARCHAR(20) NOT NULL DEFAULT 'inactive',
+    "pdfUrl" VARCHAR(1000) NOT NULL,
+    "pdfPublicId" VARCHAR(300) NOT NULL,
+    "mimeType" VARCHAR(100) NOT NULL DEFAULT 'application/pdf',
+    "fileSize" INTEGER NOT NULL,
+    "createdAt" TIMESTAMP NOT NULL DEFAULT NOW(),
+    "updatedAt" TIMESTAMP NOT NULL DEFAULT NOW(),
+    "activatedAt" TIMESTAMP,
+    "archivedAt" TIMESTAMP,
+    CONSTRAINT ck_user_contracts_status CHECK (status IN ('active', 'inactive'))
+);
+CREATE INDEX ix_user_contracts_id ON user_contracts (id);
+CREATE INDEX ix_user_contracts_userID ON user_contracts ("userID");
+CREATE INDEX ix_user_contracts_status ON user_contracts (status);
+CREATE INDEX ix_user_contracts_createdAt ON user_contracts ("createdAt");
+CREATE UNIQUE INDEX ux_user_contracts_one_active_per_user ON user_contracts ("userID") WHERE status = 'active';
