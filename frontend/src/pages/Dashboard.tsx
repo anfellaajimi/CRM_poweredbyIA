@@ -1,9 +1,10 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import {
   Users, Briefcase, DollarSign, FileText, AlertTriangle, TrendingUp,
-  Zap, Loader2, CheckCircle2, Sparkles, X,
+  Zap, Loader2, CheckCircle2, Sparkles, X, ExternalLink, LayoutDashboard
 } from 'lucide-react';
 import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
@@ -17,12 +18,12 @@ import { toast } from 'sonner';
 
 type CategoryType = 'clients' | 'projects' | 'revenue' | 'invoices' | 'monitoring';
 
-const BG      = '#f4f6fb';
-const CARD    = '#ffffff';
-const BORDER  = '#e2e8f0';
-const MUTED   = '#94a3b8';
-const TEXT    = '#1e293b';
-const SUBTEXT = '#64748b';
+const BG      = 'var(--background)';
+const CARD    = 'var(--card)';
+const BORDER  = 'var(--border)';
+const MUTED   = 'var(--muted-foreground)';
+const TEXT    = 'var(--foreground)';
+const SUBTEXT = 'var(--muted-foreground)';
 const C_RED    = '#ff5c75';
 const C_GREEN  = '#28d094';
 const C_BLUE   = '#00b5e2';
@@ -202,9 +203,16 @@ const AIScanOverlay: React.FC = () => (
     </motion.div>
   </motion.div>
 );
+const DetailItem = ({ label, value }: { label: string; value: any }) => (
+  <div style={{ marginBottom: 4 }}>
+    <p style={{ color: MUTED, fontSize: 10, textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.05em', marginBottom: 4 }}>{label}</p>
+    <p style={{ color: TEXT, fontSize: 14, fontWeight: 600, margin: 0 }}>{value || '—'}</p>
+  </div>
+);
 
 const CategoryDetailOverlay: React.FC<{ category: CategoryType; onClose: () => void; dashboardData: any }> = ({ category, onClose, dashboardData }) => {
   const [selectedItem, setSelectedItem] = React.useState<any>(null);
+  const navigate = useNavigate();
   
   const { data: clients } = useQuery({ queryKey: ['clients-all'], queryFn: () => clientsAPI.getAll(), enabled: category === 'clients' });
   const { data: projects } = useQuery({ queryKey: ['projects-all'], queryFn: projectsAPI.getAll, enabled: category === 'projects' });
@@ -281,6 +289,7 @@ const CategoryDetailOverlay: React.FC<{ category: CategoryType; onClose: () => v
                   <th style={{ textAlign: 'left', padding: '12px 16px', color: MUTED, fontSize: 12, textTransform: 'uppercase' }}>Détail / Entité</th>
                   <th style={{ textAlign: 'left', padding: '12px 16px', color: MUTED, fontSize: 12, textTransform: 'uppercase' }}>Statut</th>
                   <th style={{ textAlign: 'left', padding: '12px 16px', color: MUTED, fontSize: 12, textTransform: 'uppercase' }}>Valeur / Info</th>
+                  <th style={{ width: 40 }}></th>
                 </tr>
               </thead>
               <tbody>
@@ -296,6 +305,15 @@ const CategoryDetailOverlay: React.FC<{ category: CategoryType; onClose: () => v
                       <span style={{ padding: '4px 12px', borderRadius: 20, fontSize: 11, background: `${C_GREEN}15`, color: C_GREEN, fontWeight: 700 }}>{c.status}</span>
                     </td>
                     <td style={{ padding: '16px', color: SUBTEXT, fontSize: 14 }}>{c.email}</td>
+                    <td style={{ padding: '16px' }}>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); onClose(); navigate(`/clients/${c.id}`); }}
+                        style={{ background: 'none', border: 'none', color: C_BLUE, cursor: 'pointer', padding: 4 }}
+                        title="Ouvrir la fiche complète"
+                      >
+                        <ExternalLink size={16} />
+                      </button>
+                    </td>
                   </motion.tr>
                 ))}
                 {category === 'projects' && projects?.map((p: any) => (
@@ -305,11 +323,20 @@ const CategoryDetailOverlay: React.FC<{ category: CategoryType; onClose: () => v
                     onClick={() => setSelectedItem(p)}
                     style={{ borderBottom: `1px solid ${BG}`, cursor: 'pointer', transition: 'background 0.2s' }}
                   >
-                    <td style={{ padding: '16px', color: TEXT, fontWeight: 600 }}>{p.nomProjet}</td>
+                    <td style={{ padding: '16px', color: TEXT, fontWeight: 600 }}>{p.name}</td>
                     <td style={{ padding: '16px' }}>
                       <span style={{ padding: '4px 12px', borderRadius: 20, fontSize: 11, background: `${C_BLUE}15`, color: C_BLUE, fontWeight: 700 }}>{p.status}</span>
                     </td>
                     <td style={{ padding: '16px', color: SUBTEXT, fontSize: 14 }}>{p.progress}% terminé</td>
+                    <td style={{ padding: '16px' }}>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); onClose(); navigate(`/projects/${p.id}`); }}
+                        style={{ background: 'none', border: 'none', color: C_BLUE, cursor: 'pointer', padding: 4 }}
+                        title="Ouvrir la fiche complète"
+                      >
+                        <ExternalLink size={16} />
+                      </button>
+                    </td>
                   </motion.tr>
                 ))}
                 {(category === 'invoices' || category === 'revenue') && invoices?.map((inv: any) => (
@@ -324,6 +351,7 @@ const CategoryDetailOverlay: React.FC<{ category: CategoryType; onClose: () => v
                       <span style={{ padding: '4px 12px', borderRadius: 20, fontSize: 11, background: `${C_YELLOW}15`, color: C_YELLOW, fontWeight: 700 }}>{inv.status}</span>
                     </td>
                     <td style={{ padding: '16px', color: TEXT, fontWeight: 700 }}>{inv.amount.toLocaleString()} {inv.devise}</td>
+                    <td style={{ padding: '16px' }}></td>
                   </motion.tr>
                 ))}
                 {category === 'monitoring' && monitoring?.map((m: any) => (
@@ -333,6 +361,7 @@ const CategoryDetailOverlay: React.FC<{ category: CategoryType; onClose: () => v
                       <span style={{ padding: '4px 12px', borderRadius: 20, fontSize: 11, background: m.status === 'healthy' ? `${C_GREEN}15` : `${C_RED}15`, color: m.status === 'healthy' ? C_GREEN : C_RED, fontWeight: 700 }}>{m.status}</span>
                     </td>
                     <td style={{ padding: '16px', color: SUBTEXT, fontSize: 14 }}>{m.responseTime}ms de réponse</td>
+                    <td style={{ padding: '16px' }}></td>
                   </tr>
                 ))}
               </tbody>
@@ -368,28 +397,28 @@ const CategoryDetailOverlay: React.FC<{ category: CategoryType; onClose: () => v
                         <div>
                           <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: TEXT }}>{selectedItem.name} {selectedItem.prenom}</p>
                           <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: theme.color, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                            {selectedItem.typeClient === 'morale' ? '🏢 Personne Morale' : '👤 Personne Physique'}
+                            {selectedItem.type === 'Moral' ? '🏢 Personne Morale' : '👤 Personne Physique'}
                           </p>
                         </div>
                       </div>
 
                       {/* Common Fields */}
                       <DetailItem label="Email" value={selectedItem.email} />
-                      <DetailItem label="Téléphone" value={selectedItem.tel} />
+                      <DetailItem label="Téléphone" value={selectedItem.phone} />
                       <DetailItem label="Adresse" value={selectedItem.adresse} />
                       <DetailItem label="Statut" value={selectedItem.status} />
 
                       {/* Type-Specific Fields */}
                       <div style={{ gridColumn: 'span 2', height: 1, background: BORDER, margin: '8px 0' }} />
                       
-                      {selectedItem.typeClient === 'physique' ? (
+                      {selectedItem.type === 'Physique' ? (
                         <>
                           <DetailItem label="CIN" value={selectedItem.cin} />
                           <DetailItem label="Date de Naissance" value={selectedItem.dateNaissance} />
                         </>
                       ) : (
                         <>
-                          <DetailItem label="Entreprise" value={selectedItem.entreprise} />
+                          <DetailItem label="Entreprise" value={selectedItem.company} />
                           <DetailItem label="Raison Sociale" value={selectedItem.raisonSociale} />
                           <DetailItem label="Matricule Fiscale" value={selectedItem.matriculeFiscale} />
                           <DetailItem label="Secteur" value={selectedItem.secteurActivite} />
@@ -398,29 +427,65 @@ const CategoryDetailOverlay: React.FC<{ category: CategoryType; onClose: () => v
 
                       <div style={{ gridColumn: 'span 2', height: 1, background: BORDER, margin: '8px 0' }} />
                       <DetailItem label="Devise" value={selectedItem.devise} />
-                      <DetailItem label="Client depuis le" value={selectedItem.dateCreation ? new Date(selectedItem.dateCreation).toLocaleDateString() : '—'} />
+                      <DetailItem label="Client depuis le" value={selectedItem.createdAt} />
+
+                      <div style={{ gridColumn: 'span 2', paddingTop: 16 }}>
+                        <button 
+                          onClick={() => {
+                            onClose();
+                            navigate(`/clients/${selectedItem.id}`);
+                          }}
+                          style={{
+                            width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                            background: `linear-gradient(135deg, ${C_PURPLE}, ${C_BLUE})`, color: '#fff',
+                            border: 'none', borderRadius: 12, padding: '12px', fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                            boxShadow: '0 4px 12px rgba(146, 109, 222, 0.2)'
+                          }}
+                        >
+                          <ExternalLink size={16} />
+                          Voir les détails complets
+                        </button>
+                      </div>
                     </>
                   )}
                   {category === 'projects' && (
                     <>
-                      <DetailItem label="Nom du Projet" value={selectedItem.nomProjet} />
-                      <DetailItem label="Client ID" value={selectedItem.clientID} />
-                      <DetailItem label="Budget" value={`${selectedItem.budget} ${selectedItem.devise || 'TND'}`} />
-                      <DetailItem label="Dépenses" value={`${selectedItem.depense} ${selectedItem.devise || 'TND'}`} />
-                      <DetailItem label="Date Début" value={selectedItem.dateDebut} />
-                      <DetailItem label="Date Fin" value={selectedItem.dateFin} />
+                      <DetailItem label="Nom du Projet" value={selectedItem.name} />
+                      <DetailItem label="Client ID" value={selectedItem.clientId} />
+                      <DetailItem label="Budget" value={`${Number(selectedItem.budget).toLocaleString()} ${selectedItem.devise || 'TND'}`} />
+                      <DetailItem label="Dépenses" value={`${Number(selectedItem.spent).toLocaleString()} ${selectedItem.devise || 'TND'}`} />
+                      <DetailItem label="Date Début" value={selectedItem.startDate} />
+                      <DetailItem label="Date Fin" value={selectedItem.deadline} />
                       <DetailItem label="Progrès" value={`${selectedItem.progress}%`} />
                       <DetailItem label="Statut" value={selectedItem.status} />
+
+                      <div style={{ gridColumn: 'span 2', paddingTop: 16 }}>
+                        <button 
+                          onClick={() => {
+                            onClose();
+                            navigate(`/projects/${selectedItem.id}`);
+                          }}
+                          style={{
+                            width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                            background: `linear-gradient(135deg, ${C_GREEN}, ${C_BLUE})`, color: '#fff',
+                            border: 'none', borderRadius: 12, padding: '12px', fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                            boxShadow: '0 4px 12px rgba(40, 208, 148, 0.2)'
+                          }}
+                        >
+                          <ExternalLink size={16} />
+                          Voir les détails complets
+                        </button>
+                      </div>
                     </>
                   )}
                   {(category === 'invoices' || category === 'revenue') && (
                     <>
                       <DetailItem label="ID Facture" value={selectedItem.id} />
-                      <DetailItem label="Client ID" value={selectedItem.clientID} />
-                      <DetailItem label="Montant HT" value={`${selectedItem.amountHT} ${selectedItem.devise}`} />
-                      <DetailItem label="Montant TTC" value={`${selectedItem.amount} ${selectedItem.devise}`} />
-                      <DetailItem label="Date Émission" value={selectedItem.dateEmission} />
-                      <DetailItem label="Échéance" value={selectedItem.dueDate} />
+                      <DetailItem label="Client ID" value={selectedItem.clientId} />
+                      <DetailItem label="Montant TTC" value={`${Number(selectedItem.amount).toLocaleString()} ${selectedItem.devise}`} />
+                      <DetailItem label="Date Émission" value={selectedItem.issuedAt} />
+                      <DetailItem label="Échéance" value={selectedItem.dueAt} />
+                      <DetailItem label="Date Paiement" value={selectedItem.paidAt} />
                       <DetailItem label="Statut" value={selectedItem.status} />
                     </>
                   )}
@@ -469,12 +534,7 @@ const CategoryDetailOverlay: React.FC<{ category: CategoryType; onClose: () => v
   );
 };
 
-const DetailItem = ({ label, value }: { label: string; value: any }) => (
-  <div style={{ marginBottom: 4 }}>
-    <p style={{ color: MUTED, fontSize: 10, textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.05em', marginBottom: 4 }}>{label}</p>
-    <p style={{ color: TEXT, fontSize: 14, fontWeight: 600, margin: 0 }}>{value || '—'}</p>
-  </div>
-);
+
 
 const ExpandedChartOverlay: React.FC<{ title: string; data: any; onClose: () => void }> = ({ title, data, onClose }) => {
   const renderChart = () => {
@@ -531,10 +591,14 @@ const ExpandedChartOverlay: React.FC<{ title: string; data: any; onClose: () => 
         return (
           <ResponsiveContainer width="100%" height={500}>
             <PieChart>
-              <Pie data={data.projectStatusData} cx="50%" cy="50%" innerRadius={120} outerRadius={200}
-                paddingAngle={4} dataKey="value"
+              <Pie 
+                data={data.projectStatusData} 
+                cx="50%" cy="50%" 
+                innerRadius={100} outerRadius={180}
+                paddingAngle={5} dataKey="value"
                 label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                labelLine={{ stroke: BORDER, strokeWidth: 2 }}>
+                labelLine={{ stroke: BORDER, strokeWidth: 1 }}
+              >
                 {data.projectStatusData.map((_: any, i: number) => (
                    <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
                 ))}
@@ -542,25 +606,6 @@ const ExpandedChartOverlay: React.FC<{ title: string; data: any; onClose: () => 
               <Tooltip content={<InfobulleSombre />} />
               <Legend wrapperStyle={{ color: TEXT, fontSize: 13, paddingTop: 20 }} />
             </PieChart>
-          </ResponsiveContainer>
-        );
-      case 'Revenus totaux':
-        return (
-          <ResponsiveContainer width="100%" height={500}>
-            <LineChart data={data.revenueData}>
-              <CartesianGrid strokeDasharray="3 3" stroke={BORDER} vertical={false} />
-              <XAxis dataKey="month" tick={{ fill: TEXT, fontSize: 13 }} axisLine={{ stroke: BORDER }} tickLine={false} />
-              <YAxis tick={{ fill: TEXT, fontSize: 13 }} axisLine={{ stroke: BORDER }} tickLine={false} />
-              <Tooltip content={<InfobulleSombre />} />
-              <Legend wrapperStyle={{ color: TEXT, fontSize: 13, paddingTop: 20 }} />
-              <defs>
-                <linearGradient id="grad-rev-exp" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%" stopColor={C_GREEN} /><stop offset="100%" stopColor={C_BLUE} />
-                </linearGradient>
-              </defs>
-              <Line type="monotone" dataKey="revenue" stroke="url(#grad-rev-exp)" strokeWidth={4}
-                dot={{ fill: C_GREEN, r: 5, strokeWidth: 0 }} activeDot={{ r: 8 }} name="Revenus" />
-            </LineChart>
           </ResponsiveContainer>
         );
       default:
@@ -715,92 +760,59 @@ export const Dashboard: React.FC = () => {
         ))}
       </div>
 
-      {/* 3 graphiques côte à côte */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 18, marginBottom: 24 }}>
-        <CarteSombre titre="Aperçu des revenus" delay={0.3} onClick={() => setExpandedChart('Aperçu des revenus')}>
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={data.revenueData} barCategoryGap="40%">
-              <CartesianGrid strokeDasharray="2 4" stroke={BORDER} vertical={false} />
-              <XAxis dataKey="month" tick={{ fill: MUTED, fontSize: 10 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: MUTED, fontSize: 10 }} axisLine={false} tickLine={false} />
-              <Tooltip content={<InfobulleSombre />} cursor={{ fill: '#ffffff06' }} />
-              <defs>
-                <linearGradient id="grad-barre" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={C_PURPLE} /><stop offset="100%" stopColor={C_BLUE} />
-                </linearGradient>
-              </defs>
-              <Bar dataKey="revenue" fill="url(#grad-barre)" radius={[4, 4, 0, 0]} name="Revenus" />
-            </BarChart>
-          </ResponsiveContainer>
+      {/* Graphiques */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 18, marginBottom: 24 }}>
+        <CarteSombre titre="Aperçu des revenus" delay={0.4} onClick={() => setExpandedChart('Aperçu des revenus')}>
+          <div style={{ padding: '0 10px' }}>
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={data.revenueData} barCategoryGap="40%">
+                <CartesianGrid strokeDasharray="3 3" stroke={BORDER} vertical={false} />
+                <XAxis dataKey="month" tick={{ fill: MUTED, fontSize: 10 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: MUTED, fontSize: 10 }} axisLine={false} tickLine={false} />
+                <Tooltip content={<InfobulleSombre />} cursor={{ fill: '#ffffff06' }} />
+                <defs>
+                  <linearGradient id="grad-barre" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={C_PURPLE} /><stop offset="100%" stopColor={C_BLUE} />
+                  </linearGradient>
+                </defs>
+                <Bar dataKey="revenue" fill="url(#grad-barre)" radius={[4, 4, 0, 0]} name="Revenus" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </CarteSombre>
 
-        <CarteSombre titre="Statistiques" delay={0.36} onClick={() => setExpandedChart('Statistiques')}>
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={data.revenueData} barCategoryGap="40%">
-              <CartesianGrid strokeDasharray="2 4" stroke={BORDER} vertical={false} />
-              <XAxis dataKey="month" tick={{ fill: MUTED, fontSize: 10 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: MUTED, fontSize: 10 }} axisLine={false} tickLine={false} />
-              <Tooltip content={<InfobulleSombre />} cursor={{ fill: '#ffffff06' }} />
-              <Bar dataKey="revenue" fill={C_BLUE} radius={[4, 4, 0, 0]} name="Valeur" />
-            </BarChart>
-          </ResponsiveContainer>
+        <CarteSombre titre="Évolution de la clientèle" delay={0.45} onClick={() => setExpandedChart('Évolution de la clientèle')}>
+          <div style={{ padding: '0 10px' }}>
+            <ResponsiveContainer width="100%" height={220}>
+              <LineChart data={data.clientGrowthData}>
+                <CartesianGrid strokeDasharray="3 3" stroke={BORDER} vertical={false} />
+                <XAxis dataKey="month" tick={{ fill: MUTED, fontSize: 10 }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: MUTED, fontSize: 10 }} axisLine={false} tickLine={false} />
+                <Tooltip content={<InfobulleSombre />} />
+                <Legend wrapperStyle={{ color: SUBTEXT, fontSize: 11 }} />
+                <Line type="monotone" dataKey="clients" stroke={C_GREEN} strokeWidth={2.5}
+                  dot={{ fill: C_GREEN, r: 3, strokeWidth: 0 }} activeDot={{ r: 5 }} name="Clients" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
         </CarteSombre>
 
-        <CarteSombre titre="Évolution de la clientèle" delay={0.42} onClick={() => setExpandedChart('Évolution de la clientèle')}>
+        <CarteSombre titre="Répartition des projets" delay={0.5} onClick={() => setExpandedChart('Répartition des statuts des projets')}>
           <ResponsiveContainer width="100%" height={220}>
-            <LineChart data={data.clientGrowthData}>
-              <CartesianGrid strokeDasharray="2 4" stroke={BORDER} vertical={false} />
-              <XAxis dataKey="month" tick={{ fill: MUTED, fontSize: 10 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: MUTED, fontSize: 10 }} axisLine={false} tickLine={false} />
-              <Tooltip content={<InfobulleSombre />} />
-              <Legend wrapperStyle={{ color: SUBTEXT, fontSize: 11 }} />
-              <defs>
-                <linearGradient id="grad-ligne" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%" stopColor={C_GREEN} /><stop offset="100%" stopColor={C_BLUE} />
-                </linearGradient>
-              </defs>
-              <Line type="monotone" dataKey="clients" stroke="url(#grad-ligne)" strokeWidth={2.5}
-                dot={{ fill: C_GREEN, r: 3, strokeWidth: 0 }} activeDot={{ r: 5, fill: C_BLUE }} name="Clients" />
-            </LineChart>
-          </ResponsiveContainer>
-        </CarteSombre>
-      </div>
-
-      {/* Camembert + Courbe revenus */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18, marginBottom: 24 }}>
-        <CarteSombre titre="Répartition des statuts des projets" delay={0.48} onClick={() => setExpandedChart('Répartition des statuts des projets')}>
-          <ResponsiveContainer width="100%" height={250}>
             <PieChart>
-              <Pie data={data.projectStatusData} cx="50%" cy="50%" innerRadius={60} outerRadius={95}
-                paddingAngle={3} dataKey="value"
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                labelLine={{ stroke: BORDER, strokeWidth: 1 }}>
+              <Pie 
+                data={data.projectStatusData} 
+                cx="50%" cy="50%" 
+                innerRadius={45} outerRadius={65} 
+                paddingAngle={4} dataKey="value"
+              >
                 {data.projectStatusData.map((_: any, i: number) => (
-                  <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                   <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
                 ))}
               </Pie>
               <Tooltip content={<InfobulleSombre />} />
               <Legend wrapperStyle={{ color: SUBTEXT, fontSize: 11 }} />
             </PieChart>
-          </ResponsiveContainer>
-        </CarteSombre>
-
-        <CarteSombre titre="Revenus totaux" delay={0.54} onClick={() => setExpandedChart('Revenus totaux')}>
-          <ResponsiveContainer width="100%" height={250}>
-            <LineChart data={data.revenueData}>
-              <CartesianGrid strokeDasharray="2 4" stroke={BORDER} vertical={false} />
-              <XAxis dataKey="month" tick={{ fill: MUTED, fontSize: 10 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: MUTED, fontSize: 10 }} axisLine={false} tickLine={false} />
-              <Tooltip content={<InfobulleSombre />} />
-              <Legend wrapperStyle={{ color: SUBTEXT, fontSize: 11 }} />
-              <defs>
-                <linearGradient id="grad-rev" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%" stopColor={C_GREEN} /><stop offset="100%" stopColor={C_BLUE} />
-                </linearGradient>
-              </defs>
-              <Line type="monotone" dataKey="revenue" stroke="url(#grad-rev)" strokeWidth={2.5}
-                dot={{ fill: C_GREEN, r: 3, strokeWidth: 0 }} activeDot={{ r: 5 }} name="Revenus" />
-            </LineChart>
           </ResponsiveContainer>
         </CarteSombre>
       </div>

@@ -1,0 +1,136 @@
+@startuml
+hide empty members
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+skinparam linetype ortho
+skinparam packageStyle rectangle
+left to right direction
+
+skinparam class {
+  BackgroundColor #FFFFFF
+  BorderColor #1F3A5F
+  ArrowColor #1F3A5F
+}
+
+package "CRM - Vue Soutenance" {
+  class Client {
+    +id: int
+    +nom: string
+    +email: string
+    +tel: string
+    +status: string
+  }
+
+  class Projet {
+    +id: int
+    +nomProjet: string
+    +status: string
+    +budget: decimal
+    +progression: int
+  }
+
+  class Utilisateur {
+    +userID: int
+    +nom: string
+    +email: string
+    +role: string
+    +actif: bool
+  }
+
+  class Service {
+    +id: int
+    +nom: string
+    +type: string
+    +statut: string
+    +dateRenouvellement: date
+  }
+
+  class Devis {
+    +devisID: int
+    +dateDevis: datetime
+    +totalAmount: decimal
+    +status: string
+    +valider()
+  }
+
+  class Facture {
+    +factureID: int
+    +dateFacture: datetime
+    +amountTTC: decimal
+    +status: string
+    +marquerPayee()
+  }
+
+  class Contrat {
+    +contratID: int
+    +titre: string
+    +typeContrat: string
+    +montant: decimal
+    +status: string
+    +isSignedByClient: bool
+  }
+
+  class Rappel {
+    +id: int
+    +titre: string
+    +dateRappel: datetime
+    +statut: string
+    +priorite: string
+  }
+
+  class Message {
+    +id: int
+    +contenu: text
+    +type: string
+    +lu: bool
+    +createdAt: datetime
+  }
+
+  class CahierDeCharge {
+    +cahierID: int
+    +objet: string
+    +version: string
+    +dateValidation: datetime
+  }
+
+  class ProjetMilestone {
+    +id: int
+    +title: string
+    +dueDate: date
+    +status: string
+  }
+
+  class AIMonitoring {
+    +monitoringID: int
+    +status: string
+    +uptime: decimal
+    +responseTime: decimal
+  }
+
+  Client "1" -- "0..*" Projet : possède
+  Client "1" -- "0..*" Devis : reçoit
+  Client "1" -- "0..*" Facture : reçoit
+  Client "1" -- "0..*" Contrat : signe
+  Client "1" -- "0..*" Rappel : concerne
+
+  Projet "1" -- "0..*" Service : contient
+  Projet "1" -- "0..1" CahierDeCharge : spécifie
+  Projet "1" -- "0..*" ProjetMilestone : planifie
+
+  Projet "*" -- "*" Utilisateur : équipe
+
+  Devis "0..1" -- "0..*" Facture : source
+  Projet "0..1" -- "0..*" Devis : devis principal
+  Projet "0..1" -- "0..*" Contrat : rattaché
+
+  Service "1" -- "0..1" AIMonitoring : monitoré
+
+  Message "0..*" --> "1" Utilisateur : expéditeur
+  Message "0..*" --> "1" Utilisateur : destinataire
+
+  Rappel "0..*" --> "0..1" Projet : cible
+  Rappel "0..*" --> "0..1" Devis : cible
+  Rappel "0..*" --> "0..1" Facture : cible
+  Rappel "0..*" --> "0..1" ProjetMilestone : cible
+}
+@enduml

@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 import io
 from fpdf import FPDF
+from app.utils.pdf_generator import generate_pdf
 from sqlalchemy.orm import Session
 
 from app.api.v1.endpoints._activity import log_activity
@@ -130,82 +131,18 @@ def export_devis_pdf(devis_id: int, db: Session = Depends(get_db)):
     if not item:
         raise HTTPException(status_code=404, detail="Devis not found")
 
-    def _clean(text):
-        if not text:
-            return ""
-        # FPDF core fonts only support latin-1. Replace unhandled chars to prevent 500 errors.
-        return str(text).encode("latin-1", "replace").decode("latin-1")
-
-    pdf = FPDF()
-    pdf.add_page()
-
-    # Header
-    pdf.set_font("helvetica", "B", 20)
-    pdf.set_text_color(79, 70, 229)  # Indigo-600
-    pdf.cell(0, 10, "DEVIS", ln=True, align="R")
-    pdf.set_font("helvetica", "", 10)
-    pdf.set_text_color(107, 114, 128)  # Gray-500
-    pdf.cell(0, 5, _clean(f"Référence: DEV-{item.devisID}"), ln=True, align="R")
-    pdf.cell(0, 5, _clean(f"Date: {item.dateDevis.strftime('%d/%m/%Y')}"), ln=True, align="R")
-    if item.validUntil:
-        pdf.cell(0, 5, _clean(f"Valide jusqu'au: {item.validUntil.strftime('%d/%m/%Y')}"), ln=True, align="R")
-    pdf.ln(10)
-
-    # Client Info
-    pdf.set_font("helvetica", "B", 12)
-    pdf.set_text_color(31, 41, 55)  # Gray-800
-    pdf.cell(0, 7, "Client:", ln=True)
-    pdf.set_font("helvetica", "", 12)
-    pdf.cell(0, 7, _clean(item.client.nom), ln=True)
-    if item.client.email:
-        pdf.cell(0, 7, _clean(item.client.email), ln=True)
-    pdf.ln(10)
-
-    # Title
-    pdf.set_font("helvetica", "B", 14)
-    pdf.cell(0, 10, _clean(item.notes or "Détail des prestations"), ln=True)
-    pdf.ln(5)
-
-    # Table Header
-    pdf.set_fill_color(243, 244, 246)  # Gray-100
-    pdf.set_font("helvetica", "B", 10)
-    pdf.cell(110, 10, "Description", border=1, fill=True)
-    pdf.cell(20, 10, "Qté", border=1, fill=True, align="C")
-    pdf.cell(30, 10, "Prix Unitaire", border=1, fill=True, align="R")
-    pdf.cell(30, 10, "Total", border=1, fill=True, align="R")
-    pdf.ln()
-
-    # Table Body
-    pdf.set_font("helvetica", "", 10)
-    devise = item.client.devise or "DT"
-    for line in item.items:
-        # Check if we need a new page before drawing the row
-        if pdf.get_y() > 250:
-            pdf.add_page()
-            # Redraw header if needed or just continue
-        
-        description = _clean(line.description)
-        x = pdf.get_x()
-        y = pdf.get_y()
-        # Multi-cell for description
-        pdf.multi_cell(110, 10, description, border=1)
-        new_y = pdf.get_y()
-        height = new_y - y
-        
-        # Draw remaining cells aligned with the height of the multi-cell
-        pdf.set_xy(x + 110, y)
-        pdf.cell(20, height, str(line.quantity), border=1, align="C")
-        pdf.cell(30, height, f"{line.unitPrice:,.2f}", border=1, align="R")
-        pdf.cell(30, height, f"{line.lineTotal:,.2f}", border=1, align="R")
-        pdf.set_y(new_y)
-
-    # Totals
-    pdf.ln(5)
-    pdf.set_font("helvetica", "B", 12)
-    pdf.cell(160, 10, "TOTAL HT", border=0, align="R")
-    pdf.cell(30, 10, f"{item.totalAmount:,.2f} {devise}", border=0, align="R")
-
-    pdf_bytes = pdf.output()
+    pdf_bytes = generate_pdf(
+        title_type="DEVIS",
+        ref=f"DEV-{item.devisID}",
+        date_str=item.dateDevis.strftime('%d/%m/%Y'),
+        client=item.client,
+        items=item.items,
+        amount_ht=item.totalAmount,
+        tax_rate=19.0, # Default per template
+        amount_ttc=round(float(item.totalAmount) * 1.19, 3), # Simplification for Devis
+        currency=item.client.devise or "DT"
+    )
+    
     return StreamingResponse(
         io.BytesIO(pdf_bytes),
         media_type="application/pdf",

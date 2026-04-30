@@ -76,6 +76,8 @@ export type UIClient = {
   secteurActivite?: string;
   devise?: string;
   scoring?: string;
+  adresse?: string;
+  formattedId: string;
 };
 
 export type UIProject = {
@@ -114,7 +116,8 @@ const toUIClient = (item: any): UIClient => ({
   matriculeFiscale: item.matriculeFiscale || '',
   secteurActivite: item.secteurActivite || '',
   devise: item.devise || 'TND',
-  scoring: item.scoring || 'Moyen',
+  adresse: item.adresse || '',
+  formattedId: item.formatted_id || `CL${String(item.id).padStart(3, '0')}`,
 });
 
 const toClientPayload = (client: Partial<UIClient>) => ({
@@ -123,17 +126,16 @@ const toClientPayload = (client: Partial<UIClient>) => ({
   prenom: client.prenom || null,
   email: client.email || null,
   tel: client.phone || null,
-  adresse: null,
   dateNaissance: client.dateNaissance || null,
   cin: client.cin || null,
   raisonSociale: client.raisonSociale || null,
   matriculeFiscale: client.matriculeFiscale || null,
   secteurActivite: client.secteurActivite || null,
+  adresse: client.adresse || null,
   entreprise: client.company || null,
   avatarUrl: client.avatar || null,
   status: client.status?.toLowerCase() || 'actif',
   devise: client.devise || 'TND',
-  scoring: client.scoring || 'Moyen',
 });
 
 const toUIProject = (item: any): UIProject => ({
@@ -635,6 +637,8 @@ export type UIDevis = {
   notes?: string;
   items: UIItem[];
   devise?: string;
+  taxRate?: number;
+  fiscalStamp?: number;
 };
 
 export type UIFacture = {
@@ -647,7 +651,6 @@ export type UIFacture = {
   issuedAt: string;
   dueAt?: string;
   paidAt?: string;
-  taxRate: number;
   items: UIItem[];
   devise?: string;
 };
@@ -672,6 +675,8 @@ export type UIContrat = {
   devise?: string;
   isSignedByClient: boolean;
   isSignedByProvider: boolean;
+  signatureClient?: string;
+  signatureProvider?: string;
 };
 
 const roleToUi = (role: string): UIUser['role'] => {
@@ -711,6 +716,8 @@ const toUIDevis = (item: any): UIDevis => ({
   notes: item.notes || '',
   items: (item.items || []).map(normalizeItem),
   devise: item.clientDevise || 'TND',
+  taxRate: Number(item.taxRate || 19),
+  fiscalStamp: Number(item.fiscalStamp || 1.0),
 });
 
 const toDevisPayload = (item: Partial<UIDevis>) => ({
@@ -721,6 +728,8 @@ const toDevisPayload = (item: Partial<UIDevis>) => ({
   totalAmount: Number(item.amount || 0),
   status: item.status || 'draft',
   notes: item.notes || item.title || null,
+  taxRate: Number(item.taxRate ?? 19),
+  fiscalStamp: Number(item.fiscalStamp ?? 1.0),
   projetIDs: [],
   items: (item.items || []).map((it) => ({
     description: it.description,
@@ -740,6 +749,7 @@ const toUIFacture = (item: any): UIFacture => ({
   dueAt: item.dueDate ? String(item.dueDate).slice(0, 10) : '',
   paidAt: item.paymentDate ? String(item.paymentDate).slice(0, 10) : '',
   taxRate: Number(item.taxRate || 0),
+  fiscalStamp: Number(item.fiscalStamp || 1.0),
   items: (item.items || []).map(normalizeItem),
   devise: item.clientDevise || 'TND',
 });
@@ -753,6 +763,7 @@ const toFacturePayload = (item: Partial<UIFacture>) => ({
   amountTTC: Number(item.amount || 0),
   status: item.status || 'en_attente',
   taxRate: Number(item.taxRate ?? 19),
+  fiscalStamp: Number(item.fiscalStamp ?? 1.0),
   paymentDate: item.paidAt ? new Date(item.paidAt).toISOString() : undefined,
   projetIDs: [],
   items: (item.items || []).map((it) => ({
@@ -782,6 +793,8 @@ const toUIContrat = (item: any): UIContrat => ({
   devise: item.clientDevise || 'TND',
   isSignedByClient: Boolean(item.isSignedByClient),
   isSignedByProvider: Boolean(item.isSignedByProvider),
+  signatureClient: item.signatureClient || '',
+  signatureProvider: item.signatureProvider || '',
 });
 
 const toUIUserContract = (item: any): UIUserContract => ({
@@ -835,7 +848,9 @@ const toContratPayload = (item: Partial<UIContrat>) => ({
   conditions: item.conditions || null,
   status: item.status || 'actif',
   isSignedByClient: Boolean(item.isSignedByClient),
+  signatureClient: item.signatureClient || null,
   isSignedByProvider: Boolean(item.isSignedByProvider),
+  signatureProvider: item.signatureProvider || null,
 });
 
 export const usersAPI = {
@@ -966,7 +981,7 @@ export const userContractsAPI = {
     });
     return toUIUserContract(data);
   },
-  archive: async (userId: string, contractId: number) => {
+  delete: async (userId: string, contractId: number) => {
     await api.delete(`/utilisateurs/${userId}/contracts/${contractId}`);
   },
 };

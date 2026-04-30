@@ -1,9 +1,11 @@
 import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Download, Plus, Calendar, Search, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, DollarSign, ChevronUp, Eye } from 'lucide-react';
+import { Download, Plus, Calendar, Search, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, DollarSign, ChevronUp, Eye, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Modal } from '../components/ui/Modal';
+import { PDFPreview } from '../components/PDFPreview';
+import { FacturePrint } from '../components/FacturePrint';
 import { clientsAPI, facturesAPI, UIFacture } from '../services/api';
 import { cn } from '../utils/cn';
 
@@ -35,7 +37,6 @@ const obtenirCouleurStatut = (statut: string) => {
 
 const estPaye = (statut: string) => ['payee', 'paid'].includes(statut?.toLowerCase());
 
-// Composant menu statut cliquable
 const MenuStatut = ({
   facture,
   onChanger,
@@ -100,11 +101,20 @@ export const Factures: React.FC = () => {
   const [page, setPage] = useState(1);
   const parPage = 10;
 
+  // Edit mode state
+  const [modeEdition, setModeEdition] = useState(false);
+  const [factureEditionId, setFactureEditionId] = useState<number | null>(null);
+
+  // Delete confirmation state
+  const [confirmSuppressionOuvert, setConfirmSuppressionOuvert] = useState(false);
+  const [factureASupprimer, setFactureASupprimer] = useState<UIFacture | null>(null);
+
   const [nouvelleFacture, setNouvelleFacture] = useState({
     clientId: '',
     echeance: '',
     articles: [articleVide],
     tauxTaxe: 19,
+    fiscalStamp: 1.0,
   });
 
   const { data: factures = [] } = useQuery({
@@ -117,27 +127,54 @@ export const Factures: React.FC = () => {
     queryFn: () => clientsAPI.getAll(),
   });
 
+  const reinitialiserFormulaire = () => {
+    setNouvelleFacture({ clientId: '', echeance: '', articles: [articleVide], tauxTaxe: 19, fiscalStamp: 1.0 });
+    setModeEdition(false);
+    setFactureEditionId(null);
+  };
+
   const mutationCreer = useMutation({
     mutationFn: facturesAPI.create,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['factures'] });
       toast.success('Facture créée avec succès');
       setModalOuvert(false);
-      setNouvelleFacture({ clientId: '', echeance: '', articles: [articleVide], tauxTaxe: 19 });
+      reinitialiserFormulaire();
     },
     onError: (err: any) => toast.error(`Erreur création: ${err?.response?.data?.message ?? err?.message ?? 'inconnue'}`),
   });
 
-  // ✅ CORRECTION PRINCIPALE : on récupère la facture complète et on envoie tout le payload
+  const mutationModifier = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: Partial<UIFacture> }) => facturesAPI.update(id, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['factures'] });
+      toast.success('Facture mise à jour avec succès');
+      setModalOuvert(false);
+      reinitialiserFormulaire();
+    },
+    onError: (err: any) => toast.error(`Erreur: ${err?.response?.data?.message ?? err?.message}`),
+  });
+
+  const mutationSupprimer = useMutation({
+    mutationFn: async (id: string) => facturesAPI.delete(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['factures'] });
+      toast.success('Facture supprimée avec succès');
+      setConfirmSuppressionOuvert(false);
+      setFactureASupprimer(null);
+    },
+    onError: (err: any) => toast.error(`Erreur suppression: ${err?.response?.data?.message ?? err?.message}`),
+  });
+
   const mutationChangerStatut = useMutation({
     mutationFn: async ({ id, statut, facture }: { id: number; statut: string; facture: UIFacture }) => {
-      // On construit le payload complet avec le nouveau statut
       const payload: Partial<UIFacture> = {
         clientId: facture.clientId,
         status: statut,
         issuedAt: facture.issuedAt,
         dueAt: facture.dueAt,
         taxRate: facture.taxRate,
+        fiscalStamp: facture.fiscalStamp,
         items: facture.items,
         amount: facture.amount,
         paidAt: statut === 'payee' ? new Date().toISOString().slice(0, 10) : facture.paidAt,
@@ -189,22 +226,53 @@ export const Factures: React.FC = () => {
     facturesAPI.exportPDF(facture.numericId, `${facture.id}.pdf`, viewOnly);
   };
 
-  const creerFacture = () => {
+  const ouvrirEdition = (facture: UIFacture) => {
+    setModeEdition(true);
+    setFactureEditionId(facture.numericId);
+    setNouvelleFacture({
+      clientId: facture.clientId,
+      echeance: facture.dueAt || '',
+      tauxTaxe: facture.taxRate || 19,
+      fiscalStamp: facture.fiscalStamp || 1.0,
+      articles: facture.items.map((it) => ({ description: it.description, quantite: it.quantity, prixUnitaire: it.unitPrice })),
+    });
+    setModalOuvert(true);
+  };
+
+  const ouvrirCreation = () => {
+    reinitialiserFormulaire();
+    setModalOuvert(true);
+  };
+
+  const confirmerSuppression = (facture: UIFacture) => {
+    setFactureASupprimer(facture);
+    setConfirmSuppressionOuvert(true);
+  };
+
+  const creerOuModifierFacture = () => {
     const client = clients.find((c) => c.id === nouvelleFacture.clientId);
     if (!client) return toast.error('Veuillez sélectionner un client');
-    mutationCreer.mutate({
+
+    const payload = {
       clientId: client.id,
       status: 'en_attente',
       issuedAt: new Date().toISOString().slice(0, 10),
       dueAt: nouvelleFacture.echeance,
       taxRate: nouvelleFacture.tauxTaxe,
+      fiscalStamp: nouvelleFacture.fiscalStamp,
       items: nouvelleFacture.articles.map((a) => ({
         description: a.description,
         quantity: a.quantite,
         unitPrice: a.prixUnitaire,
       })),
       amount: totalBrouillon,
-    } as any);
+    } as any;
+
+    if (modeEdition && factureEditionId) {
+      mutationModifier.mutate({ id: String(factureEditionId), data: payload });
+    } else {
+      mutationCreer.mutate(payload);
+    }
   };
 
   const mettreAJourArticle = (index: number, champ: string, valeur: any) => {
@@ -216,14 +284,13 @@ export const Factures: React.FC = () => {
   return (
     <div className="space-y-6 p-6 bg-gray-50 min-h-screen">
 
-      {/* En-tête */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Factures</h1>
           <p className="text-sm text-gray-500 mt-0.5">Gestion backend des factures</p>
         </div>
         <button
-          onClick={() => setModalOuvert(true)}
+          onClick={ouvrirCreation}
           className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-4 py-2 rounded-lg text-sm transition-colors"
         >
           <Plus className="w-4 h-4" />
@@ -231,7 +298,6 @@ export const Factures: React.FC = () => {
         </button>
       </div>
 
-      {/* Cartes statistiques */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
           <p className="text-sm text-gray-500 font-medium mb-2">CA total</p>
@@ -253,10 +319,7 @@ export const Factures: React.FC = () => {
         </div>
       </div>
 
-      {/* Tableau */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm">
-
-        {/* Filtres */}
         <div className="flex flex-wrap items-center gap-3 p-4 border-b border-gray-100">
           <div className="relative flex-1 min-w-[180px] max-w-xs">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -304,7 +367,6 @@ export const Factures: React.FC = () => {
           </div>
         </div>
 
-        {/* Table */}
         <div className="overflow-x-auto pb-48">
           <table className="w-full text-sm">
             <thead>
@@ -336,8 +398,8 @@ export const Factures: React.FC = () => {
                   </td>
                   <td className="px-4 py-3 text-gray-600">{facture.issuedAt}</td>
                   <td className="px-4 py-3 text-gray-600">{facture.dueAt}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-end gap-2">
+                  <td className="px-4 py-3 text-right">
+                    <div className="flex items-center justify-end gap-1">
                       <button
                         onClick={() => { setFactureSelectionnee(facture); setAperçuOuvert(true); }}
                         className="p-1.5 rounded-lg hover:bg-indigo-50 text-indigo-600 hover:text-indigo-700 transition-colors"
@@ -351,6 +413,20 @@ export const Factures: React.FC = () => {
                         title="Télécharger"
                       >
                         <Download className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => ouvrirEdition(facture)}
+                        className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600 transition-colors"
+                        title="Modifier"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => confirmerSuppression(facture)}
+                        className="p-1.5 rounded-lg hover:bg-red-50 text-red-500 transition-colors"
+                        title="Supprimer"
+                      >
+                        <Trash2 className="w-4 h-4" />
                       </button>
                       {!estPaye(facture.status) && (
                         <button
@@ -369,7 +445,6 @@ export const Factures: React.FC = () => {
           </table>
         </div>
 
-        {/* Pagination */}
         {totalPages > 1 && (
           <div className="flex items-center justify-center gap-1 p-4">
             <button onClick={() => setPage(1)} disabled={page === 1} className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-30"><ChevronsLeft className="w-4 h-4 text-gray-500" /></button>
@@ -381,10 +456,9 @@ export const Factures: React.FC = () => {
         )}
       </div>
 
-      {/* Modal création */}
-      <Modal isOpen={modalOuvert} onClose={() => setModalOuvert(false)} title="Créer une facture" size="lg">
-        <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); creerFacture(); }}>
-
+      {/* Modal création / modification facture */}
+      <Modal isOpen={modalOuvert} onClose={() => { setModalOuvert(false); reinitialiserFormulaire(); }} title={modeEdition ? 'Modifier la facture' : 'Créer une facture'} size="lg">
+        <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); creerOuModifierFacture(); }}>
           <div>
             <label className="block text-sm font-medium mb-1 text-gray-700">Client</label>
             <select
@@ -394,29 +468,42 @@ export const Factures: React.FC = () => {
               required
             >
               <option value="">Sélectionner un client</option>
-              {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              {clients.map((c) => <option key={c.id} value={c.id}>{c.formattedId} - {c.name}</option>)}
             </select>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium mb-1 text-gray-700">Date d'échéance</label>
-            <input
-              type="date"
-              className="w-full border border-gray-200 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
-              value={nouvelleFacture.echeance}
-              onChange={(e) => setNouvelleFacture({ ...nouvelleFacture, echeance: e.target.value })}
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-1 text-gray-700">Taux de taxe (%)</label>
-            <input
-              type="number"
-              className="w-full border border-gray-200 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
-              value={nouvelleFacture.tauxTaxe}
-              onChange={(e) => setNouvelleFacture({ ...nouvelleFacture, tauxTaxe: Number(e.target.value) })}
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1 text-gray-700">Date d'échéance</label>
+              <input
+                type="date"
+                className="w-full border border-gray-200 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                value={nouvelleFacture.echeance}
+                onChange={(e) => setNouvelleFacture({ ...nouvelleFacture, echeance: e.target.value })}
+                required
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-sm font-medium mb-1 text-gray-700">TVA (%)</label>
+                <input
+                  type="number"
+                  className="w-full border border-gray-200 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                  value={nouvelleFacture.tauxTaxe}
+                  onChange={(e) => setNouvelleFacture({ ...nouvelleFacture, tauxTaxe: Number(e.target.value) })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1 text-gray-700">Timbre</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  className="w-full border border-gray-200 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                  value={nouvelleFacture.fiscalStamp}
+                  onChange={(e) => setNouvelleFacture({ ...nouvelleFacture, fiscalStamp: Number(e.target.value) })}
+                />
+              </div>
+            </div>
           </div>
 
           <div>
@@ -430,36 +517,31 @@ export const Factures: React.FC = () => {
                 + Ajouter un article
               </button>
             </div>
-            <div className="grid grid-cols-12 gap-2 text-xs text-gray-400 px-1 mb-1">
-              <span className="col-span-5">Description</span>
-              <span className="col-span-2">Qté</span>
-              <span className="col-span-3">Prix unitaire</span>
-            </div>
             <div className="space-y-2">
               {nouvelleFacture.articles.map((article, index) => (
                 <div key={index} className="grid grid-cols-12 gap-2">
                   <input
-                    className="col-span-5 border border-gray-200 rounded-lg p-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                    className="col-span-5 border border-gray-200 rounded-lg p-2 text-sm"
                     placeholder="Description"
                     value={article.description}
                     onChange={(e) => mettreAJourArticle(index, 'description', e.target.value)}
                     required
                   />
                   <input
-                    className="col-span-2 border border-gray-200 rounded-lg p-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                    className="col-span-2 border border-gray-200 rounded-lg p-2 text-sm"
                     type="number" min="1"
                     value={article.quantite}
                     onChange={(e) => mettreAJourArticle(index, 'quantite', Number(e.target.value))}
                   />
                   <input
-                    className="col-span-3 border border-gray-200 rounded-lg p-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                    className="col-span-3 border border-gray-200 rounded-lg p-2 text-sm"
                     type="number" min="0"
                     value={article.prixUnitaire}
                     onChange={(e) => mettreAJourArticle(index, 'prixUnitaire', Number(e.target.value))}
                   />
                   <button
                     type="button"
-                    className="col-span-2 text-red-400 text-sm hover:text-red-600 font-medium"
+                    className="col-span-2 text-red-500 text-sm"
                     onClick={() => setNouvelleFacture({ ...nouvelleFacture, articles: nouvelleFacture.articles.filter((_, i) => i !== index) })}
                   >
                     Retirer
@@ -469,112 +551,75 @@ export const Factures: React.FC = () => {
             </div>
           </div>
 
-          <div className="border-t border-gray-100 pt-3 flex justify-between items-center">
-            <span className="font-semibold text-gray-700">Total HT</span>
-            <span className="text-xl font-bold text-indigo-600">
-              {totalBrouillon.toLocaleString('fr-FR')} {nouvelleFacture.clientId ? (clients.find(c => c.id === nouvelleFacture.clientId)?.devise === 'EUR' ? '€' : clients.find(c => c.id === nouvelleFacture.clientId)?.devise === 'USD' ? '$' : 'DT') : ''}
-            </span>
-          </div>
-
-          <div className="flex justify-end gap-3 pt-2">
-            <button
-              type="button"
-              onClick={() => setModalOuvert(false)}
-              className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-            >
-              Annuler
-            </button>
-            <button
-              type="submit"
-              disabled={mutationCreer.isPending}
-              className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors"
-            >
-              {mutationCreer.isPending ? 'Création...' : 'Créer la facture'}
+          <div className="flex justify-end gap-3">
+            <button type="button" onClick={() => { setModalOuvert(false); reinitialiserFormulaire(); }} className="px-4 py-2 border rounded-lg">Annuler</button>
+            <button type="submit" disabled={mutationCreer.isPending || mutationModifier.isPending} className="px-4 py-2 bg-indigo-600 text-white rounded-lg disabled:opacity-50">
+              {(mutationCreer.isPending || mutationModifier.isPending) ? 'Chargement...' : modeEdition ? 'Mettre à jour' : 'Créer la facture'}
             </button>
           </div>
         </form>
       </Modal>
-  
-      {/* Modal aperçu facture */}
+
       <Modal isOpen={aperçuOuvert} onClose={() => setAperçuOuvert(false)} title="Aperçu de la facture" size="lg">
         {factureSelectionnee && (
-          <div className="space-y-6">
-            <div className="flex justify-between items-start border-b border-gray-100 pb-4">
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">{factureSelectionnee.id}</h2>
-                <p className="text-gray-500 text-sm mt-0.5">Émise le {factureSelectionnee.issuedAt}</p>
-              </div>
-              <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${obtenirCouleurStatut(factureSelectionnee.status)}`}>
-                {obtenirLibelleStatut(factureSelectionnee.status)}
-              </span>
-            </div>
-  
-            <div className="grid grid-cols-2 gap-6 text-sm bg-gray-50 rounded-xl p-4">
-              <div>
-                <p className="text-gray-400 text-xs mb-1 uppercase tracking-wider font-bold">Client</p>
-                <p className="font-semibold text-gray-800">{factureSelectionnee.clientName}</p>
-              </div>
-              <div>
-                <p className="text-gray-400 text-xs mb-1 uppercase tracking-wider font-bold">Échéance</p>
-                <p className={cn("font-semibold", !factureSelectionnee.dueAt ? "text-gray-400" : "text-gray-800")}>
-                  {factureSelectionnee.dueAt || 'Non spécifiée'}
-                </p>
-              </div>
-              <div>
-                <p className="text-gray-400 text-xs mb-1 uppercase tracking-wider font-bold">Montant HT</p>
-                <p className="font-semibold text-gray-800">{factureSelectionnee.amount?.toLocaleString('fr-FR')} {factureSelectionnee.devise === 'EUR' ? '€' : factureSelectionnee.devise === 'USD' ? '$' : 'DT'}</p>
-              </div>
-              <div>
-                <p className="text-gray-400 text-xs mb-1 uppercase tracking-wider font-bold">Taxe (TVA)</p>
-                <p className="font-semibold text-gray-800">{factureSelectionnee.taxRate}%</p>
-              </div>
-            </div>
-  
-            <div>
-              <p className="text-sm font-bold text-gray-900 mb-3 uppercase tracking-widest flex items-center gap-2">
-                 <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
-                 Détail des prestations
-              </p>
-              <div className="space-y-2">
-                {factureSelectionnee.items.map((item, i) => (
-                  <div key={i} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg text-sm group hover:bg-indigo-50/30 transition-colors">
-                    <div>
-                      <p className="font-medium text-gray-800">{item.description}</p>
-                      <p className="text-gray-400 text-xs">Qté: {item.quantity} × {Number(item.unitPrice).toLocaleString('fr-FR')} {factureSelectionnee.devise === 'EUR' ? '€' : factureSelectionnee.devise === 'USD' ? '$' : 'DT'}</p>
-                    </div>
-                    <p className="font-bold text-gray-900">{(item.lineTotal || item.quantity * item.unitPrice).toLocaleString('fr-FR')} {factureSelectionnee.devise === 'EUR' ? '€' : factureSelectionnee.devise === 'USD' ? '$' : 'DT'}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-  
-            <div className="flex flex-col items-end pt-4 border-t border-gray-100 space-y-1">
-              <div className="flex justify-between w-full max-w-[200px] text-sm text-gray-500">
-                <span>Total HT:</span>
-                <span>{factureSelectionnee.amount?.toLocaleString('fr-FR')} {factureSelectionnee.devise === 'EUR' ? '€' : factureSelectionnee.devise === 'USD' ? '$' : 'DT'}</span>
-              </div>
-              <div className="flex justify-between w-full max-w-[200px] text-lg font-bold text-indigo-600 mt-2">
-                <span>TOTAL TTC:</span>
-                <span>{(factureSelectionnee.amount * (1 + (factureSelectionnee.taxRate || 0) / 100)).toLocaleString('fr-FR')} {factureSelectionnee.devise === 'EUR' ? '€' : factureSelectionnee.devise === 'USD' ? '$' : 'DT'}</span>
-              </div>
-            </div>
-  
-            <div className="flex justify-end gap-3 pt-4">
-              <button onClick={() => telecharger(factureSelectionnee)} className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-                <Download className="w-4 h-4" />
-                Télécharger PDF
-              </button>
-              <button onClick={() => telecharger(factureSelectionnee, true)} className="flex items-center gap-2 px-4 py-2 rounded-lg border border-indigo-200 text-sm font-medium text-indigo-600 hover:bg-indigo-50 transition-colors">
-                <Eye className="w-4 h-4" />
-                Visualiser
-              </button>
-              <button onClick={() => setAperçuOuvert(false)} className="px-5 py-2.5 rounded-lg bg-gray-900 text-white text-sm font-bold hover:bg-gray-800 transition-colors">
-                Fermer
-              </button>
+          <div className="space-y-4 max-h-[85vh] overflow-y-auto p-4 bg-gray-100 rounded-lg">
+            <PDFPreview 
+              type="FACTURE"
+              number={factureSelectionnee.id}
+              date={factureSelectionnee.issuedAt}
+              clientName={factureSelectionnee.clientName}
+              items={factureSelectionnee.items}
+              amount={factureSelectionnee.amount}
+              devise={factureSelectionnee.devise}
+              dueAt={factureSelectionnee.dueAt}
+              taxRate={factureSelectionnee.taxRate}
+              fiscalStamp={factureSelectionnee.fiscalStamp}
+            />
+            <div className="flex justify-center gap-3 py-4 sticky bottom-0 bg-gray-100">
+               <button onClick={() => window.print()} className="px-5 py-2 bg-indigo-600 text-white rounded-xl font-bold">
+                 Imprimer
+               </button>
+               <button onClick={() => setAperçuOuvert(false)} className="px-5 py-2 bg-gray-900 text-white rounded-xl">Fermer</button>
             </div>
           </div>
         )}
       </Modal>
+
+      {/* Modal confirmation suppression */}
+      <Modal isOpen={confirmSuppressionOuvert} onClose={() => { setConfirmSuppressionOuvert(false); setFactureASupprimer(null); }} title="Confirmer la suppression" size="sm">
+        <div className="space-y-4">
+          <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-100 rounded-xl">
+            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+              <Trash2 className="w-5 h-5 text-red-600" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-red-800">Suppression irréversible</p>
+              <p className="text-xs text-red-600 mt-0.5">Cette action ne peut pas être annulée.</p>
+            </div>
+          </div>
+          <p className="text-sm text-gray-600">
+            Voulez-vous vraiment supprimer la facture <span className="font-bold text-gray-900">{factureASupprimer?.id}</span> ?
+          </p>
+          <div className="flex justify-end gap-3 pt-2">
+            <button
+              onClick={() => { setConfirmSuppressionOuvert(false); setFactureASupprimer(null); }}
+              className="px-5 py-2 rounded-xl border border-gray-200 text-sm font-bold text-gray-500 hover:bg-gray-50 transition-all"
+            >
+              Annuler
+            </button>
+            <button
+              onClick={() => factureASupprimer && mutationSupprimer.mutate(String(factureASupprimer.numericId))}
+              disabled={mutationSupprimer.isPending}
+              className="px-5 py-2 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-700 active:scale-95 transition-all disabled:opacity-50"
+            >
+              {mutationSupprimer.isPending ? 'Suppression...' : 'Supprimer'}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Rendu masqué pour l'impression */}
+      {aperçuOuvert && factureSelectionnee && <FacturePrint facture={factureSelectionnee} />}
     </div>
   );
 };

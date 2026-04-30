@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, computed_field
 from pydantic import model_validator
 
 
@@ -57,7 +57,14 @@ class ClientUpdate(BaseModel):
 
 class ClientRead(ClientBase):
     id: int
+    numSequence: int
     dateCreation: datetime
+
+    @computed_field
+    @property
+    def formatted_id(self) -> str:
+        prefix = "CL" if (self.typeClient or "").lower() == "physique" else "CM"
+        return f"{prefix}{self.numSequence:03d}"
 
     class Config:
         from_attributes = True

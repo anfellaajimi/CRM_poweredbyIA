@@ -10,6 +10,8 @@ import { ProtectedRoute } from '../routes/ProtectedRoute';
 import { Login } from '../pages/Login';
 import { Register } from '../pages/Register';
 import { ForgotPassword } from '../pages/ForgotPassword';
+import { EspaceClient } from '../pages/EspaceClient';
+import { EspaceClientRegister } from '../pages/EspaceClientRegister';
 import { Dashboard } from '../pages/Dashboard';
 import { Clients } from '../pages/Clients';
 import { ClientDetails } from '../pages/ClientDetails';
@@ -55,12 +57,18 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <Routes>
+          {/* Auth routes (no layout) */}
           <Route element={<AuthLayout />}>
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
           </Route>
 
+          {/* Espace Client — standalone, no auth required */}
+          <Route path="/espace-client" element={<EspaceClient />} />
+          <Route path="/espace-client/register" element={<EspaceClientRegister />} />
+
+          {/* Protected dashboard routes */}
           <Route
             element={
               <ProtectedRoute>

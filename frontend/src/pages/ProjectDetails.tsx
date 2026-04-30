@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Edit, Pin, PinOff, Plus, Trash2, Upload, X } from 'lucide-react';
+import { ArrowLeft, Edit, Pin, PinOff, Plus, Trash2, Upload, X, LayoutDashboard } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Badge } from '../components/ui/Badge';
@@ -30,8 +30,10 @@ import {
 const ScoringBadge: React.FC<{ scoring?: string }> = ({ scoring }) => {
   const s = (scoring || 'Moyen').toLowerCase();
   const cfg: Record<string, { bg: string; color: string; label: string }> = {
-    'hot 🔥': { bg: '#fee2e2', color: '#dc2626', label: 'Hot 🔥' },
-    'hot': { bg: '#fee2e2', color: '#dc2626', label: 'Hot 🔥' },
+    'hot 🔥': { bg: '#fee2e2', color: '#dc2626', label: 'Haute' },
+    'chaud 🔥': { bg: '#fee2e2', color: '#dc2626', label: 'Haute' },
+    'hot': { bg: '#fee2e2', color: '#dc2626', label: 'Haute' },
+    'haute': { bg: '#fee2e2', color: '#dc2626', label: 'Haute' },
     'moyen': { bg: '#fef3c7', color: '#d97706', label: 'Moyen' },
     'faible': { bg: '#f3f4f6', color: '#6b7280', label: 'Faible' },
   };
@@ -617,7 +619,10 @@ export const ProjectDetails: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center space-x-4">
-        <Button variant="outline" onClick={() => navigate('/projects')}><ArrowLeft className="w-4 h-4 mr-2" />Retour</Button>
+        <Button variant="outline" onClick={() => navigate('/projects')}><ArrowLeft className="w-4 h-4 mr-2" />Projets</Button>
+        <Button variant="outline" onClick={() => navigate('/')} className="border-purple-200 text-purple-600 hover:bg-purple-50">
+          <LayoutDashboard className="w-4 h-4 mr-2" /> Tableau de bord
+        </Button>
       </div>
       <div className="flex items-start justify-between">
         <div><h1 className="text-3xl font-bold">{project.name}</h1><p className="text-muted-foreground">{project.clientName}</p></div>
@@ -627,7 +632,11 @@ export const ProjectDetails: React.FC = () => {
             onClick={() => updateProject.mutate({ ...project, isPinned: !project.isPinned })}
             title={project.isPinned ? 'Désépingler' : 'Épingler'}
           >
-            {project.isPinned ? <PinOff className="w-4 h-4 mr-2" /> : <Pin className="w-4 h-4 mr-2" />}
+            {project.isPinned ? (
+              <Pin className="w-4 h-4 mr-2 text-red-600 fill-red-600" />
+            ) : (
+              <Pin className="w-4 h-4 mr-2" />
+            )}
             {project.isPinned ? 'Désépingler' : 'Épingler'}
           </Button>
           <Button onClick={() => { setEditProject(project); setIsEditModalOpen(true); }}><Edit className="w-4 h-4 mr-2" />Modifier</Button>
@@ -700,11 +709,11 @@ export const ProjectDetails: React.FC = () => {
         <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); updateProject.mutate(editProject); }}>
           <Input label="Nom du projet" value={editProject?.name || ''} onChange={(e) => setEditProject({ ...editProject, name: e.target.value })} required />
           <Input label="Description" value={editProject?.description || ''} onChange={(e) => setEditProject({ ...editProject, description: e.target.value })} />
-          <div className="grid grid-cols-3 gap-4">
-            <Select value={editProject?.status || ''} onChange={(e) => setEditProject({ ...editProject, status: e.target.value })} options={[{ value: 'planification', label: 'Planification' }, { value: 'en_cours', label: 'En cours' }, { value: 'en_attente', label: 'En attente' }, { value: 'termine', label: 'Terminé' }]} />
-            <Select value={editProject?.priority || ''} onChange={(e) => setEditProject({ ...editProject, priority: e.target.value })} options={[{ value: 'haute', label: 'Haute' }, { value: 'moyenne', label: 'Moyenne' }, { value: 'basse', label: 'Basse' }]} />
-            <Select value={editProject?.scoring || 'Moyen'} onChange={(e) => setEditProject({ ...editProject, scoring: e.target.value })} options={[{ value: 'Hot 🔥', label: 'Hot 🔥' }, { value: 'Moyen', label: 'Moyen' }, { value: 'Faible', label: 'Faible' }]} />
+          <div className="grid grid-cols-2 gap-4">
+            <Select label="Statut" value={editProject?.status || ''} onChange={(e) => setEditProject({ ...editProject, status: e.target.value })} options={[{ value: 'planification', label: 'Planification' }, { value: 'en_cours', label: 'En cours' }, { value: 'en_attente', label: 'En attente' }, { value: 'termine', label: 'Terminé' }]} />
+            <Select label="Priorité" value={editProject?.priority || 'moyenne'} onChange={(e) => setEditProject({ ...editProject, priority: e.target.value })} options={[{ value: 'basse', label: 'Basse' }, { value: 'moyenne', label: 'Moyenne' }, { value: 'haute', label: 'Haute' }, { value: 'urgente', label: 'Urgente' }]} />
           </div>
+          <Select label="Scoring" value={editProject?.scoring || 'Moyen'} onChange={(e) => setEditProject({ ...editProject, scoring: e.target.value })} options={[{ value: 'Haute', label: 'Haute' }, { value: 'Moyen', label: 'Moyen' }, { value: 'Faible', label: 'Faible' }]} />
           <div className="grid grid-cols-2 gap-4">
             <Input label={`Budget (${project?.devise === 'EUR' ? '€' : project?.devise === 'USD' ? '$' : 'DT'})`} type="number" value={String(editProject?.budget ?? 0)} onChange={(e) => setEditProject({ ...editProject, budget: Number(e.target.value) })} />
             <Input label="Avancement (%)" type="number" value={String(editProject?.progress ?? 0)} onChange={(e) => setEditProject({ ...editProject, progress: Number(e.target.value) })} />

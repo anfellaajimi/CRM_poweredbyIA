@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from typing import Optional
+from sqlalchemy import or_, cast, String, func
 
 from app.db.session import get_db
 from app.models.client import Client
@@ -9,21 +11,22 @@ from app.schemas.client import ClientCreate, ClientRead, ClientUpdate
 router = APIRouter(prefix="/clients", tags=["Clients"])
 
 
-from typing import Optional
-from sqlalchemy import or_, cast, String
-
 @router.get("", response_model=list[ClientRead])
 def list_clients(q: Optional[str] = None, client_id: Optional[str] = None, db: Session = Depends(get_db)):
     query = db.query(Client)
     if q:
+        # Strip common prefixes from search query if potentially an ID
+        clean_q = q.upper().replace("CL", "").replace("CM", "")
         search_filter = or_(
             Client.nom.ilike(f"%{q}%"),
             Client.email.ilike(f"%{q}%"),
-            cast(Client.id, String).ilike(f"%{q}%")
+            cast(Client.id, String).ilike(f"%{q}%"),
+            cast(Client.numSequence, String).ilike(f"%{clean_q}%")
         )
         query = query.filter(search_filter)
     if client_id:
-        query = query.filter(cast(Client.id, String).ilike(f"%{client_id}%"))
+        clean_id = client_id.upper().replace("CL", "").replace("CM", "")
+        query = query.filter(cast(Client.numSequence, String).ilike(f"%{clean_id}%"))
     return query.order_by(Client.id.desc()).all()
 
 
@@ -41,7 +44,14 @@ def create_client(payload: ClientCreate, db: Session = Depends(get_db)):
         exists = db.query(Client).filter(Client.email == payload.email).first()
         if exists:
             raise HTTPException(status_code=400, detail="L'adresse email du client existe déjà")
+    
+    # Calculate next sequence number for this specific type
+    max_seq = db.query(func.max(Client.numSequence)).filter(Client.typeClient == payload.typeClient).scalar() or 0
+    next_seq = max_seq + 1
+    
     item = Client(**payload.model_dump())
+    item.numSequence = next_seq
+    
     if not item.entreprise and item.typeClient.lower() == "moral":
         item.entreprise = item.nom
     db.add(item)

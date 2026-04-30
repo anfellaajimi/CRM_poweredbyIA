@@ -11,6 +11,7 @@ from app.db.session import get_db
 from app.models.client import Client
 from app.models.contrat import Contrat
 from app.schemas.contrat import ContratCreate, ContratRead, ContratUpdate
+from app.utils.pdf_generator import clean_pdf_text
 
 router = APIRouter(prefix="/contrats", tags=["Contrats"])
 
@@ -104,9 +105,7 @@ def export_contrat_pdf(contrat_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Contrat not found")
 
     def _clean(text):
-        if not text:
-            return ""
-        return str(text).encode("latin-1", "replace").decode("latin-1")
+        return clean_pdf_text(text)
 
     pdf = FPDF()
     pdf.add_page()

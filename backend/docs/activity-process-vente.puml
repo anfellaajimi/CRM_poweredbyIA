@@ -1,0 +1,149 @@
+@startuml
+' Diagramme d'activite - Processus de vente CRM
+skinparam shadowing false
+skinparam activity {
+  BackgroundColor #FFFFFF
+  BorderColor #1F3A5F
+  DiamondBackgroundColor #F4F8FF
+  DiamondBorderColor #1F3A5F
+  ArrowColor #1F3A5F
+  FontColor #0F2742
+}
+skinparam partition {
+  BorderColor #1F3A5F
+  BackgroundColor #F9FBFF
+}
+
+title CRM - Diagramme d'activite du processus de vente
+
+start
+
+partition "Commercial" {
+  :Identifier un prospect;
+  :Creer lead/opportunite;
+}
+
+partition "CRM" {
+  :Enregistrer fiche prospect;
+  :Affecter commercial;
+  :Scorer l'opportunite;
+}
+
+partition "Commercial" {
+  :Qualifier le besoin;
+}
+
+if (Lead qualifie ?) then (Oui)
+  partition "Commercial" {
+    :Preparer proposition;
+  }
+
+  partition "CRM" {
+    :Generer devis;
+    :Associer client/projet/services;
+    :Envoyer devis au client;
+    :Passer statut devis = Envoye;
+  }
+
+  while (Client demande negotiation ?) is (Oui)
+    partition "Client" {
+      :Analyser devis;
+      :Demander ajustements (prix/delais/perimetre);
+    }
+    partition "Commercial" {
+      :Reviser offre;
+    }
+    partition "CRM" {
+      :Mettre a jour devis;
+      :Renvoyer devis;
+      :Journaliser echanges;
+    }
+  endwhile (Non)
+
+  partition "Client" {
+    :Decision finale sur devis;
+  }
+
+  if (Decision finale ?) then (Accepte)
+    partition "CRM" {
+      :Passer statut devis = Accepte;
+      :Convertir opportunite en vente Gagnee;
+      :Creer contrat;
+      :Creer projet;
+    }
+
+    partition "Commercial" {
+      :Faire signer contrat;
+    }
+
+    partition "CRM" {
+      :Passer statut contrat = Signe;
+      :Generer facture;
+      :Passer statut facture = Emise;
+    }
+
+    partition "Client" {
+      :Effectuer paiement;
+    }
+
+    if (Paiement recu ?) then (Oui)
+      partition "Finance" {
+        :Valider encaissement;
+      }
+
+      partition "CRM" {
+        :Passer facture = Payee;
+        :Cloturer vente;
+        :Declencher suivi satisfaction;
+      }
+      stop
+
+    else (Non)
+      partition "CRM" {
+        :Planifier rappel de paiement;
+        :Envoyer relance automatique;
+      }
+
+      partition "Finance" {
+        :Suivre echeance;
+      }
+
+      if (Paiement apres relance ?) then (Oui)
+        partition "CRM" {
+          :Passer facture = Payee;
+          :Cloturer vente;
+        }
+        stop
+      else (Non)
+        partition "Finance" {
+          :Escalader impaye;
+        }
+        partition "CRM" {
+          :Passer facture = En retard / Litige;
+          :Ouvrir ticket de recouvrement;
+        }
+        stop
+      endif
+    endif
+
+  else (Refuse)
+    partition "CRM" {
+      :Passer statut devis = Refuse;
+      :Passer opportunite = Perdue;
+      :Enregistrer motif de perte;
+    }
+    partition "Commercial" {
+      :Programmer relance long terme;
+    }
+    stop
+  endif
+
+else (Non)
+  partition "CRM" {
+    :Passer opportunite = Non qualifiee;
+    :Planifier nurturing marketing;
+  }
+  stop
+endif
+
+@enduml

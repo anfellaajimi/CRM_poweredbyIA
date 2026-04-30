@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Building2, Calendar, Mail, Phone, Trash2, Edit2, Briefcase } from 'lucide-react';
+import { ArrowLeft, Building2, Calendar, Mail, Phone, Trash2, Edit2, Briefcase, User, Fingerprint, Tag, Activity, LayoutDashboard } from 'lucide-react';
 import { toast } from 'sonner';
 import { Modal } from '../components/ui/Modal';
 import { clientsAPI, projectsAPI, UIClient } from '../services/api';
@@ -23,8 +23,10 @@ const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
 const ScoringBadge: React.FC<{ scoring?: string }> = ({ scoring }) => {
   const s = (scoring || 'Moyen').toLowerCase();
   const cfg: Record<string, { bg: string; color: string; label: string }> = {
-    'hot 🔥': { bg: '#fee2e2', color: '#dc2626', label: 'Hot 🔥' },
-    'hot': { bg: '#fee2e2', color: '#dc2626', label: 'Hot 🔥' },
+    'hot 🔥': { bg: '#fee2e2', color: '#dc2626', label: 'Haute' },
+    'chaud 🔥': { bg: '#fee2e2', color: '#dc2626', label: 'Haute' },
+    'hot': { bg: '#fee2e2', color: '#dc2626', label: 'Haute' },
+    'haute': { bg: '#fee2e2', color: '#dc2626', label: 'Haute' },
     'moyen': { bg: '#fef3c7', color: '#d97706', label: 'Moyen' },
     'faible': { bg: '#f3f4f6', color: '#6b7280', label: 'Faible' },
   };
@@ -153,14 +155,24 @@ export const ClientDetails: React.FC = () => {
         <span style={{ color: '#1e293b', fontWeight: 500 }}>{client.name}</span>
       </div>
 
-      <button onClick={() => navigate('/clients')}
-        style={{
-          display: 'flex', alignItems: 'center', gap: 6, background: '#fff', border: '1px solid #e2e8f0',
-          borderRadius: 8, padding: '8px 14px', fontSize: 13, fontWeight: 500, color: '#374151',
-          cursor: 'pointer', marginBottom: 24
-        }}>
-        <ArrowLeft size={15} /> Retour
-      </button>
+      <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
+        <button onClick={() => navigate('/clients')}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6, background: '#fff', border: '1px solid #e2e8f0',
+            borderRadius: 8, padding: '8px 14px', fontSize: 13, fontWeight: 500, color: '#374151',
+            cursor: 'pointer'
+          }}>
+          <ArrowLeft size={15} /> Clients
+        </button>
+        <button onClick={() => navigate('/')}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6, background: '#fff', border: '1px solid #7c3aed40',
+            borderRadius: 8, padding: '8px 14px', fontSize: 13, fontWeight: 500, color: '#7c3aed',
+            cursor: 'pointer'
+          }}>
+          <LayoutDashboard size={15} /> Tableau de bord
+        </button>
+      </div>
 
       <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', padding: 24, marginBottom: 20, boxShadow: '0 1px 4px #0000000a' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20 }}>
@@ -227,10 +239,22 @@ export const ClientDetails: React.FC = () => {
       {activeTab === 'Vue générale' && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
           <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', padding: '20px 24px', boxShadow: '0 1px 4px #0000000a' }}>
-            <h3 style={{ fontSize: 15, fontWeight: 600, color: '#0f172a', margin: '0 0 16px' }}>Informations de contact</h3>
+            <h3 style={{ fontSize: 15, fontWeight: 600, color: '#0f172a', margin: '0 0 16px' }}>Informations détaillées</h3>
+            <InfoRow icon={client.type === 'Physique' ? User : Building2} label={client.type === 'Physique' ? 'Nom complet' : 'Raison Sociale'} value={client.name} />
             <InfoRow icon={Mail} label="Email" value={client.email || ''} />
             <InfoRow icon={Phone} label="Téléphone" value={client.phone || ''} />
-            <InfoRow icon={Building2} label="Entreprise" value={client.company || ''} />
+            
+            {client.type === 'Physique' ? (
+              <>
+                <InfoRow icon={Fingerprint} label="CIN" value={client.cin || ''} />
+                <InfoRow icon={Calendar} label="Date de naissance" value={client.dateNaissance || ''} />
+              </>
+            ) : (
+              <>
+                <InfoRow icon={Tag} label="Matricule Fiscale" value={client.matriculeFiscale || ''} />
+                <InfoRow icon={Activity} label="Secteur d'activité" value={client.secteurActivite || ''} />
+              </>
+            )}
             <InfoRow icon={Calendar} label="Client depuis" value={client.createdAt || ''} />
           </div>
           <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', padding: '20px 24px', boxShadow: '0 1px 4px #0000000a' }}>
@@ -283,31 +307,65 @@ export const ClientDetails: React.FC = () => {
       )}
 
       <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title="Modifier le Client">
-        <form style={{ display: 'flex', flexDirection: 'column', gap: 14 }} onSubmit={e => { e.preventDefault(); updateMutation.mutate(editClient); }}>
-          <Inp label="Nom complet" value={editClient.name || ''} onChange={v => setEditClient({ ...editClient, name: v })} required />
-          <Inp label="Email" type="email" value={editClient.email || ''} onChange={v => setEditClient({ ...editClient, email: v })} />
-          <Inp label="Téléphone" value={editClient.phone || ''} onChange={v => setEditClient({ ...editClient, phone: v })} />
+        <form style={{ display: 'flex', flexDirection: 'column', gap: 14 }} onSubmit={e => { 
+          e.preventDefault(); 
+          const type = editClient.type || 'Physique';
+          const fullName = type === 'Physique'
+            ? editClient.name || ''
+            : editClient.raisonSociale || '';
+          updateMutation.mutate({
+            ...editClient,
+            name: fullName,
+            company: type === 'Moral' ? editClient.raisonSociale : fullName,
+          }); 
+        }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <label style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>Devise</label>
-              <select value={editClient.devise || 'TND'} onChange={e => setEditClient({ ...editClient, devise: e.target.value })}
-                style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: '9px 12px', fontSize: 14, color: '#111827', outline: 'none', background: '#fff' }}>
-                <option value="TND">Dinar Tunisien (DT)</option>
-                <option value="EUR">Euro (€)</option>
-                <option value="USD">Dollar ($)</option>
-              </select>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <label style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>Scoring</label>
-              <select value={editClient.scoring || 'Moyen'} onChange={e => setEditClient({ ...editClient, scoring: e.target.value })}
-                style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: '9px 12px', fontSize: 14, color: '#111827', outline: 'none', background: '#fff' }}>
-                <option value="Hot 🔥">Hot 🔥</option>
-                <option value="Moyen">Moyen</option>
-                <option value="Faible">Faible</option>
-              </select>
-            </div>
+            {(['Physique', 'Moral'] as const).map(t => (
+              <button key={t} type="button" onClick={() => setEditClient({ ...editClient, type: t })}
+                style={{
+                  padding: 10, borderRadius: 8, border: `2px solid ${editClient.type === t ? '#7c3aed' : '#e5e7eb'}`,
+                  background: editClient.type === t ? '#f5f3ff' : '#fff',
+                  color: editClient.type === t ? '#7c3aed' : '#374151',
+                  fontWeight: 600, fontSize: 14, cursor: 'pointer'
+                }}>
+                {t}
+              </button>
+            ))}
           </div>
-          <Inp label="Entreprise" value={editClient.company || ''} onChange={v => setEditClient({ ...editClient, company: v })} />
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <Inp label="Email" type="email" value={editClient.email || ''} onChange={v => setEditClient({ ...editClient, email: v })} />
+            <Inp label="Téléphone" value={editClient.phone || ''} onChange={v => setEditClient({ ...editClient, phone: v })} />
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <label style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>Devise</label>
+            <select value={editClient.devise || 'TND'} onChange={e => setEditClient({ ...editClient, devise: e.target.value })}
+              style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: '9px 12px', fontSize: 14, color: '#111827', outline: 'none', background: '#fff' }}>
+              <option value="TND">Dinar Tunisien (DT)</option>
+              <option value="EUR">Euro (€)</option>
+              <option value="USD">Dollar ($)</option>
+            </select>
+          </div>
+
+          {editClient.type === 'Physique' ? (
+            <>
+              <Inp label="Nom complet" value={editClient.name || ''} onChange={v => setEditClient({ ...editClient, name: v })} required />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <Inp label="CIN" value={editClient.cin || ''} onChange={v => setEditClient({ ...editClient, cin: v })} />
+                <Inp label="Date de naissance" type="date" value={editClient.dateNaissance || ''} onChange={v => setEditClient({ ...editClient, dateNaissance: v })} />
+              </div>
+            </>
+          ) : (
+            <>
+              <Inp label="Raison Sociale" value={editClient.raisonSociale || ''} onChange={v => setEditClient({ ...editClient, raisonSociale: v })} required />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <Inp label="Matricule Fiscale" value={editClient.matriculeFiscale || ''} onChange={v => setEditClient({ ...editClient, matriculeFiscale: v })} />
+                <Inp label="Secteur d'activité" value={editClient.secteurActivite || ''} onChange={v => setEditClient({ ...editClient, secteurActivite: v })} />
+              </div>
+            </>
+          )}
+
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, paddingTop: 8 }}>
             <button type="button" onClick={() => setIsEditModalOpen(false)}
               style={{ padding: '9px 18px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#fff', color: '#374151', fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>

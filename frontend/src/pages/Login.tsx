@@ -1,50 +1,103 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'motion/react';
-import { Eye, EyeOff, Mail, Lock, ArrowRight, Sparkles, CheckCircle, TrendingUp, Users, Shield, Zap, BarChart3, Globe } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, Github, Send, Globe, Share2 } from 'lucide-react';
 
-const StatCard = ({ icon: Icon, valeur, label, couleur, delay }: any) => (
-  <motion.div
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    transition={{ delay, duration: 0.5 }}
-    className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-4 flex items-center gap-3"
-  >
-    <div className={`w-10 h-10 rounded-xl ${couleur} flex items-center justify-center flex-shrink-0`}>
-      <Icon className="w-5 h-5 text-white" />
-    </div>
-    <div>
-      <p className="text-white font-bold text-lg leading-none">{valeur}</p>
-      <p className="text-white/50 text-xs mt-0.5">{label}</p>
-    </div>
-  </motion.div>
+/* ─── Quatratech Q Logo SVG ─── */
+const QLogoSVG = ({ size = 28 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 100 110" fill="none">
+    <path
+      d="M54 8 L17 30 L17 74 L54 96 L85 78 L85 44"
+      stroke="#7c3aed" strokeWidth="14"
+      strokeLinecap="round" strokeLinejoin="round" fill="none"
+    />
+    <path d="M72 82 L91 101" stroke="#7c3aed" strokeWidth="12" strokeLinecap="round" />
+  </svg>
 );
 
-const FeatureItem = ({ texte, delay }: { texte: string; delay: number }) => (
-  <motion.div
-    initial={{ opacity: 0, x: -20 }}
-    animate={{ opacity: 1, x: 0 }}
-    transition={{ delay, duration: 0.4 }}
-    className="flex items-center gap-3"
-  >
-    <div className="w-5 h-5 rounded-full bg-purple-500/20 border border-purple-500/40 flex items-center justify-center flex-shrink-0">
-      <CheckCircle className="w-3 h-3 text-purple-400" />
-    </div>
-    <span className="text-white/60 text-sm">{texte}</span>
-  </motion.div>
-);
+/* ─── Animated Network Canvas Background ─── */
+const NetworkCanvas: React.FC = () => {
+  const ref = useRef<HTMLCanvasElement>(null);
 
+  useEffect(() => {
+    const canvas = ref.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const resize = () => {
+      canvas.width = canvas.offsetWidth;
+      canvas.height = canvas.offsetHeight;
+    };
+    resize();
+    window.addEventListener('resize', resize);
+
+    const nodes = Array.from({ length: 65 }, () => ({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      vx: (Math.random() - 0.5) * 0.4,
+      vy: (Math.random() - 0.5) * 0.4,
+      r: Math.random() * 1.8 + 1.2,
+    }));
+
+    let animId: number;
+    const draw = () => {
+      const w = canvas.width, h = canvas.height;
+      ctx.clearRect(0, 0, w, h);
+      nodes.forEach(n => {
+        n.x += n.vx; n.y += n.vy;
+        if (n.x < 0 || n.x > w) n.vx *= -1;
+        if (n.y < 0 || n.y > h) n.vy *= -1;
+      });
+      for (let i = 0; i < nodes.length; i++) {
+        for (let j = i + 1; j < nodes.length; j++) {
+          const dx = nodes[i].x - nodes[j].x;
+          const dy = nodes[i].y - nodes[j].y;
+          const d = Math.hypot(dx, dy);
+          if (d < 160) {
+            ctx.strokeStyle = `rgba(96,165,250,${(1 - d / 160) * 0.22})`;
+            ctx.lineWidth = 0.7;
+            ctx.beginPath();
+            ctx.moveTo(nodes[i].x, nodes[i].y);
+            ctx.lineTo(nodes[j].x, nodes[j].y);
+            ctx.stroke();
+          }
+        }
+        ctx.fillStyle = 'rgba(96,165,250,0.6)';
+        ctx.beginPath();
+        ctx.arc(nodes[i].x, nodes[i].y, nodes[i].r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      animId = requestAnimationFrame(draw);
+    };
+    draw();
+    return () => { cancelAnimationFrame(animId); window.removeEventListener('resize', resize); };
+  }, []);
+
+  return (
+    <canvas ref={ref} style={{
+      position: 'absolute', inset: 0,
+      width: '100%', height: '100%',
+      opacity: 0.55, pointerEvents: 'none',
+    }} />
+  );
+};
+
+/* ─── Main Login Component ─── */
 export const Login: React.FC = () => {
-  const [email, setEmail] = useState('');
+  const [username, setUsername]     = useState('');
+  const [fullName, setFullName]     = useState('');
+  const [email, setEmail]           = useState('');
   const [motDePasse, setMotDePasse] = useState('');
   const [sesouvenir, setSeSouvenir] = useState(false);
   const [chargement, setChargement] = useState(false);
-  const [voirMdp, setVoirMdp] = useState(false);
+  const [voirMdp, setVoirMdp]       = useState(false);
   const [champActif, setChampActif] = useState<string | null>(null);
+  const [newsletter, setNewsletter] = useState('');
   const { login } = useAuthStore();
-  const navigate = useNavigate();
+  const navigate  = useNavigate();
 
   const handleSoumettre = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,423 +113,387 @@ export const Login: React.FC = () => {
     }
   };
 
+  const inputStyle = (id: string): React.CSSProperties => ({
+    width: '100%', boxSizing: 'border-box',
+    padding: '10px 14px 10px 36px',
+    background: 'rgba(255,255,255,0.05)',
+    border: `1px solid ${champActif === id ? 'rgba(59,130,246,0.55)' : 'rgba(255,255,255,0.1)'}`,
+    borderRadius: 6, color: 'white', fontSize: 13, outline: 'none',
+    transition: 'border-color 0.2s',
+  });
+
+  const labelStyle: React.CSSProperties = {
+    display: 'block', fontSize: 9, fontWeight: 700,
+    letterSpacing: '0.12em', textTransform: 'uppercase',
+    color: 'rgba(255,255,255,0.4)', marginBottom: 5,
+  };
+
+  const iconStyle: React.CSSProperties = {
+    position: 'absolute', left: 11, top: '50%',
+    transform: 'translateY(-50%)',
+    color: 'rgba(255,255,255,0.3)', pointerEvents: 'none',
+  };
+
+  const footerLinks = {
+    Produit: ['Solutions', 'CRM Dashboard', 'Intelligence Artificielle'],
+    Entreprise: ['Development', 'Contact', 'Privacy Policy'],
+  };
+
   return (
-    <div className="min-h-screen w-full flex overflow-hidden bg-[#080612]">
+    <div style={{ height: '100%', minHeight: '100vh', width: '100%', background: '#060d1e', display: 'flex', flexDirection: 'column', fontFamily: "'Inter', sans-serif", overflow: 'auto' }}>
 
-      {/* ═══════════ PANNEAU GAUCHE ═══════════ */}
-      <div className="hidden lg:flex lg:w-[55%] xl:w-[60%] relative flex-col justify-between p-12 overflow-hidden">
-
-        {/* Fond dégradé */}
-        <div className="absolute inset-0 bg-gradient-to-br from-[#1a0533] via-[#0d0a2e] to-[#080612]" />
-
-        {/* Orbes lumineux */}
-        <motion.div
-          animate={{ scale: [1, 1.15, 1], opacity: [0.4, 0.7, 0.4] }}
-          transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}
-          className="absolute top-[-15%] left-[-10%] w-[600px] h-[600px] rounded-full bg-purple-700/25 blur-[100px] pointer-events-none"
-        />
-        <motion.div
-          animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
-          transition={{ duration: 9, repeat: Infinity, ease: 'easeInOut', delay: 2 }}
-          className="absolute bottom-[-10%] right-[-5%] w-[500px] h-[500px] rounded-full bg-indigo-600/20 blur-[90px] pointer-events-none"
-        />
-        <motion.div
-          animate={{ x: [0, 30, 0], y: [0, -20, 0], opacity: [0.2, 0.4, 0.2] }}
-          transition={{ duration: 11, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
-          className="absolute top-[40%] left-[30%] w-[300px] h-[300px] rounded-full bg-pink-600/15 blur-[70px] pointer-events-none"
-        />
-
-        {/* Grille de points */}
-        <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '28px 28px' }} />
-
-        {/* Lignes décoratives */}
-        <div className="absolute inset-0 overflow-hidden">
-          {[...Array(4)].map((_, i) => (
-            <motion.div
-              key={i}
-              className="absolute h-px bg-gradient-to-r from-transparent via-purple-500/20 to-transparent w-full"
-              style={{ top: `${20 + i * 20}%` }}
-              animate={{ opacity: [0, 0.5, 0], x: ['-100%', '100%'] }}
-              transition={{ duration: 8 + i * 2, repeat: Infinity, ease: 'linear', delay: i * 2 }}
-            />
+      {/* ══════════ NAVBAR ══════════ */}
+      <nav style={{
+        position: 'sticky', top: 0, zIndex: 100,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        padding: '0 48px', height: 56,
+        background: 'rgba(6,13,30,0.95)', backdropFilter: 'blur(12px)',
+        borderBottom: '1px solid rgba(255,255,255,0.06)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <QLogoSVG size={26} />
+          <span style={{ color: 'white', fontWeight: 700, fontSize: 15 }}>Quatratech</span>
+        </div>
+        <div style={{ display: 'flex', gap: 32, alignItems: 'center' }}>
+          {['Solutions', 'CRM', 'Development'].map((item, i) => (
+            <span key={item} style={{
+              color: i === 0 ? '#60a5fa' : 'rgba(255,255,255,0.55)',
+              fontSize: 14, fontWeight: 500, cursor: 'pointer',
+              borderBottom: i === 0 ? '1.5px solid #60a5fa' : 'none',
+              paddingBottom: i === 0 ? 2 : 0,
+            }}>{item}</span>
           ))}
         </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14, cursor: 'pointer' }}>Log In</span>
+          <Link to="/espace-client" style={{
+            padding: '7px 20px', borderRadius: 6,
+            background: 'linear-gradient(135deg,#1d4ed8,#3b82f6)',
+            color: 'white', fontWeight: 600, fontSize: 13,
+            textDecoration: 'none', display: 'inline-block',
+          }}>Espace client</Link>
+        </div>
+      </nav>
 
-        {/* Particules flottantes */}
-        {[...Array(12)].map((_, i) => (
+      {/* ══════════ MAIN SECTION ══════════ */}
+      <div style={{
+        flex: 1, position: 'relative',
+        display: 'flex', alignItems: 'center',
+        padding: '48px 60px', overflow: 'hidden', minHeight: '70vh',
+      }}>
+        <NetworkCanvas />
+
+        {/* Dark gradient overlay left side */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: 'linear-gradient(105deg, rgba(6,13,30,0.85) 45%, rgba(6,13,30,0.3) 100%)',
+          pointerEvents: 'none',
+        }} />
+
+        {/* ── Hero Text (left) ── */}
+        <div style={{ flex: 1, position: 'relative', zIndex: 1, paddingRight: 40, maxWidth: '50%' }}>
           <motion.div
-            key={i}
-            className="absolute rounded-full pointer-events-none"
+            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
             style={{
-              width: `${2 + (i % 3)}px`,
-              height: `${2 + (i % 3)}px`,
-              left: `${5 + i * 8}%`,
-              top: `${10 + (i % 5) * 18}%`,
-              background: i % 3 === 0 ? 'rgba(167,139,250,0.6)' : i % 3 === 1 ? 'rgba(99,102,241,0.5)' : 'rgba(236,72,153,0.4)',
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              padding: '4px 12px', borderRadius: 20,
+              border: '1px solid rgba(96,165,250,0.3)',
+              background: 'rgba(96,165,250,0.07)', marginBottom: 22,
             }}
-            animate={{ y: [-15, 15, -15], opacity: [0.2, 0.8, 0.2] }}
-            transition={{ duration: 3 + (i % 4), repeat: Infinity, ease: 'easeInOut', delay: i * 0.4 }}
-          />
-        ))}
-
-        {/* Contenu gauche */}
-        <div className="relative z-10">
-          {/* Logo */}
-          <motion.div
-            initial={{ opacity: 0, x: -30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.6 }}
-            className="flex items-center gap-3"
           >
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-purple-500/30">
-              <span className="text-white font-black text-sm">AI</span>
-            </div>
-            <div>
-              <span className="text-white font-bold text-lg tracking-tight">CRM</span>
-              <span className="text-purple-400 font-bold text-lg tracking-tight"> AI Pro</span>
-            </div>
-            <div className="ml-2 px-2 py-0.5 rounded-full bg-purple-500/20 border border-purple-500/30">
-              <span className="text-purple-300 text-[10px] font-semibold uppercase tracking-widest">Beta</span>
-            </div>
+            <span style={{ color: '#60a5fa', fontSize: 10 }}>✦</span>
+            <span style={{ fontSize: 10, color: '#93c5fd', fontWeight: 600, letterSpacing: '0.08em' }}>
+              POWERED BY ARTIFICIAL INTELLIGENCE
+            </span>
           </motion.div>
-        </div>
 
-        {/* Titre central */}
-        <div className="relative z-10 flex-1 flex flex-col justify-center py-10">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.7 }}
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+            style={{ fontSize: 'clamp(30px,3.4vw,50px)', fontWeight: 900, color: 'white', lineHeight: 1.12, margin: '0 0 4px' }}
           >
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-purple-500/10 border border-purple-500/20 mb-6">
-              <Zap className="w-3.5 h-3.5 text-purple-400" />
-              <span className="text-purple-300 text-xs font-semibold">Plateforme CRM intelligente</span>
-            </div>
+            Gérez votre business
+          </motion.h1>
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }}
+            style={{
+              fontSize: 'clamp(30px,3.4vw,50px)', fontWeight: 900, lineHeight: 1.12,
+              background: 'linear-gradient(90deg,#3b82f6,#60a5fa)',
+              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+              margin: '0 0 18px',
+            }}
+          >
+            en toute simplicité
+          </motion.h1>
 
-            <h1 className="text-5xl xl:text-6xl font-black text-white leading-[1.1] mb-6">
-              Gérez votre
-              <span className="block bg-gradient-to-r from-purple-400 via-pink-400 to-indigo-400 bg-clip-text text-transparent">
-                business en
-              </span>
-              <span className="block">toute simplicité</span>
-            </h1>
-
-            <p className="text-white/50 text-lg leading-relaxed max-w-md mb-8">
-              La plateforme tout-en-un pour gérer vos clients, factures, contrats et projets avec l'intelligence artificielle.
-            </p>
-
-            <div className="space-y-3">
-              {[
-                'Tableau de bord avec analyses en temps réel',
-                'Gestion avancée des clients et prospects',
-                'Facturation automatisée et suivi des paiements',
-                'IA intégrée pour optimiser vos ventes',
-              ].map((f, i) => (
-                <FeatureItem key={i} texte={f} delay={0.4 + i * 0.1} />
-              ))}
-            </div>
-          </motion.div>
-        </div>
-
-        {/* Stats en bas */}
-        <div className="relative z-10">
           <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.8 }}
-            className="text-white/30 text-xs uppercase tracking-widest mb-4 font-medium"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.22 }}
+            style={{ color: 'rgba(255,255,255,0.48)', fontSize: 14, lineHeight: 1.75, maxWidth: 370, marginBottom: 36 }}
           >
-            Ils nous font confiance
+            La plateforme tout-en-un pour gérer vos clients, factures,
+            contrats et projets avec l'<span style={{ color: '#60a5fa' }}>intelligence artificielle</span>.
           </motion.p>
-          <div className="grid grid-cols-2 gap-3">
-            <StatCard icon={Users} valeur="12,400+" label="Entreprises actives" couleur="bg-purple-500/40" delay={0.9} />
-            <StatCard icon={TrendingUp} valeur="98.7%" label="Taux de satisfaction" couleur="bg-indigo-500/40" delay={1.0} />
-            <StatCard icon={Globe} valeur="47 pays" label="Couverture mondiale" couleur="bg-pink-500/40" delay={1.1} />
-            <StatCard icon={BarChart3} valeur="€2.4B+" label="Transactions gérées" couleur="bg-violet-500/40" delay={1.2} />
-          </div>
 
-          {/* Avatars clients */}
           <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1.3 }}
-            className="flex items-center gap-3 mt-5"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
+            style={{ display: 'flex', gap: 28, flexWrap: 'wrap' }}
           >
-            <div className="flex -space-x-2">
-              {['#7c3aed','#4f46e5','#db2777','#0891b2','#059669'].map((c, i) => (
-                <div
-                  key={i}
-                  className="w-8 h-8 rounded-full border-2 border-[#080612] flex items-center justify-center text-white text-xs font-bold"
-                  style={{ backgroundColor: c }}
-                >
-                  {['A','B','C','D','E'][i]}
-                </div>
-              ))}
-            </div>
-            <div>
-              <div className="flex items-center gap-1">
-                {[...Array(5)].map((_, i) => (
-                  <svg key={i} className="w-3 h-3 text-yellow-400 fill-yellow-400" viewBox="0 0 20 20">
-                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                  </svg>
-                ))}
+            {[{ icon: '🔒', text: 'SECURE CLOUD' }, { icon: '✅', text: 'GDPR READY' }, { icon: '📈', text: '99.9% UPTIME' }].map(({ icon, text }) => (
+              <div key={text} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                <span style={{ fontSize: 13 }}>{icon}</span>
+                <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: 'rgba(255,255,255,0.38)' }}>{text}</span>
               </div>
-              <p className="text-white/40 text-xs mt-0.5">+1,200 avis 5 étoiles</p>
-            </div>
+            ))}
           </motion.div>
         </div>
-      </div>
 
-      {/* ═══════════ PANNEAU DROIT — FORMULAIRE ═══════════ */}
-      <div className="flex-1 lg:w-[45%] xl:w-[40%] flex items-center justify-center relative bg-[#09071a] px-6 py-12">
-
-        {/* Fond subtil */}
-        <div className="absolute inset-0 bg-gradient-to-br from-[#09071a] to-[#0d0a2e]" />
+        {/* ── Form Card (right) ── */}
         <motion.div
-          animate={{ opacity: [0.1, 0.2, 0.1] }}
-          transition={{ duration: 5, repeat: Infinity }}
-          className="absolute top-1/4 right-1/4 w-64 h-64 rounded-full bg-indigo-600/10 blur-[60px] pointer-events-none"
-        />
-
-        {/* Ligne séparatrice verticale */}
-        <div className="hidden lg:block absolute left-0 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-purple-500/20 to-transparent" />
-
-        <motion.div
-          initial={{ opacity: 0, x: 40 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          className="relative z-10 w-full max-w-sm"
+          initial={{ opacity: 0, y: 28 }} animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+          style={{
+            position: 'relative', zIndex: 2,
+            width: 'min(390px,90vw)',
+            background: 'rgba(7,13,33,0.90)',
+            backdropFilter: 'blur(20px)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: 12, padding: '28px 26px 22px',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.6)',
+          }}
         >
+          <h2 style={{ color: 'white', fontWeight: 800, fontSize: 20, margin: '0 0 4px' }}>Connexion</h2>
+          <p style={{ color: 'rgba(255,255,255,0.38)', fontSize: 12, margin: '0 0 20px' }}>
+            Prêt à propulser votre entreprise vers l'avant ?
+          </p>
 
-          {/* En-tête formulaire */}
-          <div className="mb-8">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.2 }}
-              className="w-14 h-14 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center shadow-xl shadow-purple-500/25 mb-6 relative"
-            >
-              <span className="text-white font-black text-lg">AI</span>
-              <motion.div
-                animate={{ scale: [1, 1.3, 1], opacity: [0.6, 1, 0.6] }}
-                transition={{ duration: 2, repeat: Infinity }}
-                className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center"
-              >
-                <Sparkles className="w-2.5 h-2.5 text-white" />
-              </motion.div>
-            </motion.div>
+          <form onSubmit={handleSoumettre} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
 
-            <motion.h2
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="text-2xl font-black text-white mb-1"
-            >
-              Bon retour 👋
-            </motion.h2>
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.35 }}
-              className="text-white/40 text-sm"
-            >
-              Connectez-vous à votre espace <span className="text-purple-400">CRM AI Pro</span>
-            </motion.p>
-          </div>
+            {/* USERNAME */}
+            <div>
+              <label style={labelStyle}>Username</label>
+              <div style={{ position: 'relative' }}>
+                <User size={13} style={iconStyle} />
+                <input type="text" placeholder="quatratech.user" value={username}
+                  onChange={e => setUsername(e.target.value)}
+                  onFocus={() => setChampActif('username')} onBlur={() => setChampActif(null)}
+                  style={inputStyle('username')} />
+              </div>
+            </div>
 
-          {/* Formulaire */}
-          <form onSubmit={handleSoumettre} className="space-y-4">
+            {/* NOM COMPLET */}
+            <div>
+              <label style={labelStyle}>Nom Complet</label>
+              <div style={{ position: 'relative' }}>
+                <User size={13} style={iconStyle} />
+                <input type="text" placeholder="Jean Dupont" value={fullName}
+                  onChange={e => setFullName(e.target.value)}
+                  onFocus={() => setChampActif('fullname')} onBlur={() => setChampActif(null)}
+                  style={inputStyle('fullname')} />
+              </div>
+            </div>
 
-            {/* Email */}
-            <motion.div
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-            >
-              <label className="block text-xs font-semibold text-white/50 uppercase tracking-widest mb-2">
-                Adresse Email
+            {/* EMAIL */}
+            <div>
+              <label style={labelStyle}>Email Professionnel</label>
+              <div style={{ position: 'relative' }}>
+                <Mail size={13} style={iconStyle} />
+                <input type="email" placeholder="contact@entreprise.fr" value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  onFocus={() => setChampActif('email')} onBlur={() => setChampActif(null)}
+                  required style={inputStyle('email')} />
+              </div>
+            </div>
+
+            {/* MOT DE PASSE */}
+            <div>
+              <label style={labelStyle}>Mot De Passe</label>
+              <div style={{ position: 'relative' }}>
+                <Lock size={13} style={iconStyle} />
+                <input type={voirMdp ? 'text' : 'password'} placeholder="••••••••••••" value={motDePasse}
+                  onChange={e => setMotDePasse(e.target.value)}
+                  onFocus={() => setChampActif('mdp')} onBlur={() => setChampActif(null)}
+                  required style={{ ...inputStyle('mdp'), paddingRight: 40 }} />
+                <button type="button" onClick={() => setVoirMdp(!voirMdp)} style={{
+                  position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+                  background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.3)',
+                }}>
+                  {voirMdp ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+              </div>
+            </div>
+
+            {/* Remember + Forgot */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 7, cursor: 'pointer' }}>
+                <div onClick={() => setSeSouvenir(!sesouvenir)} style={{
+                  width: 14, height: 14, borderRadius: 3, flexShrink: 0,
+                  border: `1.5px solid ${sesouvenir ? '#3b82f6' : 'rgba(255,255,255,0.2)'}`,
+                  background: sesouvenir ? '#3b82f6' : 'transparent',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                }}>
+                  <AnimatePresence>
+                    {sesouvenir && (
+                      <motion.svg initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
+                        width="9" height="9" viewBox="0 0 10 10" fill="none">
+                        <path d="M1.5 5L4 7.5L8.5 2.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                      </motion.svg>
+                    )}
+                  </AnimatePresence>
+                </div>
+                <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.42)', userSelect: 'none' }}>Se souvenir de moi</span>
               </label>
-              <div className={`relative transition-transform duration-200 ${champActif === 'email' ? 'scale-[1.01]' : ''}`}>
-                <div className={`absolute -inset-[1px] rounded-xl blur-sm transition-opacity duration-300 ${champActif === 'email' ? 'opacity-100 bg-gradient-to-r from-purple-500/60 to-indigo-500/60' : 'opacity-0'}`} />
-                <div className="relative flex items-center">
-                  <Mail className="absolute left-3.5 w-4 h-4 text-white/30 z-10 pointer-events-none" />
-                  <input
-                    type="email"
-                    placeholder="votre@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    onFocus={() => setChampActif('email')}
-                    onBlur={() => setChampActif(null)}
-                    required
-                    className="w-full pl-10 pr-4 py-3 bg-white/[0.06] border border-white/[0.08] rounded-xl text-white placeholder-white/20 text-sm focus:outline-none focus:border-purple-500/40 transition-colors duration-200"
-                  />
-                </div>
-              </div>
-            </motion.div>
+              <Link to="/forgot-password" style={{ fontSize: 12, color: '#60a5fa', textDecoration: 'none', fontWeight: 500 }}>
+                Mot de passe oublié ?
+              </Link>
+            </div>
 
-            {/* Mot de passe */}
-            <motion.div
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.45 }}
+            {/* Submit */}
+            <motion.button type="submit" disabled={chargement}
+              whileHover={{ scale: chargement ? 1 : 1.02 }}
+              whileTap={{ scale: chargement ? 1 : 0.97 }}
+              style={{
+                width: '100%', padding: '12px', borderRadius: 7,
+                border: 'none', cursor: chargement ? 'not-allowed' : 'pointer',
+                background: 'linear-gradient(135deg,#1d4ed8,#3b82f6)',
+                color: 'white', fontWeight: 700, fontSize: 14,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                boxShadow: '0 4px 18px rgba(59,130,246,0.4)',
+                opacity: chargement ? 0.7 : 1, marginTop: 4,
+              }}
             >
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-xs font-semibold text-white/50 uppercase tracking-widest">
-                  Mot de passe
-                </label>
-                <Link to="/forgot-password" className="text-xs text-purple-400 hover:text-purple-300 transition-colors">
-                  Oublié ?
-                </Link>
-              </div>
-              <div className={`relative transition-transform duration-200 ${champActif === 'mdp' ? 'scale-[1.01]' : ''}`}>
-                <div className={`absolute -inset-[1px] rounded-xl blur-sm transition-opacity duration-300 ${champActif === 'mdp' ? 'opacity-100 bg-gradient-to-r from-purple-500/60 to-indigo-500/60' : 'opacity-0'}`} />
-                <div className="relative flex items-center">
-                  <Lock className="absolute left-3.5 w-4 h-4 text-white/30 z-10 pointer-events-none" />
-                  <input
-                    type={voirMdp ? 'text' : 'password'}
-                    placeholder="••••••••••"
-                    value={motDePasse}
-                    onChange={(e) => setMotDePasse(e.target.value)}
-                    onFocus={() => setChampActif('mdp')}
-                    onBlur={() => setChampActif(null)}
-                    required
-                    className="w-full pl-10 pr-11 py-3 bg-white/[0.06] border border-white/[0.08] rounded-xl text-white placeholder-white/20 text-sm focus:outline-none focus:border-purple-500/40 transition-colors duration-200"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setVoirMdp(!voirMdp)}
-                    className="absolute right-3.5 text-white/25 hover:text-white/50 transition-colors z-10"
-                  >
-                    {voirMdp ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Se souvenir */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.5 }}
-              className="flex items-center gap-2"
-            >
-              <div
-                onClick={() => setSeSouvenir(!sesouvenir)}
-                className={`w-4 h-4 rounded border cursor-pointer flex items-center justify-center transition-all duration-200 flex-shrink-0 ${sesouvenir ? 'bg-purple-500 border-purple-500' : 'border-white/20 bg-white/5'}`}
-              >
-                <AnimatePresence>
-                  {sesouvenir && (
-                    <motion.svg
-                      initial={{ scale: 0, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      exit={{ scale: 0, opacity: 0 }}
-                      className="w-2.5 h-2.5 text-white"
-                      viewBox="0 0 10 10" fill="none"
-                    >
-                      <path d="M1.5 5L4 7.5L8.5 2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                    </motion.svg>
-                  )}
-                </AnimatePresence>
-              </div>
-              <span
-                className="text-xs text-white/40 cursor-pointer hover:text-white/60 transition-colors select-none"
-                onClick={() => setSeSouvenir(!sesouvenir)}
-              >
-                Se souvenir de moi pendant 30 jours
-              </span>
-            </motion.div>
-
-            {/* Bouton connexion */}
-            <motion.div
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.55 }}
-            >
-              <motion.button
-                type="submit"
-                disabled={chargement}
-                whileHover={{ scale: chargement ? 1 : 1.02 }}
-                whileTap={{ scale: chargement ? 1 : 0.97 }}
-                className="relative w-full py-3 rounded-xl font-bold text-sm text-white overflow-hidden disabled:opacity-60 disabled:cursor-not-allowed group mt-2"
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-700 transition-all duration-500 group-hover:from-purple-500 group-hover:via-indigo-500 group-hover:to-purple-600" />
-                <div className="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent" />
-                <motion.div
-                  className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"
-                />
-                <span className="relative flex items-center justify-center gap-2">
-                  {chargement ? (
-                    <>
-                      <motion.div
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                        className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full"
-                      />
-                      Connexion...
-                    </>
-                  ) : (
-                    <>
-                      Se connecter
-                      <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200" />
-                    </>
-                  )}
-                </span>
-              </motion.button>
-            </motion.div>
+              {chargement ? (
+                <>
+                  <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                    style={{ width: 15, height: 15, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%' }} />
+                  Connexion...
+                </>
+              ) : 'Create Account'}
+            </motion.button>
           </form>
 
-          {/* Séparateur */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.6 }}
-            className="flex items-center gap-3 my-5"
-          >
-            <div className="flex-1 h-px bg-white/[0.07]" />
-            <span className="text-white/25 text-xs">ou</span>
-            <div className="flex-1 h-px bg-white/[0.07]" />
-          </motion.div>
+          {/* Divider */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '16px 0' }}>
+            <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.07)' }} />
+            <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', letterSpacing: '0.07em' }}>OU CONTINUER AVEC</span>
+            <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.07)' }} />
+          </div>
 
-          {/* Bouton SSO / démo */}
-          <motion.button
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.65 }}
-            type="button"
-            onClick={() => { setEmail('admin@gmail.com'); setMotDePasse('password'); }}
-            className="w-full py-3 rounded-xl border border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.07] text-white/60 hover:text-white/80 text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2"
-          >
-            <Shield className="w-4 h-4" />
-            Connexion démo (Admin)
-          </motion.button>
+          {/* Social */}
+          <div style={{ display: 'flex', gap: 10 }}>
+            {[
+              {
+                label: 'Google',
+                icon: (
+                  <svg width="15" height="15" viewBox="0 0 24 24">
+                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+                  </svg>
+                ),
+              },
+              { label: 'GitHub', icon: <Github size={15} /> },
+            ].map(({ label, icon }) => (
+              <button key={label} type="button" style={{
+                flex: 1, padding: '10px', borderRadius: 7,
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                color: 'rgba(255,255,255,0.65)',
+                fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+              }}>
+                {icon} {label}
+              </button>
+            ))}
+          </div>
 
-          {/* Inscription */}
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.7 }}
-            className="text-center text-xs text-white/30 mt-6"
-          >
-            Pas encore de compte ?{' '}
-            <Link to="/register" className="text-purple-400 hover:text-purple-300 font-semibold transition-colors">
-              Créer un compte gratuit
+          <p style={{ textAlign: 'center', fontSize: 11, color: 'rgba(255,255,255,0.28)', marginTop: 16 }}>
+            Déjà un compte ?{' '}
+            <Link to="/register" style={{ color: '#60a5fa', textDecoration: 'none', fontWeight: 600 }}>
+              Se connecter
             </Link>
-          </motion.p>
-
-          {/* Mentions légales */}
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.75 }}
-            className="text-center text-[10px] text-white/15 mt-4 leading-relaxed"
-          >
-            En vous connectant, vous acceptez nos{' '}
-            <span className="underline cursor-pointer hover:text-white/30 transition-colors">Conditions d'utilisation</span>
-            {' '}et notre{' '}
-            <span className="underline cursor-pointer hover:text-white/30 transition-colors">Politique de confidentialité</span>
-          </motion.p>
+          </p>
         </motion.div>
       </div>
+
+      {/* ══════════ FOOTER ══════════ */}
+      <footer style={{
+        background: 'rgba(3,8,18,0.98)',
+        borderTop: '1px solid rgba(255,255,255,0.06)',
+        padding: '40px 60px 0',
+        position: 'relative', zIndex: 5,
+      }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr 1fr 1.3fr', gap: 40, paddingBottom: 32 }}>
+
+          {/* Brand */}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+              <QLogoSVG size={22} />
+              <span style={{ color: 'white', fontWeight: 700, fontSize: 14 }}>Quatratech</span>
+            </div>
+            <p style={{ color: 'rgba(255,255,255,0.32)', fontSize: 12, lineHeight: 1.75, maxWidth: 210 }}>
+              Solutions intelligentes pour la gestion d'entreprise moderne. Maximisez votre
+              productivité avec <span style={{ color: '#60a5fa' }}>Quatratech</span>.
+            </p>
+          </div>
+
+          {/* Produit */}
+          <div>
+            <p style={{ color: 'white', fontWeight: 700, fontSize: 13, marginBottom: 16 }}>Produit</p>
+            {footerLinks.Produit.map(l => (
+              <p key={l} style={{ color: 'rgba(255,255,255,0.38)', fontSize: 12, marginBottom: 10, cursor: 'pointer' }}>{l}</p>
+            ))}
+          </div>
+
+          {/* Entreprise */}
+          <div>
+            <p style={{ color: 'white', fontWeight: 700, fontSize: 13, marginBottom: 16 }}>Entreprise</p>
+            {footerLinks.Entreprise.map(l => (
+              <p key={l} style={{ color: 'rgba(255,255,255,0.38)', fontSize: 12, marginBottom: 10, cursor: 'pointer' }}>{l}</p>
+            ))}
+          </div>
+
+          {/* Newsletter */}
+          <div>
+            <p style={{ color: 'white', fontWeight: 700, fontSize: 13, marginBottom: 16 }}>Restez informé</p>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <input
+                type="email" placeholder="Email" value={newsletter}
+                onChange={e => setNewsletter(e.target.value)}
+                style={{
+                  flex: 1, padding: '9px 12px',
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: 6, color: 'white', fontSize: 12, outline: 'none',
+                }}
+              />
+              <button style={{
+                width: 36, height: 36, borderRadius: 6, flexShrink: 0,
+                background: 'linear-gradient(135deg,#1d4ed8,#3b82f6)',
+                border: 'none', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <Send size={14} color="white" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom bar */}
+        <div style={{
+          borderTop: '1px solid rgba(255,255,255,0.06)',
+          padding: '14px 0',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          <span style={{ color: 'rgba(255,255,255,0.22)', fontSize: 11 }}>
+            © 2024 Quatratech Solutions. All rights reserved.
+          </span>
+          <div style={{ display: 'flex', gap: 16 }}>
+            {[<Globe size={14} />, <User size={14} />, <Share2 size={14} />].map((icon, i) => (
+              <div key={i} style={{ color: 'rgba(255,255,255,0.28)', cursor: 'pointer' }}>{icon}</div>
+            ))}
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };

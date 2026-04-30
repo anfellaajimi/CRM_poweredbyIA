@@ -4,6 +4,8 @@ import { AlertCircle, Eye, FileText, Plus, Trash2, Search, ChevronDown, ChevronL
 import { toast } from 'sonner';
 
 import { Modal } from '../components/ui/Modal';
+import { SignaturePad } from '../components/SignaturePad';
+import { ContratPrint } from '../components/ContratPrint';
 import { clientsAPI, contratsAPI, UIContrat } from '../services/api';
 import { cn } from '../utils/cn';
 
@@ -56,8 +58,6 @@ const MenuStatut = ({
 }) => {
   const [ouvert, setOuvert] = useState(false);
   const statuts = [
-    { valeur: 'actif', label: 'Actif', couleur: 'text-green-600 hover:bg-green-50' },
-    { valeur: 'expirant', label: 'Expirant', couleur: 'text-yellow-600 hover:bg-yellow-50' },
     { valeur: 'expiré', label: 'Expiré', couleur: 'text-red-600 hover:bg-red-50' },
     { valeur: 'terminé', label: 'Terminé', couleur: 'text-gray-600 hover:bg-gray-50' },
     { valeur: 'en_attente', label: 'En attente', couleur: 'text-blue-600 hover:bg-blue-50' },
@@ -124,7 +124,7 @@ const FormulaireContrat = ({
         required
       >
         <option value="">Sélectionner un client</option>
-        {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+        {clients.map((c) => <option key={c.id} value={c.id}>{c.formattedId} - {c.name}</option>)}
       </select>
     </div>
 
@@ -216,9 +216,20 @@ export const Contrats: React.FC = () => {
   const [recherche, setRecherche] = useState('');
   const [filtreStatut, setFiltreStatut] = useState('Tous');
   const [page, setPage] = useState(1);
+  const [signatureOuverte, setSignatureOuverte] = useState<'client' | 'provider' | null>(null);
   const parPage = 10;
 
+  // Delete confirmation state
+  const [confirmSuppressionOuvert, setConfirmSuppressionOuvert] = useState(false);
+  const [contratASupprimer, setContratASupprimer] = useState<UIContrat | null>(null);
+
   const { data: contrats = [] } = useQuery({ queryKey: ['contrats'], queryFn: contratsAPI.getAll });
+
+  const contratSelectionneDetail = useMemo(() => {
+    if (!contratSelectionne) return null;
+    // Find the latest version from the query data
+    return contrats.find(c => c.numericId === contratSelectionne.numericId) || contratSelectionne;
+  }, [contratSelectionne, contrats]);
   const { data: clients = [] } = useQuery({ queryKey: ['clients'], queryFn: () => clientsAPI.getAll() });
 
   const mutationCreer = useMutation({
@@ -257,7 +268,9 @@ export const Contrats: React.FC = () => {
     mutationFn: (id: number) => contratsAPI.delete(String(id)),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['contrats'] });
-      toast.success('Contrat supprimé');
+      toast.success('Contrat supprimé avec succès');
+      setConfirmSuppressionOuvert(false);
+      setContratASupprimer(null);
     },
     onError: (err: any) => toast.error(`Erreur: ${err?.response?.data?.message ?? err?.message}`),
   });
@@ -273,9 +286,8 @@ export const Contrats: React.FC = () => {
   };
 
   const confirmerSuppression = (contrat: UIContrat) => {
-    if (window.confirm(`Supprimer le contrat ${contrat.id} ?`)) {
-      mutationSupprimer.mutate(contrat.numericId);
-    }
+    setContratASupprimer(contrat);
+    setConfirmSuppressionOuvert(true);
   };
 
   const telecharger = (contrat: UIContrat, viewOnly = false) => {
@@ -327,30 +339,12 @@ export const Contrats: React.FC = () => {
         </button>
       </div>
 
-      {/* Alerte renouvellement */}
-      {expirantCount > 0 && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
-          <div>
-            <p className="font-semibold text-yellow-900 text-sm">Renouvellement requis</p>
-            <p className="text-sm text-yellow-700">{expirantCount} contrat(s) arrivent à expiration bientôt.</p>
-          </div>
-        </div>
-      )}
 
-      {/* Cartes statistiques */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-          <p className="text-sm text-gray-500 font-medium mb-1">Contrats Actifs</p>
-          <p className="text-3xl font-bold text-green-600">{stats.actifs}</p>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+      {/* Carte statistique */}
+      <div className="flex">
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 min-w-[200px]">
           <p className="text-sm text-gray-500 font-medium mb-1">Valeur Totale</p>
           <p className="text-3xl font-bold text-gray-900">{stats.valeurTotale.toLocaleString('fr-FR')}</p>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-          <p className="text-sm text-gray-500 font-medium mb-1">Expirant Bientôt</p>
-          <p className="text-3xl font-bold text-yellow-600">{stats.expirantBientot}</p>
         </div>
       </div>
 
@@ -375,8 +369,6 @@ export const Contrats: React.FC = () => {
               onChange={(e) => { setFiltreStatut(e.target.value); setPage(1); }}
             >
               <option value="Tous">Tous les statuts</option>
-              <option value="Actif">Actif</option>
-              <option value="Expirant">Expirant</option>
               <option value="Expiré">Expiré</option>
               <option value="Terminé">Terminé</option>
               <option value="En attente">En attente</option>
@@ -437,11 +429,19 @@ export const Contrats: React.FC = () => {
                       >
                         <Download className="w-4 h-4" />
                       </button>
+                      {/* Modifier */}
+                      <button
+                        onClick={() => ouvrirModification(contrat)}
+                        className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600 transition-colors"
+                        title="Modifier"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
                       {/* Supprimer */}
                       <button
                         onClick={() => confirmerSuppression(contrat)}
                         disabled={mutationSupprimer.isPending}
-                        className="p-1.5 rounded-lg hover:bg-red-50 text-red-400 hover:text-red-600 disabled:opacity-50 transition-colors"
+                        className="p-1.5 rounded-lg hover:bg-red-50 text-red-500 hover:text-red-600 disabled:opacity-50 transition-colors"
                         title="Supprimer"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -499,44 +499,68 @@ export const Contrats: React.FC = () => {
       {contratSelectionne && (
         <Modal isOpen={modalVoirOuvert} onClose={() => setModalVoirOuvert(false)} title={`Contrat — ${contratSelectionne.id}`} size="lg">
           <div className="bg-white p-8 rounded-lg shadow-inner border border-gray-100 space-y-8 max-h-[70vh] overflow-y-auto">
+
+    {/* Signature Overlay (Global) */}
+    {signatureOuverte && contratSelectionneDetail && (
+      <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-md animate-in fade-in duration-300">
+        <div className="w-full max-w-xl">
+          <SignaturePad 
+            title={signatureOuverte === 'client' ? `Signature du Client — ${contratSelectionneDetail.clientName}` : "Signature du Prestataire — QUETRATECH"}
+            onCancel={() => setSignatureOuverte(null)}
+            onSave={(data) => {
+              mutationModifier.mutate({ 
+                id: contratSelectionneDetail.numericId, 
+                data: { 
+                  ...contratSelectionneDetail,
+                  [signatureOuverte === 'client' ? 'isSignedByClient' : 'isSignedByProvider']: true,
+                  [signatureOuverte === 'client' ? 'signatureClient' : 'signatureProvider']: data 
+                } 
+              });
+              setSignatureOuverte(null);
+            }}
+          />
+        </div>
+      </div>
+    )}
+
             <div className="flex justify-between items-start border-b border-gray-100 pb-6">
               <div>
-                <h2 className="text-3xl font-bold text-gray-900 tracking-tight">{contratSelectionne.titre}</h2>
+                <h2 className="text-3xl font-bold text-gray-900 tracking-tight">{contratSelectionneDetail.titre}</h2>
                 <div className="flex items-center gap-2 mt-2">
                   <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-indigo-50 text-indigo-600 border border-indigo-100">
-                    {contratSelectionne.type}
+                    {contratSelectionneDetail.type}
                   </span>
-                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${obtenirCouleurStatut(contratSelectionne.status)}`}>
-                    {obtenirLibelleStatut(contratSelectionne.status)}
+                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${obtenirCouleurStatut(contratSelectionneDetail.status)}`}>
+                    {obtenirLibelleStatut(contratSelectionneDetail.status)}
                   </span>
                 </div>
               </div>
               <div className="text-right">
                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Référence</p>
-                <p className="text-lg font-mono font-bold text-indigo-600">{contratSelectionne.id}</p>
+                <p className="text-lg font-mono font-bold text-indigo-600">{contratSelectionneDetail.id}</p>
               </div>
             </div>
 
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 py-6 border-b border-gray-50">
               <div className="space-y-1">
                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Client</p>
-                <p className="font-semibold text-gray-800">{contratSelectionne.clientName}</p>
+                <p className="font-semibold text-gray-800">{contratSelectionneDetail.clientName}</p>
               </div>
               <div className="space-y-1">
                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Valeur Contractuelle</p>
                 <p className="font-bold text-gray-900 text-lg">
-                  {Number(contratSelectionne.value).toLocaleString('fr-FR')} 
-                  <span className="text-indigo-600 ml-1">{contratSelectionne.devise === 'EUR' ? '€' : contratSelectionne.devise === 'USD' ? '$' : 'DT'}</span>
+                  {Number(contratSelectionneDetail.value).toLocaleString('fr-FR')} 
+                  <span className="text-indigo-600 ml-1">{contratSelectionneDetail.devise === 'EUR' ? '€' : contratSelectionneDetail.devise === 'USD' ? '$' : 'DT'}</span>
                 </p>
               </div>
               <div className="space-y-1">
                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Période du Contrat</p>
-                <p className="font-semibold text-gray-800">{contratSelectionne.dateDebut || '—'} au {contratSelectionne.dateFin || '—'}</p>
+                <p className="font-semibold text-gray-800">{contratSelectionneDetail.dateDebut || '—'} au {contratSelectionneDetail.dateFin || '—'}</p>
               </div>
-              {contratSelectionne.dateRenouvellement && (
+              {contratSelectionneDetail.dateRenouvellement && (
                 <div className="space-y-1">
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Renouvellement</p>
-                  <p className="font-semibold text-yellow-600">{contratSelectionne.dateRenouvellement}</p>
+                  <p className="font-semibold text-yellow-600">{contratSelectionneDetail.dateRenouvellement}</p>
                 </div>
               )}
             </div>
@@ -548,14 +572,14 @@ export const Contrats: React.FC = () => {
                 { champ: 'responsabilites', label: 'Responsabilités et Assurances' },
                 { champ: 'conditions', label: 'Conditions Générales' },
               ].map(({ champ, label }) =>
-                (contratSelectionne as any)[champ] ? (
+                (contratSelectionneDetail as any)[champ] ? (
                   <div key={champ} className="group">
                     <h3 className="text-xs font-bold text-gray-900 uppercase tracking-widest mb-3 flex items-center gap-2">
                        <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
                        {label}
                     </h3>
                     <div className="text-sm text-gray-600 leading-relaxed bg-gray-50/50 p-4 rounded-xl border border-gray-100/50">
-                      {(contratSelectionne as any)[champ]}
+                      {(contratSelectionneDetail as any)[champ]}
                     </div>
                   </div>
                 ) : null
@@ -569,40 +593,41 @@ export const Contrats: React.FC = () => {
                 <div className="space-y-12">
                   <div className="space-y-2">
                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Le Client</p>
-                    <p className="text-sm font-bold text-gray-800">{contratSelectionne.clientName}</p>
+                    <p className="text-sm font-bold text-gray-800">{contratSelectionneDetail.clientName}</p>
                   </div>
                   
                   <button 
-                    disabled={contratSelectionne.isSignedByClient || mutationModifier.isPending}
-                    onClick={() => mutationModifier.mutate({ 
-                      id: contratSelectionne.numericId, 
-                      data: { ...contratSelectionne, isSignedByClient: true } 
-                    })}
+                    disabled={contratSelectionneDetail.isSignedByClient || mutationModifier.isPending}
+                    onClick={() => setSignatureOuverte('client')}
                     className={cn(
-                      "h-40 w-full border-2 rounded-2xl flex flex-col items-center justify-center transition-all pt-4",
-                      contratSelectionne.isSignedByClient 
-                        ? "border-green-200 bg-green-50/30" 
-                        : "border-dashed border-gray-200 bg-gray-50/30 hover:border-indigo-300 hover:bg-indigo-50/30"
+                      "h-48 w-full border-2 rounded-2xl flex flex-col items-center justify-center transition-all group/sig relative overflow-hidden cursor-pointer",
+                      contratSelectionneDetail.isSignedByClient 
+                        ? "border-green-100 bg-green-50/20" 
+                        : "border-dashed border-gray-200 bg-gray-50/30 hover:border-indigo-300 hover:bg-indigo-50/50"
                     )}
                   >
-                    {contratSelectionne.isSignedByClient ? (
-                      <>
-                        <p className="text-3xl font-script text-green-600 rotate-[-5deg] mb-1 opacity-80">
-                          {contratSelectionne.clientName}
-                        </p>
-                        <p className="text-[10px] font-medium text-green-500 uppercase tracking-tighter">Signé électroniquement</p>
-                        <p className="text-[9px] text-green-400 mt-1 font-mono">ID: {contratSelectionne.id}-C</p>
-                      </>
+                    {contratSelectionneDetail.isSignedByClient && contratSelectionneDetail.signatureClient ? (
+                      <div className="p-4 w-full h-full flex flex-col items-center justify-center">
+                        <img src={contratSelectionneDetail.signatureClient} alt="Signature Client" className="max-h-24 object-contain mb-2 mix-blend-multiply opacity-90" />
+                        <div className="text-center">
+                           <p className="text-[10px] font-bold text-green-600 uppercase tracking-tighter">Signé électroniquement</p>
+                           <p className="text-[9px] text-green-400 font-mono mt-0.5 tracking-tight group-hover/sig:hidden">ID: {contratSelectionneDetail.id}-C</p>
+                           <p className="text-[9px] text-green-500 font-bold hidden group-hover/sig:block">✓ Validé le {new Date().toLocaleDateString('fr-FR')}</p>
+                        </div>
+                      </div>
                     ) : (
                       <>
-                        <Pencil className="w-8 h-8 text-gray-300 mb-2" />
-                        <p className="text-[10px] font-medium text-gray-400">Signature Électronique (Client)</p>
+                        <div className="p-3 bg-white rounded-full shadow-sm mb-3 group-hover/sig:scale-110 transition-transform cursor-pointer border border-indigo-100">
+                          <Pencil className="w-6 h-6 text-indigo-400" />
+                        </div>
+                        <p className="text-xs font-bold text-gray-400 group-hover/sig:text-indigo-600">Signer ici (Client)</p>
+                        <p className="text-[9px] text-gray-300 mt-1">Cliquer pour capturer la signature</p>
                       </>
                     )}
                   </button>
 
                   <div className="border-t border-gray-100 pt-2">
-                    <p className="text-[10px] text-gray-400">Date et Mention "Lu et approuvé"</p>
+                    <p className="text-[10px] text-gray-400">Mention "Lu et approuvé"</p>
                   </div>
                 </div>
 
@@ -610,34 +635,49 @@ export const Contrats: React.FC = () => {
                 <div className="space-y-12">
                   <div className="space-y-2">
                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Le Prestataire</p>
-                    <p className="text-sm font-bold text-gray-800">CRM AI Pro</p>
+                    <p className="text-sm font-bold text-gray-800">QUETRATECH S.A.R.L</p>
                   </div>
 
                   <button 
-                    disabled={contratSelectionne.isSignedByProvider || mutationModifier.isPending}
-                    onClick={() => mutationModifier.mutate({ 
-                      id: contratSelectionne.numericId, 
-                      data: { ...contratSelectionne, isSignedByProvider: true } 
-                    })}
+                    disabled={contratSelectionneDetail.isSignedByProvider || mutationModifier.isPending}
+                    onClick={() => setSignatureOuverte('provider')}
                     className={cn(
-                      "h-40 w-full border-2 rounded-2xl flex flex-col items-center justify-center transition-all pt-4",
-                      contratSelectionne.isSignedByProvider 
-                        ? "border-indigo-200 bg-indigo-50/30" 
-                        : "border-dashed border-gray-200 bg-gray-50/30 hover:border-indigo-300 hover:bg-indigo-50/30"
+                      "h-48 w-full border-2 rounded-2xl flex flex-col items-center justify-center transition-all group/sig relative overflow-hidden cursor-pointer",
+                      contratSelectionneDetail.isSignedByProvider 
+                        ? "border-indigo-100 bg-indigo-50/20" 
+                        : "border-dashed border-gray-200 bg-gray-50/30 hover:border-indigo-300 hover:bg-indigo-50/50"
                     )}
                   >
-                    {contratSelectionne.isSignedByProvider ? (
-                      <>
-                        <p className="text-3xl font-script text-indigo-600 rotate-[-5deg] mb-1 opacity-80">
-                          CRM AI Pro
-                        </p>
-                        <p className="text-[10px] font-medium text-indigo-500 uppercase tracking-tighter">Signé électroniquement</p>
-                        <p className="text-[9px] text-indigo-400 mt-1 font-mono">ID: {contratSelectionne.id}-P</p>
-                      </>
+                    {contratSelectionneDetail.isSignedByProvider && contratSelectionneDetail.signatureProvider ? (
+                      <div className="p-4 w-full h-full flex flex-col items-center justify-center relative">
+                        {/* Cachet Prestataire */}
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-40 transform -rotate-12 z-0">
+                          <div className="w-40 h-40 border-4 border-indigo-600/30 rounded-full flex flex-col items-center justify-center p-2 text-center text-indigo-600/60">
+                             <span className="text-[11px] font-black uppercase tracking-widest">QUETRATECH</span>
+                             <div className="w-8 h-8 bg-indigo-600/40 rotate-45 flex items-center justify-center my-1.5 shadow-sm">
+                                <div className="w-3 h-3 bg-white/80"></div>
+                             </div>
+                             <span className="text-[8px] font-black leading-tight uppercase">
+                               MF: 1694357/R<br/>
+                               MAHDIA, TUNISIE
+                             </span>
+                          </div>
+                        </div>
+
+                        <img src={contratSelectionneDetail.signatureProvider} alt="Signature Prestataire" className="max-h-24 object-contain mb-2 mix-blend-multiply opacity-90 relative z-10" />
+                        <div className="text-center relative z-10">
+                           <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-tighter">Signé électroniquement</p>
+                           <p className="text-[9px] text-indigo-400 font-mono mt-0.5 tracking-tight group-hover/sig:hidden">ID: {contratSelectionneDetail.id}-P</p>
+                           <p className="text-[9px] text-indigo-500 font-bold hidden group-hover/sig:block">✓ Validé par la plateforme</p>
+                        </div>
+                      </div>
                     ) : (
                       <>
-                        <Pencil className="w-8 h-8 text-gray-300 mb-2" />
-                        <p className="text-[10px] font-medium text-gray-400">Signature Électronique (SaaS)</p>
+                        <div className="p-3 bg-white rounded-full shadow-sm mb-3 group-hover/sig:scale-110 transition-transform cursor-pointer border border-indigo-100">
+                          <Pencil className="w-6 h-6 text-indigo-400" />
+                        </div>
+                        <p className="text-xs font-bold text-gray-400 group-hover/sig:text-indigo-600">Signer ici (SaaS)</p>
+                        <p className="text-[9px] text-gray-300 mt-1">Cliquer pour capturer la signature</p>
                       </>
                     )}
                   </button>
@@ -651,15 +691,11 @@ export const Contrats: React.FC = () => {
           </div>
 
           <div className="flex justify-end gap-3 pt-6 border-t border-gray-100 mt-6">
-            <button onClick={() => telecharger(contratSelectionne, true)} className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-gray-200 text-sm font-bold text-gray-700 hover:bg-gray-50 transition-all active:scale-95">
+             <button onClick={() => window.print()} className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 text-sm font-bold text-white hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition-all active:scale-95">
               <Eye className="w-4 h-4" />
-              Visualiser PDF
+              Imprimer / PDF
             </button>
-            <button onClick={() => telecharger(contratSelectionne)} className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-50 text-sm font-bold text-indigo-600 hover:bg-indigo-100 transition-all active:scale-95">
-              <Download className="w-4 h-4" />
-              Télécharger
-            </button>
-            <button onClick={() => { setModalVoirOuvert(false); ouvrirModification(contratSelectionne); }} className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-gray-200 text-sm font-bold text-gray-700 hover:bg-gray-50 transition-all active:scale-95">
+            <button onClick={() => { setModalVoirOuvert(false); ouvrirModification(contratSelectionneDetail); }} className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-gray-200 text-sm font-bold text-gray-700 hover:bg-gray-50 transition-all active:scale-95">
               <Pencil className="w-4 h-4" />
               Modifier
             </button>
@@ -669,6 +705,42 @@ export const Contrats: React.FC = () => {
           </div>
         </Modal>
       )}
+
+      {/* Modal confirmation suppression */}
+      <Modal isOpen={confirmSuppressionOuvert} onClose={() => { setConfirmSuppressionOuvert(false); setContratASupprimer(null); }} title="Confirmer la suppression" size="sm">
+        <div className="space-y-4">
+          <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-100 rounded-xl">
+            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+              <Trash2 className="w-5 h-5 text-red-600" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-red-800">Suppression irréversible</p>
+              <p className="text-xs text-red-600 mt-0.5">Cette action ne peut pas être annulée.</p>
+            </div>
+          </div>
+          <p className="text-sm text-gray-600">
+            Voulez-vous vraiment supprimer le contrat <span className="font-bold text-gray-900">{contratASupprimer?.id}</span> ?
+          </p>
+          <div className="flex justify-end gap-3 pt-2">
+            <button
+              onClick={() => { setConfirmSuppressionOuvert(false); setContratASupprimer(null); }}
+              className="px-5 py-2 rounded-xl border border-gray-200 text-sm font-bold text-gray-500 hover:bg-gray-50 transition-all"
+            >
+              Annuler
+            </button>
+            <button
+              onClick={() => contratASupprimer && mutationSupprimer.mutate(contratASupprimer.numericId)}
+              disabled={mutationSupprimer.isPending}
+              className="px-5 py-2 rounded-xl bg-red-600 text-white text-sm font-bold hover:bg-red-700 active:scale-95 transition-all disabled:opacity-50"
+            >
+              {mutationSupprimer.isPending ? 'Suppression...' : 'Supprimer'}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Rendu masqué pour l'impression */}
+      {contratSelectionneDetail && <ContratPrint contrat={contratSelectionneDetail} />}
     </div>
   );
 };

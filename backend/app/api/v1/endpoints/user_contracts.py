@@ -266,20 +266,20 @@ async def update_user_contract(
 
 
 @router.delete("/{user_id}/contracts/{contract_id}", status_code=status.HTTP_204_NO_CONTENT)
-def archive_user_contract(user_id: int, contract_id: int, db: Session = Depends(get_db)):
+def delete_user_contract(user_id: int, contract_id: int, db: Session = Depends(get_db)):
     _require_user(db, user_id)
     item = db.get(UserContract, contract_id)
     if not item or item.userID != user_id:
         raise HTTPException(status_code=404, detail="User contract not found")
-    item.status = "inactive"
-    item.archivedAt = datetime.utcnow()
-    item.updatedAt = datetime.utcnow()
+    
+    _destroy_cloudinary_file(item.pdfPublicId)
+    db.delete(item)
     log_activity(
         db,
         entity_type="user_contract",
         entity_id=item.id,
-        action="archive",
-        message=f"User contract {item.frontId} archived",
+        action="delete",
+        message=f"User contract {item.frontId} deleted",
     )
     db.commit()
     return None

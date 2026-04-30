@@ -1,0 +1,257 @@
+@startuml
+title Diagramme de classe — CRM Professional
+skinparam classAttributeIconSize 0
+skinparam classFontStyle Bold
+skinparam defaultFontSize 12
+
+class Client <<Entity>> {
+  -id: int
+  -typeClient: string
+  -nom: string
+  -email: string
+  -tel: string
+  -adresse: string
+  -status: string
+  -dateCreation: DateTime
+  +creer(): Client
+  +modifier(nom: string, email: string, tel: string, adresse: string, status: string): void
+  +archiver(): void
+  +listerProjets(): List~Projet~
+}
+
+class Projet <<Entity>> {
+  -id: int
+  -clientID: int
+  -nomProjet: string
+  -description: string
+  -status: string
+  -dateDebut: Date
+  -dateFin: Date
+  -createdAt: DateTime
+  +creer(): Projet
+  +modifier(nomProjet: string, description: string, status: string, dateDebut: Date, dateFin: Date): void
+  +cloturer(): void
+  +affecterUtilisateur(u: Utilisateur): void
+  +ajouterService(s: Service): void
+  +ajouterRessource(r: Ressource): void
+}
+
+class Utilisateur <<Entity>> {
+  -userID: int
+  -nom: string
+  -email: string
+  -motDePasse: string
+  -role: string
+  -actif: bool
+  -dateCreation: DateTime
+  +creer(): Utilisateur
+  +activer(): void
+  +desactiver(): void
+  +changerMotDePasse(nouveauHash: string): void
+  +aLeRole(role: string): bool
+}
+
+class ProjetUtilisateur <<Association>> {
+  -projetID: int
+  -userID: int
+  +lier(projet: Projet, user: Utilisateur): void
+  +delier(projet: Projet, user: Utilisateur): void
+}
+
+class Ressource <<Entity>> {
+  -ressourceID: int
+  -projetID: int
+  -nom: string
+  -type: string
+  -url: string
+  -description: string
+  +creer(): Ressource
+  +modifier(nom: string, type: string, url: string, description: string): void
+  +supprimer(): void
+}
+
+class Service <<Entity>> {
+  -id: int
+  -projetID: int
+  -nom: string
+  -type: string
+  -prix: decimal
+  -dateRenouvellement: Date
+  -statut: string
+  -url: string
+  -createdAt: DateTime
+  +creer(): Service
+  +modifier(nom: string, type: string, prix: decimal, dateRenouvellement: Date, statut: string, url: string): void
+  +renouveler(nouvelleDate: Date): void
+  +activer(): void
+  +desactiver(): void
+}
+
+class Acces <<Entity>> {
+  -accesID: int
+  -projetID: int
+  -serviceID: int
+  -login: string
+  -motDePasse: string
+  -url: string
+  -description: string
+  -note: string
+  +creer(): Acces
+  +modifier(login: string, motDePasse: string, url: string, description: string, note: string): void
+  +rotationMotDePasse(nouveau: string): void
+  +supprimer(): void
+}
+
+class Rappel <<Entity>> {
+  -id: int
+  -clientID: int
+  -typeRappel: string
+  -dateRappel: DateTime
+  -message: string
+  -statut: string
+  -priorite: string
+  -createdAt: DateTime
+  +creer(): Rappel
+  +planifier(dateRappel: DateTime): void
+  +marquerFait(): void
+  +annuler(): void
+}
+
+class Devis <<Entity>> {
+  -devisID: int
+  -clientID: int
+  -projetID: int
+  -dateDevis: DateTime
+  -validUntil: DateTime
+  -totalAmount: decimal
+  -status: string
+  -notes: string
+  +creer(): Devis
+  +modifier(totalAmount: decimal, validUntil: DateTime, status: string, notes: string): void
+  +valider(): void
+  +annuler(): void
+  +associerProjet(p: Projet): void
+}
+
+class DevisItem {
+  -itemID: int
+  -devisID: int
+  -description: string
+  -quantity: float
+  -unitPrice: float
+  -lineTotal: float
+}
+
+class DevisProjet <<Association>> {
+  -devisID: int
+  -projetID: int
+  +lier(devis: Devis, projet: Projet): void
+  +delier(devis: Devis, projet: Projet): void
+}
+
+class Facture <<Entity>> {
+  -factureID: int
+  -clientID: int
+  -devisID: int
+  -dateFacture: DateTime
+  -dueDate: DateTime
+  -amountHT: decimal
+  -amountTTC: decimal
+  -status: string
+  -taxRate: decimal
+  -paymentDate: DateTime
+  +creer(): Facture
+  +calculerTTC(): decimal
+  +marquerPayee(paymentDate: DateTime): void
+  +relancer(): void
+  +annuler(): void
+}
+
+class FactureItem {
+  -itemID: int
+  -factureID: int
+  -description: string
+  -quantity: float
+  -unitPrice: float
+  -lineTotal: float
+}
+
+class FactureProjet <<Association>> {
+  -factureID: int
+  -projetID: int
+  +lier(facture: Facture, projet: Projet): void
+  +delier(facture: Facture, projet: Projet): void
+}
+
+class Contrat <<Entity>> {
+  -contratID: int
+  -clientID: int
+  -projetID: int
+  -dateDebut: Date
+  -dateFin: Date
+  -typeContrat: string
+  -montant: decimal
+  -conditions: string
+  -status: string
+  +creer(): Contrat
+  +activer(): void
+  +resilier(): void
+  +renouveler(nouvelleFin: Date): void
+}
+
+class CahierDeCharge <<Entity>> {
+  -cahierID: int
+  -projetID: int
+  -objet: string
+  -description: string
+  -dateCreation: DateTime
+  -dateValidation: DateTime
+  -fileUrl: string
+  +creer(): CahierDeCharge
+  +modifier(objet: string, description: string, fileUrl: string): void
+  +valider(dateValidation: DateTime): void
+}
+
+class AiMonitoring <<Entity>> {
+  -monitoringID: int
+  -serviceID: int
+  -status: string
+  -uptime: decimal
+  -responseTime: decimal
+  -lastCheck: DateTime
+  -checks: string
+  -alerts: string
+  +mettreAJour(status: string, uptime: decimal, responseTime: decimal, lastCheck: DateTime): void
+  +estSain(): bool
+  +genererAlerte(message: string): void
+}
+
+' ── Relations ──
+Client        "1" --> "0..*" Projet             : clientID
+Client        "1" --> "0..*" Rappel             : clientID
+Client        "1" --> "0..*" Devis              : clientID
+Client        "1" --> "0..*" Facture            : clientID
+Client        "1" --> "0..*" Contrat            : clientID
+
+Projet        "1" --> "0..*" Ressource          : projetID
+Projet        "1" --> "0..*" Service            : projetID
+Projet        "0..1" --> "0..*" Acces           : projetID
+Projet        "1" --> "0..1" CahierDeCharge     : projetID
+Projet        "0..1" --> "0..*" Contrat         : projetID
+
+Utilisateur   "1" --> "0..*" ProjetUtilisateur
+Projet        "1" --> "0..*" ProjetUtilisateur
+
+Service       "0..1" --> "0..*" Acces           : serviceID
+Service       "1"    --> "0..1" AiMonitoring    : serviceID
+
+Devis         "1"    --> "0..*" DevisItem       : items
+Devis         "0..1" --> "0..*" DevisProjet
+Projet        "0..1" --> "0..*" DevisProjet
+
+Devis         "0..1" --> "0..*" Facture         : devisID
+Facture       "1"    --> "0..*" FactureItem     : items
+Facture       "0..1" --> "0..*" FactureProjet
+Projet        "0..1" --> "0..*" FactureProjet
+
+@enduml

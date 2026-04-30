@@ -149,6 +149,15 @@ export const UserDetails: React.FC = () => {
     },
     onError: (error: any) => toast.error(error?.response?.data?.detail || error?.message || 'Échec de la suppression'),
   });
+  
+  const deleteContractMutation = useMutation<any, any, number>({
+    mutationFn: (contractId: number) => userContractsAPI.delete(id, contractId),
+    onSuccess: () => {
+      toast.success('Contrat supprimé');
+      qc.invalidateQueries({ queryKey: ['user-contracts', id] });
+    },
+    onError: (error: any) => toast.error(error?.response?.data?.detail || error?.message || 'Échec de la suppression'),
+  });
 
   const allContracts = (grouped?.all as UIUserContract[]) || [];
   const active = grouped?.active as UIUserContract | null;
@@ -197,13 +206,24 @@ export const UserDetails: React.FC = () => {
           </div>
           {contract.description && <p className="mt-3 text-sm leading-relaxed text-gray-600 border-l-2 border-gray-100 pl-3 italic">{contract.description}</p>}
         </div>
-        <span
-          className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-tight ${
-            isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
-          }`}
-        >
-          {contract.status === 'active' ? 'ACTIF' : 'INACTIF'}
-        </span>
+        <div className="flex items-center gap-1.5">
+          <span
+            className={`rounded-full px-3 py-1 text-xs font-bold uppercase tracking-tight ${
+              isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+            }`}
+          >
+            {contract.status === 'active' ? 'ACTIF' : 'INACTIF'}
+          </span>
+          <button
+            onClick={() => {
+              if (confirm('Supprimer définitivement ce contrat ?')) deleteContractMutation.mutate(contract.id);
+            }}
+            className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"
+            title="Supprimer"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
       </div>
       <div className="mt-5 flex flex-wrap gap-2 pt-4 border-t border-gray-50">
         <button

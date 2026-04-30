@@ -185,6 +185,7 @@ def generate_project_rappels(db: Session, now: datetime) -> dict:
                 if before:
                     marked_done += 1
                 continue
+            overdue = due < today
             if overdue:
                 _get_or_create_system_rappel(
                     db,
@@ -362,13 +363,71 @@ def generate_project_rappels(db: Session, now: datetime) -> dict:
                         system_key=key_overdue,
                         client_id=client_id,
                         projet_id=projet_id,
-                        titre=f"Facture en retard â€” #{inv.factureID}",
+                        titre=f"Facture en retard — #{inv.factureID}",
                         message=f"La facture #{inv.factureID} est en retard depuis le {due.isoformat()}.",
                         date_rappel=datetime.combine(today, datetime.min.time()),
                         priorite="elevee",
                         facture_id=inv.factureID,
                     )
                     created_or_updated += 1
+                    logs.append(f"Alerte : Facture #{inv.factureID} en retard (Client: {p.clientNom})")
+
+        # --- AI ADVANCED ANALYSIS ---
+
+        # 1. Project Delay Risk (Low progress vs Time elapsed)
+        if start_date and end_date and not _is_project_done(p.status):
+            total_days = (end_date - start_date).days
+            days_elapsed = (today - start_date).days
+            if total_days > 0 and days_elapsed > 0:
+                time_pct = days_elapsed / total_days
+                progress_pct = (p.progression or 0) / 100
+                if (time_pct > 0.4 and progress_pct < 0.1) or (time_pct > 0.7 and progress_pct < 0.4):
+                    key_risk = _mk_system_key("ai_risk", projet_id, "delay")
+                    _get_or_create_system_rappel(
+                        db,
+                        system_key=key_risk,
+                        client_id=client_id,
+                        projet_id=projet_id,
+                        titre=f"Risque d'IA : Retard probable - {p.nomProjet}",
+                        message=f"Le projet avance lentement ({p.progression}% pour {time_pct*100:.0f}% du temps).",
+                        date_rappel=datetime.combine(today, datetime.min.time()),
+                        priorite="elevee",
+                    )
+                    created_or_updated += 1
+                    logs.append(f'Analyse IA : Risque de retard sur "{p.nomProjet}"')
+
+        # 2. Lack of definition (Active project with no milestones)
+        if not _is_project_done(p.status) and len(p.milestones) == 0:
+            key_def = _mk_system_key("ai_risk", projet_id, "no_milestones")
+            _get_or_create_system_rappel(
+                db,
+                system_key=key_def,
+                client_id=client_id,
+                projet_id=projet_id,
+                titre=f"Alerte IA : Definition incomplete - {p.nomProjet}",
+                message="Aucun jalon n'est defini pour ce projet actif.",
+                date_rappel=datetime.combine(today, datetime.min.time()),
+                priorite="moyenne",
+            )
+            created_or_updated += 1
+            logs.append(f'Analyse IA : Manque de jalons pour "{p.nomProjet}"')
+
+        # 3. Contract compliance (Unsigned contracts for active projects)
+        for c in p.contrats:
+            if not c.isSignedByClient or not c.isSignedByProvider:
+                key_sign = _mk_system_key("ai_risk", projet_id, f"unsigned_contract:{c.contratID}")
+                _get_or_create_system_rappel(
+                    db,
+                    system_key=key_sign,
+                    client_id=client_id,
+                    projet_id=projet_id,
+                    titre=f"Risque Juridique IA : Contrat non signe - {p.nomProjet}",
+                    message=f"Le contrat {c.contratID} n'est pas encore signe par les deux parties.",
+                    date_rappel=datetime.combine(today, datetime.min.time()),
+                    priorite="elevee",
+                )
+                created_or_updated += 1
+                logs.append(f'Analyse IA : Contrat non signé identifié pour "{p.nomProjet}"')
 
     db.commit()
 

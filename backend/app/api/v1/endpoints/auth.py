@@ -1,6 +1,6 @@
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Header
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 
@@ -80,7 +80,7 @@ class UserUpdateRequest(BaseModel):
     avatar: str | None = None
 
 @router.get("/me")
-def me(authorization: str | None = None, db: Session = Depends(get_db)):
+def me(authorization: str | None = Header(None), db: Session = Depends(get_db)):
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing bearer token")
 
@@ -96,7 +96,7 @@ def me(authorization: str | None = None, db: Session = Depends(get_db)):
     return _to_user_payload(user)
 
 @router.put("/me")
-def update_me(payload: UserUpdateRequest, authorization: str | None = None, db: Session = Depends(get_db)):
+def update_me(payload: UserUpdateRequest, authorization: str | None = Header(None), db: Session = Depends(get_db)):
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing bearer token")
 

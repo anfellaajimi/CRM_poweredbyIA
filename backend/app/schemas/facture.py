@@ -37,6 +37,7 @@ class FactureBase(BaseModel):
     amountTTC: float = 0
     status: str = "en_attente"
     taxRate: float = 19.0
+    fiscalStamp: float = 1.0
     paymentDate: datetime | None = None
     items: list[FactureItemPayload] = Field(default_factory=list)
 

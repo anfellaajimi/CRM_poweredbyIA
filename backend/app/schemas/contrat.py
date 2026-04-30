@@ -20,6 +20,8 @@ class ContratBase(BaseModel):
     status: str = "actif"
     isSignedByClient: bool = False
     isSignedByProvider: bool = False
+    signatureClient: str | None = None
+    signatureProvider: str | None = None
 
     @model_validator(mode="after")
     def validate_dates(self):
@@ -49,6 +51,8 @@ class ContratUpdate(BaseModel):
     status: str | None = None
     isSignedByClient: bool | None = None
     isSignedByProvider: bool | None = None
+    signatureClient: str | None = None
+    signatureProvider: str | None = None
 
     @model_validator(mode="after")
     def validate_dates(self):

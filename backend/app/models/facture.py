@@ -18,6 +18,7 @@ class Facture(Base):
     amountTTC: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
     status: Mapped[str] = mapped_column(String(50), default="en_attente", nullable=False, index=True)
     taxRate: Mapped[float] = mapped_column(Numeric(5, 2), default=19.0, nullable=False)
+    fiscalStamp: Mapped[float] = mapped_column(Numeric(10, 3), default=1.0, nullable=False)
     paymentDate: Mapped[datetime | None] = mapped_column(DateTime)
 
     client = relationship("Client", back_populates="factures")

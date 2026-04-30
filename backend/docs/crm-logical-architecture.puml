@@ -1,0 +1,99 @@
+@startuml
+title CRM Professional - Architecture logique de la solution
+
+left to right direction
+skinparam shadowing false
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam componentStyle rectangle
+skinparam defaultTextAlignment center
+
+skinparam package {
+  BorderColor #1F3A5F
+  FontColor #0F2740
+  BackgroundColor #F8FBFF
+}
+skinparam component {
+  BorderColor #1F3A5F
+  FontColor #0F2740
+  BackgroundColor #FFFFFF
+}
+skinparam database {
+  BorderColor #1F3A5F
+  FontColor #0F2740
+  BackgroundColor #FFFFFF
+}
+skinparam queue {
+  BorderColor #1F3A5F
+  FontColor #0F2740
+  BackgroundColor #FFFFFF
+}
+
+actor "Utilisateur CRM\n(Admin, Commercial, Manager)" as User
+
+package "Couche Frontend (Presentation)" as FRONT {
+  component "Web App CRM\n(React + Vite)" as WebApp
+  component "UI Metier\nClients, Projets, Devis,\nFactures, Contrats, Rappels" as UI
+  component "API Client\nservices/api.ts" as ApiClient
+  component "Auth Guard\nJWT + RBAC UI" as FrontAuth
+}
+
+package "Couche Backend (Application)" as BACK {
+  component "API REST\n(FastAPI)" as Api
+  component "Module Auth\nJWT, roles, permissions" as Auth
+  component "Services Metier CRM\nClientService, ProjetService,\nDevisService, FactureService,\nContratService, RappelService" as Domain
+  component "Orchestrateur IA\n(prompting, scoring,\nalertes intelligentes)" as AiOrchestrator
+  component "Jobs Planifies\nRappels, notifications,\nmonitoring periodique" as Scheduler
+  component "Audit & Observabilite\nlogs, traces, healthcheck" as Observability
+}
+
+package "Module IA (Intelligence artificielle)" as AI {
+  component "Moteur IA\nclassification,\nresume, recommandations" as AiEngine
+  component "Prompt/Policy Layer\nregles metier + guardrails" as AiPolicy
+  queue "Contexte IA\n(features CRM,\nhistorique interactions)" as AiContext
+}
+
+package "Couche Donnees (Persistence)" as DATA {
+  database "PostgreSQL\nschema CRM" as Pg
+  component "ORM Layer\nSQLAlchemy" as ORM
+  component "Stockage fichiers\n(cahiers, pieces jointes)" as Files
+}
+
+User --> WebApp : Utilisation
+WebApp --> UI : Navigation
+UI --> FrontAuth : Controle acces UI
+UI --> ApiClient : Actions CRUD + recherche
+
+ApiClient --> Api : HTTPS/JSON
+Api --> Auth : Verification token\net autorisations
+Api --> Domain : Commandes metier
+Api --> AiOrchestrator : Cas IA (analyse,\npriorisation, prediction)
+Api --> Observability : Logs + metriques
+
+Domain --> ORM : Requetes metier
+ORM --> Pg : SQL transactions
+Domain --> Files : Upload/Download documents
+Scheduler --> Domain : Taches planifiees CRM
+Scheduler --> AiOrchestrator : Verification IA periodique
+
+AiOrchestrator --> AiPolicy : Validation regles
+AiPolicy --> AiEngine : Appels IA controles
+AiEngine --> AiContext : Lit/Ecrit contexte
+AiOrchestrator --> ORM : Donnees metier pour IA
+AiOrchestrator --> Observability : Traces IA\net alertes
+
+note right of Domain
+Elements essentiels CRM:
+- Gestion clients et pipeline projets
+- Chaine devis -> facture -> contrat
+- Rappels et automatisations
+- Collaboration equipe et tracabilite
+end note
+
+note bottom of AI
+Le module IA reste decouple:
+il enrichit les decisions sans casser
+les flux metier principaux.
+end note
+
+@enduml

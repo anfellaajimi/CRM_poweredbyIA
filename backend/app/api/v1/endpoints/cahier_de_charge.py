@@ -9,6 +9,7 @@ from app.db.session import get_db
 from app.models.cahier_de_charge import CahierDeCharge
 from app.models.projet import Projet
 from app.schemas.cahier_de_charge import CahierDeChargeCreate, CahierDeChargeRead, CahierDeChargeUpdate
+from app.utils.pdf_generator import clean_pdf_text
 
 router = APIRouter(prefix="/cahier-de-charge", tags=["CahierDeCharge"])
 
@@ -88,13 +89,13 @@ def export_cahier_pdf(cahier_id: int, db: Session = Depends(get_db)):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("helvetica", "B", 16)
-    pdf.cell(0, 10, f"Cahier des Charges - {item.objet}", border=False, ln=True, align="C")
+    pdf.cell(0, 10, clean_pdf_text(f"Cahier des Charges - {item.objet}"), border=False, ln=True, align="C")
     pdf.ln(5)
 
     pdf.set_font("helvetica", "B", 12)
-    pdf.cell(0, 10, f"Projet: {item.projet.nomProjet}", ln=True)
+    pdf.cell(0, 10, clean_pdf_text(f"Projet: {item.projet.nomProjet}"), ln=True)
     pdf.set_font("helvetica", "", 10)
-    pdf.cell(0, 10, f"Version: {item.version}", ln=True)
+    pdf.cell(0, 10, clean_pdf_text(f"Version: {item.version}"), ln=True)
     pdf.ln(5)
 
     sections = [
@@ -111,16 +112,17 @@ def export_cahier_pdf(cahier_id: int, db: Session = Depends(get_db)):
     for title, content in sections:
         if content:
             pdf.set_font("helvetica", "B", 12)
-            pdf.cell(0, 10, title, ln=True)
+            pdf.cell(0, 10, clean_pdf_text(title), ln=True)
             pdf.set_font("helvetica", "", 10)
             # Try to write as HTML if it looks like HTML, else multi_cell
+            cleaned_content = clean_pdf_text(content)
             if "<" in content and ">" in content:
                 try:
-                    pdf.write_html(content)
+                    pdf.write_html(cleaned_content)
                 except:
-                    pdf.multi_cell(0, 5, content)
+                    pdf.multi_cell(0, 5, cleaned_content)
             else:
-                pdf.multi_cell(0, 5, content)
+                pdf.multi_cell(0, 5, cleaned_content)
             pdf.ln(5)
 
     pdf_bytes = pdf.output()

@@ -10,6 +10,7 @@ class Client(Base):
     __tablename__ = "clients"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    numSequence: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     typeClient: Mapped[str] = mapped_column(String(50), default="moral", nullable=False)
     nom: Mapped[str] = mapped_column(String(255), nullable=False)
     email: Mapped[str | None] = mapped_column(String(255), unique=True, index=True)

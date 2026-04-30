@@ -25,8 +25,12 @@ const PAGE_SIZE = 10;
 const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
   const s = (status || '').toLowerCase();
   const cfg: Record<string, { bg: string; color: string; label: string }> = {
-    actif: { bg: '#d1fae5', color: '#059669', label: 'Actif' },
-    inactif: { bg: '#fee2e2', color: '#dc2626', label: 'Inactif' },
+    'hot 🔥': { bg: '#fee2e2', color: '#dc2626', label: 'Haute' },
+    'chaud 🔥': { bg: '#fee2e2', color: '#dc2626', label: 'Haute' },
+    'hot': { bg: '#fee2e2', color: '#dc2626', label: 'Haute' },
+    'haute': { bg: '#fee2e2', color: '#dc2626', label: 'Haute' },
+    'moyen': { bg: '#fef3c7', color: '#d97706', label: 'Moyen' },
+    'faible': { bg: '#f3f4f6', color: '#6b7280', label: 'Faible' },
   };
   const c = cfg[s] || { bg: '#f3f4f6', color: '#6b7280', label: status };
   return (
@@ -42,8 +46,10 @@ const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
 const ScoringBadge: React.FC<{ scoring?: string }> = ({ scoring }) => {
   const s = (scoring || 'Moyen').toLowerCase();
   const cfg: Record<string, { bg: string; color: string; label: string }> = {
-    'hot 🔥': { bg: '#fee2e2', color: '#dc2626', label: 'Hot 🔥' },
-    'hot': { bg: '#fee2e2', color: '#dc2626', label: 'Hot 🔥' },
+    'hot 🔥': { bg: '#fee2e2', color: '#dc2626', label: 'Haute' },
+    'chaud 🔥': { bg: '#fee2e2', color: '#dc2626', label: 'Haute' },
+    'hot': { bg: '#fee2e2', color: '#dc2626', label: 'Haute' },
+    'haute': { bg: '#fee2e2', color: '#dc2626', label: 'Haute' },
     'moyen': { bg: '#fef3c7', color: '#d97706', label: 'Moyen' },
     'faible': { bg: '#f3f4f6', color: '#6b7280', label: 'Faible' },
   };
@@ -285,7 +291,7 @@ export const Clients: React.FC = () => {
                   style={{ cursor: 'pointer', borderBottom: '1px solid #f1f5f9', background: '#fff', transition: 'background .15s' }}
                   onMouseEnter={e => (e.currentTarget.style.background = '#f5f3ff')}
                   onMouseLeave={e => (e.currentTarget.style.background = '#fff')}>
-                  <td style={{ padding: '14px 20px', fontSize: 13, fontWeight: 700, color: '#64748b' }}>#{client.id}</td>
+                  <td style={{ padding: '14px 20px', fontSize: 13, fontWeight: 700, color: '#64748b' }}>{client.formattedId}</td>
                   <td style={{ padding: '14px 20px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <img src={client.avatar || ''} alt={client.name}
@@ -504,25 +510,14 @@ export const Clients: React.FC = () => {
             <Inp label="Email" type="email" value={newClient.email || ''} onChange={v => setNewClient({ ...newClient, email: v })} required />
             <Inp label="Téléphone" value={newClient.phone || ''} onChange={v => setNewClient({ ...newClient, phone: v })} required />
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <label style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>Devise *</label>
-              <select value={newClient.devise || 'TND'} onChange={e => setNewClient({ ...newClient, devise: e.target.value })}
-                style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: '9px 12px', fontSize: 14, color: '#111827', outline: 'none', background: '#fff' }}>
-                <option value="TND">Dinar Tunisien (DT)</option>
-                <option value="EUR">Euro (€)</option>
-                <option value="USD">Dollar ($)</option>
-              </select>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <label style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>Scoring *</label>
-              <select value={newClient.scoring || 'Moyen'} onChange={e => setNewClient({ ...newClient, scoring: e.target.value })}
-                style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: '9px 12px', fontSize: 14, color: '#111827', outline: 'none', background: '#fff' }}>
-                <option value="Hot 🔥">Hot 🔥</option>
-                <option value="Moyen">Moyen</option>
-                <option value="Faible">Faible</option>
-              </select>
-            </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <label style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>Devise *</label>
+            <select value={newClient.devise || 'TND'} onChange={e => setNewClient({ ...newClient, devise: e.target.value })}
+              style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: '9px 12px', fontSize: 14, color: '#111827', outline: 'none', background: '#fff' }}>
+              <option value="TND">Dinar Tunisien (DT)</option>
+              <option value="EUR">Euro (€)</option>
+              <option value="USD">Dollar ($)</option>
+            </select>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <label style={{ fontSize: 13, fontWeight: 500, color: '#374151' }}>Statut *</label>

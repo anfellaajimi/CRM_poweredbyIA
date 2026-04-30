@@ -35,6 +35,8 @@ class DevisBase(BaseModel):
     validUntil: datetime | None = None
     totalAmount: float = 0
     status: str = "draft"
+    taxRate: float = 19.0
+    fiscalStamp: float = 1.0
     notes: str | None = None
     items: list[DevisItemPayload] = Field(default_factory=list)
 

@@ -15,8 +15,10 @@ import { clientsAPI, projectsAPI, UIProject } from '../services/api';
 const ScoringBadge: React.FC<{ scoring?: string }> = ({ scoring }) => {
   const s = (scoring || 'Moyen').toLowerCase();
   const cfg: Record<string, { bg: string; color: string; label: string }> = {
-    'hot 🔥': { bg: '#fee2e2', color: '#dc2626', label: 'Hot 🔥' },
-    'hot': { bg: '#fee2e2', color: '#dc2626', label: 'Hot 🔥' },
+    'hot 🔥': { bg: '#fee2e2', color: '#dc2626', label: 'Haute' },
+    'chaud 🔥': { bg: '#fee2e2', color: '#dc2626', label: 'Haute' },
+    'hot': { bg: '#fee2e2', color: '#dc2626', label: 'Haute' },
+    'haute': { bg: '#fee2e2', color: '#dc2626', label: 'Haute' },
     'moyen': { bg: '#fef3c7', color: '#d97706', label: 'Moyen' },
     'faible': { bg: '#f3f4f6', color: '#6b7280', label: 'Faible' },
   };
@@ -131,7 +133,11 @@ export const Projects: React.FC = () => {
                         className="p-2 rounded-lg border border-border hover:bg-secondary transition-colors"
                         title={project.isPinned ? 'Désépingler' : 'Épingler'}
                       >
-                        {project.isPinned ? <PinOff className="w-4 h-4" /> : <Pin className="w-4 h-4" />}
+                        {project.isPinned ? (
+                          <Pin className="w-4 h-4 text-red-600 fill-red-600" />
+                        ) : (
+                          <Pin className="w-4 h-4" />
+                        )}
                       </button>
                       <Badge>{project.status}</Badge>
                       <ScoringBadge scoring={project.scoring} />
@@ -175,7 +181,11 @@ export const Projects: React.FC = () => {
                             className="p-2 rounded-lg border border-border hover:bg-secondary transition-colors flex-shrink-0"
                             title={project.isPinned ? 'Désépingler' : 'Épingler'}
                           >
-                            {project.isPinned ? <PinOff className="w-4 h-4" /> : <Pin className="w-4 h-4" />}
+                            {project.isPinned ? (
+                              <Pin className="w-4 h-4 text-red-600 fill-red-600" />
+                            ) : (
+                              <Pin className="w-4 h-4" />
+                            )}
                           </button>
                         </div>
                         <div className="flex items-center justify-between text-xs">
@@ -207,11 +217,11 @@ export const Projects: React.FC = () => {
             </select>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
-            <Select value={newProject.status || ''} onChange={(e) => setNewProject({ ...newProject, status: e.target.value })} options={[{ value: 'planification', label: 'Planification' }, { value: 'en_cours', label: 'En cours' }, { value: 'en_attente', label: 'En attente' }, { value: 'termine', label: 'Terminé' }]} />
-            <Select value={newProject.priority || ''} onChange={(e) => setNewProject({ ...newProject, priority: e.target.value })} options={[{ value: 'haute', label: 'Haute' }, { value: 'moyenne', label: 'Moyenne' }, { value: 'basse', label: 'Basse' }]} />
-            <Select value={newProject.scoring || 'Moyen'} onChange={(e) => setNewProject({ ...newProject, scoring: e.target.value })} options={[{ value: 'Hot 🔥', label: 'Hot 🔥' }, { value: 'Moyen', label: 'Moyen' }, { value: 'Faible', label: 'Faible' }]} />
+          <div className="grid grid-cols-2 gap-4">
+            <Select label="Statut" value={newProject.status || ''} onChange={(e) => setNewProject({ ...newProject, status: e.target.value })} options={[{ value: 'planification', label: 'Planification' }, { value: 'en_cours', label: 'En cours' }, { value: 'en_attente', label: 'En attente' }, { value: 'termine', label: 'Terminé' }]} />
+            <Select label="Priorité" value={newProject.priority || ''} onChange={(e) => setNewProject({ ...newProject, priority: e.target.value })} options={[{ value: 'basse', label: 'Basse' }, { value: 'moyenne', label: 'Moyenne' }, { value: 'haute', label: 'Haute' }, { value: 'urgente', label: 'Urgente' }]} />
           </div>
+          <Select label="Scoring" value={newProject.scoring || 'Moyen'} onChange={(e) => setNewProject({ ...newProject, scoring: e.target.value })} options={[{ value: 'Haute', label: 'Haute' }, { value: 'Moyen', label: 'Moyen' }, { value: 'Faible', label: 'Faible' }]} />
 
           <div className="grid grid-cols-2 gap-4">
             <Input label="Date de début" type="date" value={newProject.startDate || ''} onChange={(e) => setNewProject({ ...newProject, startDate: e.target.value })} />
