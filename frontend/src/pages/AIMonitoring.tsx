@@ -1,7 +1,8 @@
-import React, { useMemo, useState } from 'react';
+﻿import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Activity, AlertTriangle, CheckCircle, Pencil, Plus, Settings, Trash2, XCircle } from 'lucide-react';
+import { Activity, AlertTriangle, Bot, CheckCircle, Pencil, Settings, Trash2, XCircle } from 'lucide-react';
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { Badge } from '../components/ui/Badge';
@@ -10,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/Card'
 import { Input } from '../components/ui/Input';
 import { Modal } from '../components/ui/Modal';
 import { Select } from '../components/ui/Select';
-import { aiMonitoringAPI, servicesAPI, UIMonitoring } from '../services/api';
+import { aiMonitoringAPI, servicesAPI, UIAIAgentAlert, UIMonitoring } from '../services/api';
 
 const defaultForm: Partial<UIMonitoring> = {
   serviceID: 0,
@@ -46,19 +47,44 @@ const statusLabel = (status?: string) => {
   return 'Inconnu';
 };
 
+const severityLabel = (priority?: string) => ((priority || '').toLowerCase() === 'elevee' ? 'Critique' : 'Avertissement');
+
 export const AIMonitoring: React.FC = () => {
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editing, setEditing] = useState<UIMonitoring | null>(null);
   const [form, setForm] = useState<Partial<UIMonitoring>>(defaultForm);
+  const [tab, setTab] = useState<'active' | 'history'>('active');
+  const [severityFilter, setSeverityFilter] = useState<'all' | 'warning' | 'critical'>('all');
+  const [dateFilter, setDateFilter] = useState('');
 
   const { data: monitoring = [] } = useQuery({ queryKey: ['ai-monitoring'], queryFn: aiMonitoringAPI.getAll });
   const { data: services = [] } = useQuery({ queryKey: ['services'], queryFn: servicesAPI.getAll });
+  const { data: agentActivity } = useQuery({ queryKey: ['ai-agent-activity'], queryFn: aiMonitoringAPI.getAgentActivity, refetchInterval: 15000 });
+  const { data: historyData } = useQuery({ queryKey: ['ai-agent-history'], queryFn: aiMonitoringAPI.getAgentHistory, refetchInterval: 20000 });
+  const { data: diagnostics } = useQuery({ queryKey: ['ai-monitoring-diagnostics'], queryFn: aiMonitoringAPI.getDiagnostics, refetchInterval: 15000 });
+
+  const runAgentMutation = useMutation({
+    mutationFn: aiMonitoringAPI.runAgent,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['ai-monitoring'] });
+      qc.invalidateQueries({ queryKey: ['services'] });
+      qc.invalidateQueries({ queryKey: ['ai-agent-activity'] });
+      qc.invalidateQueries({ queryKey: ['ai-agent-activity-topbar'] });
+      qc.invalidateQueries({ queryKey: ['ai-agent-history'] });
+      qc.invalidateQueries({ queryKey: ['ai-monitoring-diagnostics'] });
+      qc.invalidateQueries({ queryKey: ['rappels'] });
+      toast.success('Agent exécuté avec succès');
+    },
+    onError: () => toast.error("Exécution de l'agent impossible."),
+  });
 
   const createMutation = useMutation({
     mutationFn: aiMonitoringAPI.create,
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['ai-monitoring'] });
+      qc.invalidateQueries({ queryKey: ['ai-monitoring-diagnostics'] });
       toast.success('Monitoring créé');
       setForm(defaultForm);
       setIsModalOpen(false);
@@ -70,6 +96,7 @@ export const AIMonitoring: React.FC = () => {
     mutationFn: ({ id, payload }: { id: number; payload: Partial<UIMonitoring> }) => aiMonitoringAPI.update(id, payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['ai-monitoring'] });
+      qc.invalidateQueries({ queryKey: ['ai-monitoring-diagnostics'] });
       toast.success('Monitoring mis à jour');
       setEditing(null);
       setForm(defaultForm);
@@ -82,18 +109,58 @@ export const AIMonitoring: React.FC = () => {
     mutationFn: (id: number) => aiMonitoringAPI.delete(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['ai-monitoring'] });
+      qc.invalidateQueries({ queryKey: ['ai-monitoring-diagnostics'] });
       toast.success('Monitoring supprimé');
     },
   });
 
-  const stats = useMemo(() => {
-    const healthy = monitoring.filter((m) => toStatusKey(m.status) === 'healthy').length;
-    const warning = monitoring.filter((m) => toStatusKey(m.status) === 'warning').length;
-    const critical = monitoring.filter((m) => toStatusKey(m.status) === 'critical').length;
-    return { healthy, warning, critical };
-  }, [monitoring]);
+  const resolveAlertMutation = useMutation({
+    mutationFn: (id: number) => aiMonitoringAPI.resolveAlert(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['ai-agent-activity'] });
+      qc.invalidateQueries({ queryKey: ['ai-agent-activity-topbar'] });
+      qc.invalidateQueries({ queryKey: ['ai-agent-history'] });
+      qc.invalidateQueries({ queryKey: ['rappels'] });
+      toast.success('Alerte résolue avec succès');
+    },
+    onError: () => toast.error('Résolution impossible.'),
+  });
 
-  const uptimeData = useMemo(() => {
+  const activeAlerts = useMemo(() => agentActivity?.alerts || [], [agentActivity]);
+  const resolvedAlerts = useMemo(() => historyData?.history || [], [historyData]);
+
+  const filteredActiveAlerts = useMemo(() => {
+    return activeAlerts.filter((a: UIAIAgentAlert) => {
+      const sev = (a.priority || '').toLowerCase() === 'elevee' ? 'critical' : 'warning';
+      if (severityFilter !== 'all' && sev !== severityFilter) return false;
+      if (dateFilter) {
+        const d = new Date(a.createdAt).toISOString().slice(0, 10);
+        if (d !== dateFilter) return false;
+      }
+      return true;
+    });
+  }, [activeAlerts, severityFilter, dateFilter]);
+
+  const filteredHistory = useMemo(() => {
+    return resolvedAlerts.filter((a: UIAIAgentAlert) => {
+      const sev = (a.priority || '').toLowerCase() === 'elevee' ? 'critical' : 'warning';
+      if (severityFilter !== 'all' && sev !== severityFilter) return false;
+      if (dateFilter && a.resolvedAt) {
+        const d = new Date(a.resolvedAt).toISOString().slice(0, 10);
+        if (d !== dateFilter) return false;
+      }
+      return true;
+    });
+  }, [resolvedAlerts, severityFilter, dateFilter]);
+
+  const stats = useMemo(() => {
+    const warning = activeAlerts.filter((a: UIAIAgentAlert) => (a.priority || '').toLowerCase() !== 'elevee').length;
+    const critical = activeAlerts.filter((a: UIAIAgentAlert) => (a.priority || '').toLowerCase() === 'elevee').length;
+    const healthy = monitoring.filter((m) => toStatusKey(m.status) === 'healthy').length;
+    return { healthy, warning, critical };
+  }, [activeAlerts, monitoring]);
+
+  const checksData = useMemo(() => {
     return [...monitoring]
       .sort((a, b) => new Date(a.lastCheck || 0).getTime() - new Date(b.lastCheck || 0).getTime())
       .map((m) => ({
@@ -102,11 +169,19 @@ export const AIMonitoring: React.FC = () => {
       }));
   }, [monitoring]);
 
+  const agentActivityData = useMemo(() => {
+    return [...(agentActivity?.actions || [])]
+      .sort((a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime())
+      .slice(-30)
+      .map((a: any) => ({
+        time: a.createdAt ? new Date(a.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-',
+        value: 1,
+      }));
+  }, [agentActivity]);
+
   const usedServiceIds = useMemo(() => new Set(monitoring.map((m) => Number(m.serviceID))), [monitoring]);
-  const availableServices = useMemo(
-    () => services.filter((s) => !usedServiceIds.has(Number(s.id))),
-    [services, usedServiceIds]
-  );
+  const monitoredServices = useMemo(() => [...monitoring], [monitoring]);
+  const availableServices = useMemo(() => services.filter((s) => !usedServiceIds.has(Number(s.id))), [services, usedServiceIds]);
 
   const getStatusIcon = (status: string) => {
     const key = toStatusKey(status);
@@ -145,6 +220,18 @@ export const AIMonitoring: React.FC = () => {
     setIsModalOpen(true);
   };
 
+  const openPrimaryMonitoringAction = () => {
+    if (availableServices.length > 0) {
+      openCreate();
+      return;
+    }
+    if (monitoredServices.length > 0) {
+      openEdit(monitoredServices[0]);
+      return;
+    }
+    toast.info('Aucun monitoring disponible pour le moment.');
+  };
+
   const submit = () => {
     if (!form.serviceID) {
       toast.error('Service obligatoire');
@@ -165,65 +252,111 @@ export const AIMonitoring: React.FC = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">AI Monitoring</h1>
-          <p className="text-muted-foreground">Surveiller l'état de santé et les performances des services.</p>
+          <h1 className="text-3xl font-bold">Monitoring IA</h1>
+          <p className="text-muted-foreground">Surveillez l'état de santé des services et le cycle de vie des alertes IA.</p>
         </div>
-        <Button onClick={openCreate} disabled={!availableServices.length}>
-          <Settings className="w-4 h-4 mr-2" />
-          {availableServices.length ? 'Configurer Monitoring' : 'Tous les services sont monitorés'}
+        <Button onClick={openPrimaryMonitoringAction} title={availableServices.length === 0 ? 'Tous les services sont déjà monitorés. Vous pouvez les modifier.' : undefined} variant={availableServices.length > 0 ? 'default' : 'outline'}>
+          {availableServices.length > 0 ? <Settings className="w-4 h-4 mr-2" /> : <Pencil className="w-4 h-4 mr-2" />}
+          {availableServices.length > 0 ? 'Ajouter un monitoring' : 'Gérer Monitoring'}
         </Button>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Services en bon état</p>
-                <p className="text-3xl font-bold mt-2">{stats.healthy}</p>
-              </div>
-              <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                <CheckCircle className="w-6 h-6 text-green-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Avertissement</p>
-                <p className="text-3xl font-bold mt-2">{stats.warning}</p>
-              </div>
-              <div className="w-12 h-12 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center">
-                <AlertTriangle className="w-6 h-6 text-yellow-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Critique</p>
-                <p className="text-3xl font-bold mt-2">{stats.critical}</p>
-              </div>
-              <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center">
-                <XCircle className="w-6 h-6 text-red-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Disponibilité des checks</CardTitle>
+          <CardTitle className="flex items-center gap-2"><Bot className="w-5 h-5" /> Alertes IA</CardTitle>
         </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap items-center gap-2 justify-between">
+            <div className="flex gap-2">
+              <Button variant={tab === 'active' ? 'default' : 'outline'} onClick={() => setTab('active')}>Alertes actives</Button>
+              <Button variant={tab === 'history' ? 'default' : 'outline'} onClick={() => setTab('history')}>Historique</Button>
+            </div>
+            <Button size="sm" onClick={() => runAgentMutation.mutate()} disabled={runAgentMutation.isPending}>Lancer un check agent</Button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <Select
+              label="Filtre sévérité"
+              value={severityFilter}
+              onChange={(e) => setSeverityFilter(e.target.value as 'all' | 'warning' | 'critical')}
+              options={[
+                { value: 'all', label: 'Toutes' },
+                { value: 'warning', label: 'Avertissement' },
+                { value: 'critical', label: 'Critique' },
+              ]}
+            />
+            <Input label="Filtre date" type="date" value={dateFilter} onChange={(e) => setDateFilter(e.target.value)} />
+            <div className="flex items-end">
+              <Button variant="outline" onClick={() => { setSeverityFilter('all'); setDateFilter(''); }}>Réinitialiser filtres</Button>
+            </div>
+          </div>
+
+          {tab === 'active' ? (
+            <div className="space-y-2 max-h-72 overflow-auto">
+              {filteredActiveAlerts.map((a: UIAIAgentAlert) => (
+                <div key={a.id} className="rounded-lg border p-3">
+                  <p className="text-sm font-semibold">{a.title}</p>
+                  <p className="text-xs text-muted-foreground">{a.message}</p>
+                  <p className="text-xs text-muted-foreground mt-1">Créée le: {new Date(a.createdAt).toLocaleString()}</p>
+                  <div className="mt-2 flex items-center justify-between">
+                    <Badge variant={(a.priority || '').toLowerCase() === 'elevee' ? 'danger' : 'warning'}>{severityLabel(a.priority)}</Badge>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          if (a.projectId) {
+                            navigate(`/projects/${a.projectId}`);
+                            return;
+                          }
+                          toast.info(a.message || 'Aucun détail disponible');
+                        }}
+                      >
+                        Voir détails
+                      </Button>
+                      <Button size="sm" onClick={() => resolveAlertMutation.mutate(a.id)} disabled={resolveAlertMutation.isPending}>Résoudre</Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {!filteredActiveAlerts.length ? <p className="text-sm text-muted-foreground">Aucune alerte active.</p> : null}
+            </div>
+          ) : (
+            <div className="space-y-2 max-h-72 overflow-auto">
+              {filteredHistory.map((a: UIAIAgentAlert) => (
+                <div key={a.id} className="rounded-lg border p-3 bg-muted/20">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-semibold">{a.title}</p>
+                    <Badge variant="success">Résolu</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{a.message}</p>
+                  <div className="mt-1 text-xs text-muted-foreground">
+                    <span>Sévérité: {severityLabel(a.priority)}</span>
+                    <span className="mx-2">•</span>
+                    <span>Résolu le: {a.resolvedAt ? new Date(a.resolvedAt).toLocaleString() : '-'}</span>
+                    <span className="mx-2">•</span>
+                    <span>{a.resolvedBy || 'Résolu par AI agent / utilisateur'}</span>
+                  </div>
+                </div>
+              ))}
+              {!filteredHistory.length ? <p className="text-sm text-muted-foreground">Aucun élément dans l'historique.</p> : null}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card><CardContent className="pt-6"><div className="flex items-center justify-between"><div><p className="text-sm text-muted-foreground">Services en bon état</p><p className="text-3xl font-bold mt-2">{stats.healthy}</p></div><div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center"><CheckCircle className="w-6 h-6 text-green-600" /></div></div></CardContent></Card>
+        <Card><CardContent className="pt-6"><div className="flex items-center justify-between"><div><p className="text-sm text-muted-foreground">Avertissement</p><p className="text-3xl font-bold mt-2">{stats.warning}</p></div><div className="w-12 h-12 rounded-full bg-yellow-100 dark:bg-yellow-900/30 flex items-center justify-center"><AlertTriangle className="w-6 h-6 text-yellow-600" /></div></div></CardContent></Card>
+        <Card><CardContent className="pt-6"><div className="flex items-center justify-between"><div><p className="text-sm text-muted-foreground">Critique</p><p className="text-3xl font-bold mt-2">{stats.critical}</p></div><div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center"><XCircle className="w-6 h-6 text-red-600" /></div></div></CardContent></Card>
+      </div>
+
+      <Card>
+        <CardHeader><CardTitle>Disponibilité des checks</CardTitle></CardHeader>
         <CardContent>
-          {uptimeData.length ? (
+          {checksData.length ? (
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={uptimeData}>
+              <LineChart data={checksData}>
                 <XAxis dataKey="time" />
                 <YAxis domain={[0, 100]} />
                 <Tooltip />
@@ -231,7 +364,30 @@ export const AIMonitoring: React.FC = () => {
               </LineChart>
             </ResponsiveContainer>
           ) : (
-            <p className="text-sm text-muted-foreground">Aucune donnée de monitoring disponible.</p>
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">Aucune donnée réelle de monitoring disponible. Ajoutez/configurez un service monitoré pour alimenter ce graphe.</p>
+              <p className="text-xs text-muted-foreground">
+                Diagnostic: services={diagnostics?.totalServices ?? 0}, URLs configurées={diagnostics?.servicesWithUrl ?? 0}, checks enregistrés={diagnostics?.monitoringRows ?? 0}, services sans monitoring={diagnostics?.servicesWithoutMonitoring ?? 0}
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader><CardTitle>Activité Agent IA</CardTitle></CardHeader>
+        <CardContent>
+          {agentActivityData.length ? (
+            <ResponsiveContainer width="100%" height={260}>
+              <LineChart data={agentActivityData}>
+                <XAxis dataKey="time" />
+                <YAxis domain={[0, 1]} ticks={[0, 1]} />
+                <Tooltip />
+                <Line type="stepAfter" dataKey="value" stroke="#0ea5e9" strokeWidth={2} dot />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <p className="text-sm text-muted-foreground">Aucun événement agent disponible pour le moment.</p>
           )}
         </CardContent>
       </Card>
@@ -241,43 +397,20 @@ export const AIMonitoring: React.FC = () => {
           <Card key={service.monitoringID}>
             <CardContent className="pt-6">
               <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center space-x-3">
-                  {getStatusIcon(service.status)}
-                  <div>
-                    <h3 className="font-semibold text-lg">{service.serviceName}</h3>
-                    <p className="text-sm text-muted-foreground">{service.endpoint || '-'}</p>
-                  </div>
-                </div>
+                <div className="flex items-center space-x-3">{getStatusIcon(service.status)}<div><h3 className="font-semibold text-lg">{service.serviceName}</h3><p className="text-sm text-muted-foreground">{service.endpoint || '-'}</p></div></div>
                 <Badge variant={getBadgeVariant(service.status)}>{statusLabel(service.status)}</Badge>
               </div>
-
               <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <p className="text-xs text-muted-foreground">Disponibilité</p>
-                  <p className="font-medium">{Number(service.uptime).toFixed(2)}%</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Temps réponse</p>
-                  <p className="font-medium">{Number(service.responseTime || 0).toFixed(0)}ms</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Dernière vérif</p>
-                  <p className="font-medium text-xs">{service.lastCheck ? new Date(service.lastCheck).toLocaleString() : '-'}</p>
-                </div>
+                <div><p className="text-xs text-muted-foreground">Disponibilité</p><p className="font-medium">{Number(service.uptime).toFixed(2)}%</p></div>
+                <div><p className="text-xs text-muted-foreground">Temps réponse</p><p className="font-medium">{Number(service.responseTime || 0).toFixed(0)}ms</p></div>
+                <div><p className="text-xs text-muted-foreground">Dernière vérif</p><p className="font-medium text-xs">{service.lastCheck ? new Date(service.lastCheck).toLocaleString() : '-'}</p></div>
               </div>
-
               <div className="mt-4 pt-4 border-t border-border space-y-2">
                 {service.alerts ? <p className="text-xs text-red-600">Alertes: {service.alerts}</p> : null}
                 {service.checks ? <p className="text-xs text-muted-foreground">Checks: {service.checks}</p> : null}
                 <div className="flex gap-2">
-                  <Button size="sm" variant="outline" className="w-full" onClick={() => openEdit(service)}>
-                    <Pencil className="w-4 h-4 mr-2" />
-                    Modifier
-                  </Button>
-                  <Button size="sm" variant="outline" className="w-full" onClick={() => deleteMutation.mutate(service.monitoringID)}>
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Supprimer
-                  </Button>
+                  <Button size="sm" variant="outline" className="w-full" onClick={() => openEdit(service)}><Pencil className="w-4 h-4 mr-2" />Modifier</Button>
+                  <Button size="sm" variant="outline" className="w-full" onClick={() => deleteMutation.mutate(service.monitoringID)}><Trash2 className="w-4 h-4 mr-2" />Supprimer</Button>
                 </div>
               </div>
             </CardContent>
@@ -286,83 +419,18 @@ export const AIMonitoring: React.FC = () => {
       </div>
 
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editing ? 'Modifier Monitoring' : 'Nouveau Monitoring'}>
-        <form
-          className="space-y-4"
-          onSubmit={(e) => {
-            e.preventDefault();
-            submit();
-          }}
-        >
-          <Select
-            label="Service"
-            value={String(form.serviceID || 0)}
-            onChange={(e) => setForm({ ...form, serviceID: Number(e.target.value) })}
-            disabled={Boolean(editing)}
-            options={[
-              { value: '0', label: 'Sélectionner un service' },
-              ...(editing
-                ? services.filter((s) => s.id === Number(form.serviceID)).map((s) => ({ value: String(s.id), label: s.nom }))
-                : availableServices.map((s) => ({ value: String(s.id), label: s.nom }))),
-            ]}
-          />
-          <Select
-            label="Statut"
-            value={String(form.status || 'healthy')}
-            onChange={(e) => setForm({ ...form, status: e.target.value })}
-            options={[
-              { value: 'healthy', label: 'En bon état' },
-              { value: 'warning', label: 'Avertissement' },
-              { value: 'critical', label: 'Critique' },
-              { value: 'unknown', label: 'Inconnu' },
-            ]}
-          />
-          <Input
-            label="Disponibilité (%)"
-            type="number"
-            min={0}
-            max={100}
-            step={0.01}
-            value={String(form.uptime ?? 0)}
-            onChange={(e) => setForm({ ...form, uptime: Number(e.target.value) })}
-          />
-          <Input
-            label="Temps de réponse (ms)"
-            type="number"
-            min={0}
-            step={1}
-            value={String(form.responseTime ?? 0)}
-            onChange={(e) => setForm({ ...form, responseTime: Number(e.target.value) })}
-          />
-          <Input
-            label="Dernière vérification"
-            type="datetime-local"
-            value={form.lastCheck || ''}
-            onChange={(e) => setForm({ ...form, lastCheck: e.target.value })}
-          />
-          <div>
-            <label className="block text-sm font-medium mb-2">Checks</label>
-            <textarea
-              className="w-full rounded-lg border border-input bg-input-background px-3 py-2 text-sm"
-              rows={3}
-              value={form.checks || ''}
-              onChange={(e) => setForm({ ...form, checks: e.target.value })}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">Alertes</label>
-            <textarea
-              className="w-full rounded-lg border border-input bg-input-background px-3 py-2 text-sm"
-              rows={3}
-              value={form.alerts || ''}
-              onChange={(e) => setForm({ ...form, alerts: e.target.value })}
-            />
-          </div>
-          <div className="flex justify-end gap-3 pt-2">
-            <Button variant="outline" type="button" onClick={() => setIsModalOpen(false)}>Annuler</Button>
-            <Button type="submit">{editing ? 'Sauvegarder' : 'Créer'}</Button>
-          </div>
+        <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); submit(); }}>
+          <Select label="Service" value={String(form.serviceID || 0)} onChange={(e) => setForm({ ...form, serviceID: Number(e.target.value) })} disabled={Boolean(editing)} options={[{ value: '0', label: 'Sélectionner un service' }, ...(editing ? services.filter((s) => s.id === Number(form.serviceID)).map((s) => ({ value: String(s.id), label: s.nom })) : availableServices.map((s) => ({ value: String(s.id), label: s.nom })))]} />
+          <Select label="Statut" value={String(form.status || 'healthy')} onChange={(e) => setForm({ ...form, status: e.target.value })} options={[{ value: 'healthy', label: 'En bon état' }, { value: 'warning', label: 'Avertissement' }, { value: 'critical', label: 'Critique' }, { value: 'unknown', label: 'Inconnu' }]} />
+          <Input label="Disponibilité (%)" type="number" min={0} max={100} step={0.01} value={String(form.uptime ?? 0)} onChange={(e) => setForm({ ...form, uptime: Number(e.target.value) })} />
+          <Input label="Temps de réponse (ms)" type="number" min={0} step={1} value={String(form.responseTime ?? 0)} onChange={(e) => setForm({ ...form, responseTime: Number(e.target.value) })} />
+          <Input label="Dernière vérification" type="datetime-local" value={form.lastCheck || ''} onChange={(e) => setForm({ ...form, lastCheck: e.target.value })} />
+          <div><label className="block text-sm font-medium mb-2">Checks</label><textarea className="w-full rounded-lg border border-input bg-input-background px-3 py-2 text-sm" rows={3} value={form.checks || ''} onChange={(e) => setForm({ ...form, checks: e.target.value })} /></div>
+          <div><label className="block text-sm font-medium mb-2">Alertes</label><textarea className="w-full rounded-lg border border-input bg-input-background px-3 py-2 text-sm" rows={3} value={form.alerts || ''} onChange={(e) => setForm({ ...form, alerts: e.target.value })} /></div>
+          <div className="flex justify-end gap-3 pt-2"><Button variant="outline" type="button" onClick={() => setIsModalOpen(false)}>Annuler</Button><Button type="submit">{editing ? 'Sauvegarder' : 'Créer'}</Button></div>
         </form>
       </Modal>
     </div>
   );
 };
+

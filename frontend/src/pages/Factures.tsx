@@ -1,12 +1,12 @@
 import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Download, Plus, Calendar, Search, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, DollarSign, ChevronUp, Eye, Pencil, Trash2 } from 'lucide-react';
+import { Download, Plus, Calendar, Search, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, DollarSign, ChevronUp, Eye, Pencil, Trash2, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Modal } from '../components/ui/Modal';
 import { PDFPreview } from '../components/PDFPreview';
 import { FacturePrint } from '../components/FacturePrint';
-import { clientsAPI, facturesAPI, UIFacture } from '../services/api';
+import { clientsAPI, devisAPI, facturesAPI, UIDevis, UIFacture } from '../services/api';
 import { cn } from '../utils/cn';
 
 const articleVide = { description: '', quantite: 1, prixUnitaire: 0 };
@@ -115,6 +115,7 @@ export const Factures: React.FC = () => {
     articles: [articleVide],
     tauxTaxe: 19,
     fiscalStamp: 1.0,
+    devisId: '' as string,
   });
 
   const { data: factures = [] } = useQuery({
@@ -127,16 +128,70 @@ export const Factures: React.FC = () => {
     queryFn: () => clientsAPI.getAll(),
   });
 
+  const { data: listDevis = [] } = useQuery({
+    queryKey: ['devis'],
+    queryFn: devisAPI.getAll,
+  });
+
+  // Devis: if a client is selected, filter by client. Otherwise, show all non-converted devis.
+  const devisClient = useMemo(() => {
+    return listDevis.filter((d) => {
+      const isNotConverted = !['converti'].includes(d.status?.toLowerCase());
+      if (nouvelleFacture.clientId) {
+        return d.clientId === nouvelleFacture.clientId && isNotConverted;
+      }
+      return isNotConverted;
+    });
+  }, [listDevis, nouvelleFacture.clientId]);
+
   const reinitialiserFormulaire = () => {
-    setNouvelleFacture({ clientId: '', echeance: '', articles: [articleVide], tauxTaxe: 19, fiscalStamp: 1.0 });
+    setNouvelleFacture({ clientId: '', echeance: '', articles: [articleVide], tauxTaxe: 19, fiscalStamp: 1.0, devisId: '' });
     setModeEdition(false);
     setFactureEditionId(null);
   };
 
+  const appliquerDevis = (devisId: string) => {
+    const devis = listDevis.find((d) => String(d.numericId) === devisId);
+    if (!devis) {
+      setNouvelleFacture((prev) => ({
+        ...prev,
+        devisId: '',
+        articles: [articleVide],
+        tauxTaxe: 19,
+        fiscalStamp: 1.0,
+        echeance: '',
+      }));
+      return;
+    }
+    setNouvelleFacture((prev) => ({
+      ...prev,
+      devisId,
+      clientId: devis.clientId || prev.clientId, // Auto-select client!
+      echeance: devis.validUntil || prev.echeance,
+      tauxTaxe: devis.taxRate || 19,
+      fiscalStamp: devis.fiscalStamp || 1.0,
+      articles: devis.items.map((it) => ({
+        description: it.description,
+        quantite: it.quantity,
+        prixUnitaire: it.unitPrice,
+      })),
+    }));
+  };
+
   const mutationCreer = useMutation({
-    mutationFn: facturesAPI.create,
+    mutationFn: async (payload: Partial<UIFacture>) => {
+      const fact = await facturesAPI.create(payload);
+      if (payload.devisId) {
+        const devis = listDevis.find((d) => String(d.numericId) === payload.devisId);
+        if (devis) {
+          await devisAPI.update(String(devis.numericId), { ...devis, status: 'converti' });
+        }
+      }
+      return fact;
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['factures'] });
+      qc.invalidateQueries({ queryKey: ['devis'] }); // Refresh devis list as well
       toast.success('Facture créée avec succès');
       setModalOuvert(false);
       reinitialiserFormulaire();
@@ -231,6 +286,7 @@ export const Factures: React.FC = () => {
     setFactureEditionId(facture.numericId);
     setNouvelleFacture({
       clientId: facture.clientId,
+      devisId: facture.devisId || '',
       echeance: facture.dueAt || '',
       tauxTaxe: facture.taxRate || 19,
       fiscalStamp: facture.fiscalStamp || 1.0,
@@ -255,6 +311,7 @@ export const Factures: React.FC = () => {
 
     const payload = {
       clientId: client.id,
+      devisId: nouvelleFacture.devisId,
       status: 'en_attente',
       issuedAt: new Date().toISOString().slice(0, 10),
       dueAt: nouvelleFacture.echeance,
@@ -464,12 +521,38 @@ export const Factures: React.FC = () => {
             <select
               className="w-full border border-gray-200 rounded-lg p-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
               value={nouvelleFacture.clientId}
-              onChange={(e) => setNouvelleFacture({ ...nouvelleFacture, clientId: e.target.value })}
+              onChange={(e) => setNouvelleFacture({ ...nouvelleFacture, clientId: e.target.value, devisId: '' })}
               required
             >
               <option value="">Sélectionner un client</option>
               {clients.map((c) => <option key={c.id} value={c.id}>{c.formattedId} - {c.name}</option>)}
             </select>
+          </div>
+
+          {/* Devis selector */}
+          <div>
+            <label className="block text-sm font-medium mb-1 text-gray-700">Importer depuis un devis</label>
+            <div className="relative">
+              <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <select
+                className="w-full pl-9 pr-3 border border-gray-200 rounded-lg p-2 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                value={nouvelleFacture.devisId}
+                onChange={(e) => appliquerDevis(e.target.value)}
+              >
+                <option value="">Sélectionner un devis (optionnel)</option>
+                {devisClient.map((d) => (
+                  <option key={d.numericId} value={String(d.numericId)}>
+                    {d.id} — {d.clientName} — {d.title} — {d.amount?.toLocaleString('fr-FR')} {d.devise || 'DT'}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {nouvelleFacture.clientId && devisClient.length === 0 && (
+              <p className="text-xs text-gray-400 mt-1">Aucun devis disponible pour ce client.</p>
+            )}
+            {nouvelleFacture.devisId && (
+              <p className="text-xs text-green-600 mt-1 font-medium">✓ Devis sélectionné ! Le client et les données ont été pré-remplis.</p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">

@@ -32,7 +32,7 @@ def get_dashboard_overview(db: Session = Depends(get_db)):
 
     total_clients = db.query(func.count(Client.id)).scalar() or 0
     active_projects = db.query(func.count(Projet.id)).filter(Projet.status.in_(["en_cours", "En cours", "In Progress"])).scalar() or 0
-    pending_invoices = db.query(func.count(Facture.factureID)).filter(Facture.status.in_(["en_attente", "pending", "Impayée"])).scalar() or 0
+    pending_invoices = db.query(func.count(Facture.factureID)).filter(Facture.status.in_(["en_attente", "pending", "Impayee"])).scalar() or 0
     monthly_revenue = db.query(func.coalesce(func.sum(Facture.amountTTC), 0)).filter(extract("month", Facture.dateFacture) == now.month).scalar() or 0
 
     revenues = (
@@ -87,12 +87,32 @@ def get_dashboard_overview(db: Session = Depends(get_db)):
 
     monitoring_rows = db.query(AIMonitoring.status, func.count(AIMonitoring.monitoringID)).group_by(AIMonitoring.status).all()
     monitoring_counts = {status.lower(): count for status, count in monitoring_rows if status}
-    monitoring_summary = MonitoringSummary(
-        totalServices=sum(monitoring_counts.values()),
-        healthy=monitoring_counts.get("healthy", 0) + monitoring_counts.get("en bon état", 0),
-        warning=monitoring_counts.get("warning", 0) + monitoring_counts.get("avertissement", 0),
-        critical=monitoring_counts.get("critical", 0),
-    )
+    service_total = sum(monitoring_counts.values())
+    service_healthy = monitoring_counts.get("healthy", 0) + monitoring_counts.get("en bon etat", 0)
+    service_warning = monitoring_counts.get("warning", 0) + monitoring_counts.get("avertissement", 0)
+    service_critical = monitoring_counts.get("critical", 0)
+
+    if service_total == 0:
+        agent_alerts = (
+            db.query(Rappel)
+            .filter(Rappel.systemKey.like("ai-agent:%"), Rappel.statut != "termine")
+            .all()
+        )
+        agent_warning = sum(1 for a in agent_alerts if (a.priorite or "").lower() != "elevee")
+        agent_critical = sum(1 for a in agent_alerts if (a.priorite or "").lower() == "elevee")
+        monitoring_summary = MonitoringSummary(
+            totalServices=len(agent_alerts),
+            healthy=max(0, len(agent_alerts) - agent_warning - agent_critical),
+            warning=agent_warning,
+            critical=agent_critical,
+        )
+    else:
+        monitoring_summary = MonitoringSummary(
+            totalServices=service_total,
+            healthy=service_healthy,
+            warning=service_warning,
+            critical=service_critical,
+        )
 
     return DashboardOverview(
         kpis=DashboardKPI(

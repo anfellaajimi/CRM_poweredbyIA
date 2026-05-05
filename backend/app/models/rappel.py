@@ -24,6 +24,7 @@ class Rappel(Base):
     systemKey: Mapped[str | None] = mapped_column(String(255), unique=True, index=True)
     emailSentAt: Mapped[datetime | None] = mapped_column(DateTime)
     emailLastError: Mapped[str | None] = mapped_column(Text)
+    resolvedAt: Mapped[datetime | None] = mapped_column(DateTime, index=True)
     createdAt: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
 
     client = relationship("Client", back_populates="rappels")

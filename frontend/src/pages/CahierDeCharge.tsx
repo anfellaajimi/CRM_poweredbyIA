@@ -49,7 +49,7 @@ export const CahierDeCharge: React.FC = () => {
       setModalCreerOuvert(false);
       setBrouillon(cahierVide);
     },
-    onError: (err: any) => toast.error(`Erreur: ${err?.response?.data?.message ?? err?.message}`),
+    onError: (err: any) => toast.error(`Erreur: ${err?.response?.data?.detail ?? err?.response?.data?.message ?? err?.message}`),
   });
 
   const mutationModifier = useMutation({
@@ -60,7 +60,7 @@ export const CahierDeCharge: React.FC = () => {
       toast.success('Cahier modifié avec succès');
       setModalModifierOuvert(false);
     },
-    onError: (err: any) => toast.error(`Erreur: ${err?.response?.data?.message ?? err?.message}`),
+    onError: (err: any) => toast.error(`Erreur: ${err?.response?.data?.detail ?? err?.response?.data?.message ?? err?.message}`),
   });
 
   const mutationSupprimer = useMutation({
@@ -69,7 +69,7 @@ export const CahierDeCharge: React.FC = () => {
       qc.invalidateQueries({ queryKey: ['cahiers'] });
       toast.success('Cahier supprimé');
     },
-    onError: (err: any) => toast.error(`Erreur: ${err?.response?.data?.message ?? err?.message}`),
+    onError: (err: any) => toast.error(`Erreur: ${err?.response?.data?.detail ?? err?.response?.data?.message ?? err?.message}`),
   });
 
   const confirmerSuppression = (cahier: UICahier) => {

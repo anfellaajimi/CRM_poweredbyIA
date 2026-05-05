@@ -1,10 +1,11 @@
 # Triggering reload
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.sessions import SessionMiddleware
 from app.api.v1.api import api_router
 from app.core.config import settings
 from app.db import base  # noqa: F401
@@ -19,6 +20,8 @@ except Exception:  # pragma: no cover
     CronTrigger = None  # type: ignore
 
 from app.services.reminders import generate_project_rappels, send_due_reminder_emails
+from app.services.ai_agent import run_ai_agent
+from app.services.service_monitoring import run_service_monitoring_checks
 
 openapi_tags = [
     {"name": "Health", "description": "Health and readiness endpoints."},
@@ -39,6 +42,7 @@ openapi_tags = [
 ]
 
 app = FastAPI(title=settings.APP_NAME, openapi_tags=openapi_tags)
+app.add_middleware(SessionMiddleware, secret_key=settings.SECRET_KEY)
 UPLOADS_ROOT = Path(__file__).resolve().parents[1] / "uploads"
 UPLOADS_ROOT.mkdir(parents=True, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=str(UPLOADS_ROOT)), name="uploads")
@@ -71,7 +75,13 @@ def startup_create_tables() -> None:
         _scheduler_started = True
         return
 
-    scheduler = BackgroundScheduler()
+    scheduler = BackgroundScheduler(
+        job_defaults={
+            "coalesce": True,
+            "max_instances": 1,
+            "misfire_grace_time": 3600,
+        }
+    )
 
     def daily_job() -> None:
         db = SessionLocal()
@@ -82,14 +92,44 @@ def startup_create_tables() -> None:
         finally:
             db.close()
 
+    def ai_agent_job() -> None:
+        db = SessionLocal()
+        try:
+            now = datetime.utcnow()
+            run_service_monitoring_checks(db, now=now)
+            run_ai_agent(db, now=now)
+        finally:
+            db.close()
+
     # Run every day at 08:00 server time.
-    scheduler.add_job(daily_job, CronTrigger(hour=8, minute=0))
-    # Also run once shortly after startup to populate reminders quickly.
-    scheduler.add_job(daily_job, "date", run_date=datetime.utcnow() + timedelta(seconds=10))
+    scheduler.add_job(
+        daily_job,
+        CronTrigger(hour=8, minute=0),
+        id="daily_job",
+        replace_existing=True,
+    )
+    minute_interval = max(1, int(settings.AI_AGENT_CRON_MINUTE_INTERVAL or 15))
+    scheduler.add_job(
+        ai_agent_job,
+        CronTrigger(minute=f"*/{minute_interval}"),
+        id="ai_agent_job",
+        replace_existing=True,
+    )
 
     scheduler.start()
     _scheduler = scheduler
     _scheduler_started = True
+
+    # Run once at startup directly (avoids one-shot date-job misfire/remove races on reload).
+    db = SessionLocal()
+    try:
+        now = datetime.utcnow()
+        generate_project_rappels(db, now=now)
+        send_due_reminder_emails(db, now=now)
+        run_service_monitoring_checks(db, now=now)
+        run_ai_agent(db, now=now)
+    finally:
+        db.close()
 
 
 @app.on_event("shutdown")

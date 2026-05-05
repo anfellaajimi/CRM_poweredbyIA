@@ -17,6 +17,7 @@ interface AuthState {
   register: (name: string, email: string, password: string, role: string) => Promise<void>;
   logout: () => void;
   updateUser: (user: User) => void;
+  handleOAuthSuccess: (token: string) => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -78,6 +79,26 @@ export const useAuthStore = create<AuthState>()(
       },
       updateUser: (user: User) => {
         set({ user });
+      },
+      handleOAuthSuccess: async (token: string) => {
+        localStorage.setItem('auth-token', token);
+        const { data: apiUser } = await authAPI.me();
+
+        const roleMap: Record<string, User['role']> = {
+          admin: 'Admin',
+          manager: 'Manager',
+          developpeur: 'Developer',
+          developer: 'Developer',
+        };
+
+        const user: User = {
+          id: String(apiUser.id ?? ''),
+          name: apiUser.name ?? '',
+          email: apiUser.email ?? '',
+          role: roleMap[String(apiUser.role ?? '').toLowerCase()] ?? 'Developer',
+          avatar: apiUser.avatar,
+        };
+        set({ user, isAuthenticated: true });
       }
     }),
     {

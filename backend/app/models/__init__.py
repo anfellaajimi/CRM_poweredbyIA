@@ -1,11 +1,13 @@
 from app.models.activity_event import ActivityEvent
 from app.models.acces import Acces
 from app.models.association import DevisProjet, FactureProjet, ProjetUtilisateur
+from app.models.app_settings import AppSettings
 from app.models.cahier_de_charge import CahierDeCharge
 from app.models.client import Client
 from app.models.contrat import Contrat
 from app.models.devis import Devis
 from app.models.devis_item import DevisItem
+from app.models.declaration_cnss import DeclarationCNSS
 from app.models.facture import Facture
 from app.models.facture_item import FactureItem
 from app.models.monitoring import AIMonitoring
@@ -46,4 +48,5 @@ __all__ = [
     "DevisProjet",
     "FactureProjet",
     "Message",
+    "DeclarationCNSS",
 ]

@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, Uploa
 from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session
 
-from app.api.v1.endpoints.auth import _TOKENS
+from app.api.v1.endpoints.auth import get_current_user
 from app.db.session import get_db
 from app.models.message import Message
 from app.models.utilisateur import Utilisateur
@@ -26,26 +26,13 @@ def _last_message_preview(msg: Message | None) -> str | None:
     return msg.contenu
 
 
-def _get_current_user(
-    authorization: str | None = Header(default=None),
-    db: Session = Depends(get_db),
-) -> Utilisateur:
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing token")
-    token = authorization.split(" ", 1)[1].strip()
-    user_id = _TOKENS.get(token)
-    if not user_id:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
-    user = db.get(Utilisateur, user_id)
-    if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
-    return user
+
 
 
 @router.get("/contacts", response_model=list[ContactRead])
 def get_contacts(
     db: Session = Depends(get_db),
-    current_user: Utilisateur = Depends(_get_current_user),
+    current_user: Utilisateur = Depends(get_current_user),
 ):
     """Return all other utilisateurs with their last message and unread count."""
     others = (
@@ -108,7 +95,7 @@ def get_contacts(
 def get_conversation(
     other_user_id: int,
     db: Session = Depends(get_db),
-    current_user: Utilisateur = Depends(_get_current_user),
+    current_user: Utilisateur = Depends(get_current_user),
 ):
     """Return all messages between current user and another user, ordered by date."""
     messages = (
@@ -142,7 +129,7 @@ def get_conversation(
 def delete_conversation(
     other_user_id: int,
     db: Session = Depends(get_db),
-    current_user: Utilisateur = Depends(_get_current_user),
+    current_user: Utilisateur = Depends(get_current_user),
 ):
     """Delete all messages between current user and another user."""
     deleted = (
@@ -169,7 +156,7 @@ def delete_conversation(
 def send_message(
     payload: MessageCreate,
     db: Session = Depends(get_db),
-    current_user: Utilisateur = Depends(_get_current_user),
+    current_user: Utilisateur = Depends(get_current_user),
 ):
     """Send a message from the current user to another utilisateur."""
     destinataire = db.get(Utilisateur, payload.destinataireID)
@@ -195,7 +182,7 @@ async def send_audio_message(
     file: UploadFile = File(...),
     durationSec: int | None = Form(default=None),
     db: Session = Depends(get_db),
-    current_user: Utilisateur = Depends(_get_current_user),
+    current_user: Utilisateur = Depends(get_current_user),
 ):
     """Send an audio message from the current user to another utilisateur."""
     destinataire = db.get(Utilisateur, destinataireID)
@@ -240,7 +227,7 @@ async def send_audio_message(
 def mark_as_read(
     message_id: int,
     db: Session = Depends(get_db),
-    current_user: Utilisateur = Depends(_get_current_user),
+    current_user: Utilisateur = Depends(get_current_user),
 ):
     """Mark a message as read."""
     msg = db.get(Message, message_id)

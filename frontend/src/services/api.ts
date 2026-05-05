@@ -178,6 +178,9 @@ export const authAPI = {
     api.post('/auth/register', payload),
   me: () => api.get('/auth/me'),
   updateMe: (payload: { nom: string; email: string; avatar?: string }) => api.put('/auth/me', payload),
+  changePassword: (payload: { currentPassword: string; newPassword: string }) => api.put('/auth/change-password', payload),
+  googleLogin: () => { window.location.href = `${api.defaults.baseURL}/auth/google`; },
+  githubLogin: () => { window.location.href = `${api.defaults.baseURL}/auth/github`; },
 };
 
 export const clientsAPI = {
@@ -316,6 +319,93 @@ export type UIRappel = {
   emailSentAt?: string | null;
   emailLastError?: string | null;
 };
+
+export type UIAppSettings = {
+  companyName?: string;
+  companyAddress?: string;
+  companyTaxId?: string;
+  companyVatNumber?: string;
+  companyPhone?: string;
+  companyEmail?: string;
+  companyReference?: string;
+
+  logoUrl?: string;
+  stampUrl?: string;
+  defaultTaxRate?: number;
+  defaultValidityDays?: number;
+  documentNotes?: string;
+
+  aiProvider?: string;
+  aiApiKey?: string;
+  aiModel?: string;
+
+  notificationsEnabled?: boolean;
+  notificationsEmailEnabled?: boolean;
+  notificationsPushEnabled?: boolean;
+  notificationsDailyDigestEnabled?: boolean;
+  notificationsEmailRecipients?: string;
+
+  appearanceTheme?: 'light' | 'dark';
+  appearancePrimaryColor?: string;
+};
+
+const toUIAppSettings = (item: any): UIAppSettings => ({
+  companyName: item.company_name || '',
+  companyAddress: item.company_address || '',
+  companyTaxId: item.company_tax_id || '',
+  companyVatNumber: item.company_vat_number || '',
+  companyPhone: item.company_phone || '',
+  companyEmail: item.company_email || '',
+  companyReference: item.company_reference || '',
+
+  logoUrl: item.logo_url || '',
+  stampUrl: item.stamp_url || '',
+  defaultTaxRate: item.default_tax_rate ?? 19.0,
+  defaultValidityDays: item.default_validity_days ?? 30,
+  documentNotes: item.document_notes || '',
+
+  aiProvider: item.ai_provider || 'openai',
+  aiApiKey: item.ai_api_key || '',
+  aiModel: item.ai_model || 'gpt-4',
+
+  notificationsEnabled: item.notifications_enabled ?? true,
+  notificationsEmailEnabled: item.notifications_email_enabled ?? false,
+  notificationsPushEnabled: item.notifications_push_enabled ?? true,
+  notificationsDailyDigestEnabled: item.notifications_daily_digest_enabled ?? false,
+  notificationsEmailRecipients: item.notifications_email_recipients || '',
+
+  appearanceTheme: item.appearance_theme === 'dark' ? 'dark' : 'light',
+  appearancePrimaryColor: item.appearance_primary_color || '#6366f1',
+});
+
+const toAppSettingsPayload = (item: Partial<UIAppSettings>) => ({
+  company_name: item.companyName,
+  company_address: item.companyAddress,
+  company_tax_id: item.companyTaxId,
+  company_vat_number: item.companyVatNumber,
+  company_phone: item.companyPhone,
+  company_email: item.companyEmail,
+  company_reference: item.companyReference,
+
+  logo_url: item.logoUrl,
+  stamp_url: item.stampUrl,
+  default_tax_rate: item.defaultTaxRate,
+  default_validity_days: item.defaultValidityDays,
+  document_notes: item.documentNotes,
+
+  ai_provider: item.aiProvider,
+  ai_api_key: item.aiApiKey,
+  ai_model: item.aiModel,
+
+  notifications_enabled: item.notificationsEnabled,
+  notifications_email_enabled: item.notificationsEmailEnabled,
+  notifications_push_enabled: item.notificationsPushEnabled,
+  notifications_daily_digest_enabled: item.notificationsDailyDigestEnabled,
+  notifications_email_recipients: item.notificationsEmailRecipients,
+
+  appearance_theme: item.appearanceTheme,
+  appearance_primary_color: item.appearancePrimaryColor,
+});
 
 export type UICahier = {
   cahierID: number;
@@ -489,6 +579,39 @@ export type UIMonitoring = {
   alerts: string;
 };
 
+export type UIAIAgentAlert = {
+  id: number;
+  projectId?: number;
+  title: string;
+  message: string;
+  priority: string;
+  status: string;
+  createdAt: string;
+  resolvedAt?: string | null;
+  resolvedBy?: string | null;
+};
+
+export type UIAIAgentAction = {
+  id: number;
+  action: string;
+  message: string;
+  entityId?: number;
+  createdAt: string;
+};
+
+export type UIAIAgentSummary = {
+  warning: number;
+  critical: number;
+  total: number;
+};
+
+export type UIMonitoringDiagnostics = {
+  totalServices: number;
+  servicesWithUrl: number;
+  monitoringRows: number;
+  servicesWithoutMonitoring: number;
+};
+
 const toUIService = (item: any): UIService => ({
   id: Number(item.id),
   projetID: Number(item.projetID),
@@ -556,6 +679,14 @@ export const aiMonitoringAPI = {
     return toUIMonitoring(updated, serviceById);
   },
   delete: (id: number) => api.delete(`/ai-monitoring/${id}`),
+  runAgent: async () => (await api.post('/ai-monitoring/agent/run')).data,
+  getAgentActivity: async (): Promise<{ alerts: UIAIAgentAlert[]; actions: UIAIAgentAction[]; summary: UIAIAgentSummary }> =>
+    (await api.get('/ai-monitoring/agent/activity')).data,
+  getAgentHistory: async (): Promise<{ history: UIAIAgentAlert[] }> =>
+    (await api.get('/ai-monitoring/agent/alerts/history')).data,
+  getDiagnostics: async (): Promise<UIMonitoringDiagnostics> =>
+    (await api.get('/ai-monitoring/diagnostics')).data,
+  resolveAlert: async (id: number) => api.put(`/ai-monitoring/agent/alerts/${id}/resolve`),
 };
 
 export const dashboardAPI = {
@@ -653,6 +784,9 @@ export type UIFacture = {
   paidAt?: string;
   items: UIItem[];
   devise?: string;
+  taxRate?: number;
+  fiscalStamp?: number;
+  devisId?: string;
 };
 
 export type UIContrat = {
@@ -756,7 +890,7 @@ const toUIFacture = (item: any): UIFacture => ({
 
 const toFacturePayload = (item: Partial<UIFacture>) => ({
   clientID: Number(item.clientId),
-  devisID: null,
+  devisID: item.devisId ? Number(item.devisId) : null,
   dateFacture: item.issuedAt ? new Date(item.issuedAt).toISOString() : undefined,
   dueDate: item.dueAt ? new Date(item.dueAt).toISOString() : undefined,
   amountHT: Number(item.amount || 0),
@@ -1039,6 +1173,24 @@ export const devisAPI = {
     downloadPDF(`/devis/${id}/pdf`, filename, viewOnly),
 };
 
+export const activityAPI = {
+  getRecent: async (params?: { limit?: number; offset?: number }) => {
+    const { data } = await api.get('/activity', { params });
+    return data;
+  },
+};
+
+export const settingsAPI = {
+  get: async (): Promise<UIAppSettings> => {
+    const { data } = await api.get('/settings/');
+    return toUIAppSettings(data);
+  },
+  update: async (payload: Partial<UIAppSettings>): Promise<UIAppSettings> => {
+    const { data } = await api.put('/settings/', toAppSettingsPayload(payload));
+    return toUIAppSettings(data);
+  },
+};
+
 export const facturesAPI = {
   getAll: async (): Promise<UIFacture[]> => {
     const { data } = await api.get('/factures');
@@ -1082,8 +1234,6 @@ export const contratsAPI = {
   exportPDF: (id: number, filename: string, viewOnly = false) => 
     downloadPDF(`/contrats/${id}/pdf`, filename, viewOnly),
 };
-
-// ─── Chat ────────────────────────────────────────────────────────────────────
 
 export type UIChatMessage = {
   id: number;

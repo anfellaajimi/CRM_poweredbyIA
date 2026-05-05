@@ -29,12 +29,26 @@ class Settings(BaseSettings):
 
     # Reminder scheduler
     ENABLE_REMINDER_SCHEDULER: bool = True
+    AI_AGENT_CRON_MINUTE_INTERVAL: int = 15
+    AI_AGENT_AUTO_RESOLVE_LOW_MINUTES: int = 0
 
     # Cloudinary (user contracts PDFs)
     CLOUDINARY_CLOUD_NAME: str = ""
     CLOUDINARY_API_KEY: str = ""
     CLOUDINARY_API_SECRET: str = ""
     CLOUDINARY_FOLDER_USER_CONTRACTS: str = "crm-professional/user-contracts"
+
+    # Security
+    SECRET_KEY: str = "your-super-secret-key-change-it-in-production"
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 10080  # 7 days
+
+    # OAuth
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
+    GITHUB_CLIENT_ID: str = ""
+    GITHUB_CLIENT_SECRET: str = ""
+    FRONTEND_URL: str = "http://localhost:5173"
 
     @property
     def DATABASE_URL(self) -> str:

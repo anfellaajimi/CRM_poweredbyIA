@@ -7,6 +7,8 @@ import { cn } from '../utils/cn';
 import { useSidebarStore } from '../store/sidebarStore';
 import { useNotificationStore } from '../store/notificationStore';
 import { CheckCheck } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { aiMonitoringAPI, rappelsAPI, UIRappel } from '../services/api';
 
 export const TopBar: React.FC = () => {
   const { theme, toggleTheme } = useThemeStore();
@@ -22,6 +24,47 @@ export const TopBar: React.FC = () => {
   };
 
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotificationStore();
+
+  const { data: rappels = [] } = useQuery({
+    queryKey: ['rappels'],
+    queryFn: () => rappelsAPI.getAll({}),
+    refetchInterval: 30000,
+  });
+
+  const { data: aiAgentActivity } = useQuery({
+    queryKey: ['ai-agent-activity-topbar'],
+    queryFn: aiMonitoringAPI.getAgentActivity,
+    refetchInterval: 15000,
+  });
+
+  const rappelNotifications = React.useMemo(() => {
+    return rappels
+      .filter((r: UIRappel) => r.statut?.toLowerCase() !== 'terminé' && r.statut?.toLowerCase() !== 'termine' && r.statut?.toLowerCase() !== 'annule')
+      .map((r: UIRappel) => ({
+        id: `rappel-${r.id}`,
+        type: ['elevee', 'haute', 'élevée'].includes(r.priorite?.toLowerCase() || '') ? 'error' : 'warning',
+        message: `Rappel : ${r.titre}${r.description ? ` - ${r.description}` : ''}`,
+        timestamp: r.dateLimite || r.createdAt || new Date().toISOString(),
+        read: false,
+        isRappel: true
+      }));
+  }, [rappels]);
+
+  const allNotifications = React.useMemo(() => {
+    const aiAgentNotifications = (aiAgentActivity?.alerts || []).map((a) => ({
+      id: `ai-agent-${a.id}`,
+      type: a.priority?.toLowerCase() === 'elevee' ? 'error' : 'warning',
+      message: `AI Agent: ${a.title}${a.message ? ` - ${a.message}` : ''}`,
+      timestamp: a.createdAt || new Date().toISOString(),
+      read: false,
+      isAIAgent: true,
+    }));
+    return [...aiAgentNotifications, ...rappelNotifications, ...notifications].sort(
+      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
+  }, [aiAgentActivity, rappelNotifications, notifications]);
+
+  const totalUnreadCount = unreadCount() + rappelNotifications.length + (aiAgentActivity?.alerts?.length || 0);
 
   return (
     <header
@@ -56,30 +99,40 @@ export const TopBar: React.FC = () => {
               className="p-2 rounded-lg hover:bg-accent transition-colors relative"
             >
               <Bell className="w-5 h-5" />
-              {unreadCount() > 0 && <span className="absolute top-1 right-1 w-3.5 h-3.5 text-[9px] flex items-center justify-center font-bold text-white bg-red-500 rounded-full">{unreadCount()}</span>}
+              {totalUnreadCount > 0 && <span className="absolute top-1 right-1 w-3.5 h-3.5 text-[9px] flex items-center justify-center font-bold text-white bg-red-500 rounded-full">{totalUnreadCount}</span>}
             </button>
 
             {showNotifications && (
               <div className="absolute right-0 mt-2 w-[380px] bg-card border border-border rounded-lg shadow-xl overflow-hidden z-50">
                 <div className="p-4 border-b border-border flex justify-between items-center bg-gray-50/50">
                   <h3 className="font-semibold text-foreground">Notifications</h3>
-                  {unreadCount() > 0 && (
+                  {totalUnreadCount > 0 && (
                     <button onClick={markAllAsRead} className="text-xs text-blue-600 hover:text-blue-800 flex items-center font-medium">
                       <CheckCheck className="w-3 h-3 mr-1" /> Tout marquer comme lu
                     </button>
                   )}
                 </div>
                 <div className="max-h-[400px] overflow-y-auto">
-                  {notifications.length === 0 ? (
+                  {allNotifications.length === 0 ? (
                     <div className="p-8 text-center text-muted-foreground text-sm flex flex-col items-center">
                       <Bell className="w-8 h-8 opacity-20 mb-2" />
                       Aucune notification
                     </div>
                   ) : (
-                    notifications.map((notif) => (
+                    allNotifications.map((notif: any) => (
                       <div 
                         key={notif.id} 
-                        onClick={() => markAsRead(notif.id)}
+                        onClick={() => {
+                          if (notif.isRappel) {
+                            navigate('/rappels');
+                            setShowNotifications(false);
+                          } else if (notif.isAIAgent) {
+                            navigate('/ai-monitoring');
+                            setShowNotifications(false);
+                          } else {
+                            markAsRead(notif.id);
+                          }
+                        }}
                         className={`p-4 border-b border-border hover:bg-accent cursor-pointer transition-colors ${!notif.read ? 'bg-blue-50/30 dark:bg-blue-900/10' : ''}`}
                       >
                         <div className="flex items-start gap-3">

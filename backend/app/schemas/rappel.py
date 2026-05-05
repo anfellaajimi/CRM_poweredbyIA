@@ -18,6 +18,7 @@ class RappelBase(BaseModel):
     systemKey: str | None = None
     emailSentAt: datetime | None = None
     emailLastError: str | None = None
+    resolvedAt: datetime | None = None
 
 
 class RappelCreate(RappelBase):
@@ -39,6 +40,7 @@ class RappelUpdate(BaseModel):
     systemKey: str | None = None
     emailSentAt: datetime | None = None
     emailLastError: str | None = None
+    resolvedAt: datetime | None = None
 
 
 class RappelRead(RappelBase):

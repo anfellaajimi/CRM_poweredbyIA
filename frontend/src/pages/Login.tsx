@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
+import { authAPI } from '../services/api';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'motion/react';
 import { Eye, EyeOff, Mail, Lock, User, Github, Send, Globe, Share2 } from 'lucide-react';
@@ -87,7 +88,7 @@ const NetworkCanvas: React.FC = () => {
 
 /* ─── Main Login Component ─── */
 export const Login: React.FC = () => {
-  const [username, setUsername]     = useState('');
+
   const [fullName, setFullName]     = useState('');
   const [email, setEmail]           = useState('');
   const [motDePasse, setMotDePasse] = useState('');
@@ -96,8 +97,43 @@ export const Login: React.FC = () => {
   const [voirMdp, setVoirMdp]       = useState(false);
   const [champActif, setChampActif] = useState<string | null>(null);
   const [newsletter, setNewsletter] = useState('');
-  const { login } = useAuthStore();
+  const { login, handleOAuthSuccess } = useAuthStore();
   const navigate  = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    const token = searchParams.get('token');
+    if (token) {
+      handleOAuthSuccess(token)
+        .then(() => {
+          toast.success('Connexion réussie !');
+          navigate('/');
+        })
+        .catch(() => {
+          toast.error("Échec de l'authentification sociale.");
+        });
+    }
+  }, [searchParams, handleOAuthSuccess, navigate]);
+
+  const handleGoogleLogin = () => {
+    authAPI.googleLogin();
+  };
+
+  const handleGithubLogin = () => {
+    authAPI.githubLogin();
+  };
+
+  const handleNewsletter = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newsletter) return;
+    setChargement(true);
+    // Simulate API call
+    setTimeout(() => {
+      toast.success('Merci de vous être inscrit à notre newsletter !');
+      setNewsletter('');
+      setChargement(false);
+    }, 1000);
+  };
 
   const handleSoumettre = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -135,8 +171,14 @@ export const Login: React.FC = () => {
   };
 
   const footerLinks = {
-    Produit: ['Solutions', 'CRM Dashboard', 'Intelligence Artificielle'],
-    Entreprise: ['Development', 'Contact', 'Privacy Policy'],
+    Produit: [
+      { label: 'Log In', path: '/login' },
+      { label: 'Intelligence Artificielle', path: '/ai-monitoring' }
+    ],
+    Entreprise: [
+      { label: 'Contact', path: '/support' },
+      { label: 'Privacy Policy', path: '#' }
+    ],
   };
 
   return (
@@ -155,7 +197,7 @@ export const Login: React.FC = () => {
           <span style={{ color: 'white', fontWeight: 700, fontSize: 15 }}>Quatratech</span>
         </div>
         <div style={{ display: 'flex', gap: 32, alignItems: 'center' }}>
-          {['Solutions', 'CRM', 'Development'].map((item, i) => (
+          {['Log In'].map((item, i) => (
             <span key={item} style={{
               color: i === 0 ? '#60a5fa' : 'rgba(255,255,255,0.55)',
               fontSize: 14, fontWeight: 500, cursor: 'pointer',
@@ -165,7 +207,6 @@ export const Login: React.FC = () => {
           ))}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <span style={{ color: 'rgba(255,255,255,0.6)', fontSize: 14, cursor: 'pointer' }}>Log In</span>
           <Link to="/espace-client" style={{
             padding: '7px 20px', borderRadius: 6,
             background: 'linear-gradient(135deg,#1d4ed8,#3b82f6)',
@@ -267,17 +308,7 @@ export const Login: React.FC = () => {
 
           <form onSubmit={handleSoumettre} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
 
-            {/* USERNAME */}
-            <div>
-              <label style={labelStyle}>Username</label>
-              <div style={{ position: 'relative' }}>
-                <User size={13} style={iconStyle} />
-                <input type="text" placeholder="quatratech.user" value={username}
-                  onChange={e => setUsername(e.target.value)}
-                  onFocus={() => setChampActif('username')} onBlur={() => setChampActif(null)}
-                  style={inputStyle('username')} />
-              </div>
-            </div>
+
 
             {/* NOM COMPLET */}
             <div>
@@ -377,11 +408,11 @@ export const Login: React.FC = () => {
             <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.07)' }} />
           </div>
 
-          {/* Social */}
           <div style={{ display: 'flex', gap: 10 }}>
             {[
               {
                 label: 'Google',
+                onClick: handleGoogleLogin,
                 icon: (
                   <svg width="15" height="15" viewBox="0 0 24 24">
                     <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
@@ -391,9 +422,9 @@ export const Login: React.FC = () => {
                   </svg>
                 ),
               },
-              { label: 'GitHub', icon: <Github size={15} /> },
-            ].map(({ label, icon }) => (
-              <button key={label} type="button" style={{
+              { label: 'GitHub', onClick: handleGithubLogin, icon: <Github size={15} /> },
+            ].map(({ label, icon, onClick }) => (
+              <button key={label} type="button" onClick={onClick} style={{
                 flex: 1, padding: '10px', borderRadius: 7,
                 background: 'rgba(255,255,255,0.04)',
                 border: '1px solid rgba(255,255,255,0.1)',
@@ -440,7 +471,9 @@ export const Login: React.FC = () => {
           <div>
             <p style={{ color: 'white', fontWeight: 700, fontSize: 13, marginBottom: 16 }}>Produit</p>
             {footerLinks.Produit.map(l => (
-              <p key={l} style={{ color: 'rgba(255,255,255,0.38)', fontSize: 12, marginBottom: 10, cursor: 'pointer' }}>{l}</p>
+              <Link key={l.label} to={l.path} style={{ color: 'rgba(255,255,255,0.38)', fontSize: 12, marginBottom: 10, cursor: 'pointer', display: 'block', textDecoration: 'none' }}>
+                {l.label}
+              </Link>
             ))}
           </div>
 
@@ -448,17 +481,20 @@ export const Login: React.FC = () => {
           <div>
             <p style={{ color: 'white', fontWeight: 700, fontSize: 13, marginBottom: 16 }}>Entreprise</p>
             {footerLinks.Entreprise.map(l => (
-              <p key={l} style={{ color: 'rgba(255,255,255,0.38)', fontSize: 12, marginBottom: 10, cursor: 'pointer' }}>{l}</p>
+              <Link key={l.label} to={l.path} style={{ color: 'rgba(255,255,255,0.38)', fontSize: 12, marginBottom: 10, cursor: 'pointer', display: 'block', textDecoration: 'none' }}>
+                {l.label}
+              </Link>
             ))}
           </div>
 
           {/* Newsletter */}
           <div>
             <p style={{ color: 'white', fontWeight: 700, fontSize: 13, marginBottom: 16 }}>Restez informé</p>
-            <div style={{ display: 'flex', gap: 6 }}>
+            <form onSubmit={handleNewsletter} style={{ display: 'flex', gap: 6 }}>
               <input
                 type="email" placeholder="Email" value={newsletter}
                 onChange={e => setNewsletter(e.target.value)}
+                required
                 style={{
                   flex: 1, padding: '9px 12px',
                   background: 'rgba(255,255,255,0.05)',
@@ -466,15 +502,21 @@ export const Login: React.FC = () => {
                   borderRadius: 6, color: 'white', fontSize: 12, outline: 'none',
                 }}
               />
-              <button style={{
+              <button type="submit" disabled={chargement} style={{
                 width: 36, height: 36, borderRadius: 6, flexShrink: 0,
                 background: 'linear-gradient(135deg,#1d4ed8,#3b82f6)',
-                border: 'none', cursor: 'pointer',
+                border: 'none', cursor: chargement ? 'not-allowed' : 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
+                opacity: chargement ? 0.7 : 1,
               }}>
-                <Send size={14} color="white" />
+                {chargement ? (
+                   <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                   style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%' }} />
+                ) : (
+                  <Send size={14} color="white" />
+                )}
               </button>
-            </div>
+            </form>
           </div>
         </div>
 
