@@ -6,7 +6,7 @@ from urllib.error import URLError, HTTPError
 from urllib.request import Request, urlopen
 
 from sqlalchemy.orm import Session
-
+from app.api.v1.endpoints._activity import log_activity
 from app.models.monitoring import AIMonitoring
 from app.models.service import Service
 
@@ -75,6 +75,15 @@ def run_service_monitoring_checks(db: Session, now: datetime | None = None) -> d
         row.checks = check_msg
         row.alerts = None if status == "healthy" else f"Check {status}: {check_msg}"
         row.uptime = 100.0 if status == "healthy" else 0.0
+
+        log_activity(
+            db,
+            entity_type="ai_agent",
+            entity_id=svc.id,
+            action="health_check",
+            message=f"[AI Agent] Health check service '{svc.nom}': {status} ({check_msg})",
+            actor="AI Agent",
+        )
 
         checked += 1
         if status == "healthy":

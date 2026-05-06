@@ -6,8 +6,9 @@ from datetime import date, datetime, timedelta
 
 from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session
-
+from app.api.v1.endpoints._activity import log_activity
 from app.models.devis import Devis
+# ... (rest)
 from app.models.facture import Facture
 from app.models.projet import Projet
 from app.models.projet_milestone import ProjetMilestone
@@ -520,6 +521,14 @@ def send_due_reminder_emails(db: Session, now: datetime) -> dict:
             r.emailLastError = last_error
             sent += 1
             logs.append(f"Email envoyé : {subject} à {', '.join(sorted(recipients))}")
+            log_activity(
+                db,
+                entity_type="ai_agent",
+                entity_id=r.projetID,
+                action="email_notification",
+                message=f"[AI Agent] Email de rappel envoyé pour: {r.titre}",
+                actor="AI Agent",
+            )
         else:
             r.emailLastError = last_error or "Unknown error"
             failed += 1

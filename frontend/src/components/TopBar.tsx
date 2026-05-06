@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
-import { Bell, Moon, Sun, Search, LogOut, User, Settings, Shield, CreditCard, HelpCircle } from 'lucide-react';
+import { Bell, Moon, Sun, Search, LogOut, User, Settings, Shield, CreditCard, HelpCircle, Activity, CheckCheck } from 'lucide-react';
 import { useThemeStore } from '../store/themeStore';
 import { useAuthStore } from '../store/authStore';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../utils/cn';
 import { useSidebarStore } from '../store/sidebarStore';
 import { useNotificationStore } from '../store/notificationStore';
-import { CheckCheck } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { aiMonitoringAPI, rappelsAPI, UIRappel } from '../services/api';
+import { aiMonitoringAPI, rappelsAPI, UIRappel, UIServiceCheck } from '../services/api';
 
 export const TopBar: React.FC = () => {
   const { theme, toggleTheme } = useThemeStore();
@@ -36,6 +35,19 @@ export const TopBar: React.FC = () => {
     queryFn: aiMonitoringAPI.getAgentActivity,
     refetchInterval: 15000,
   });
+
+  const { data: healthStatus = [] } = useQuery({
+    queryKey: ['health-current-topbar'],
+    queryFn: aiMonitoringAPI.getCurrentHealth,
+    refetchInterval: 30000,
+  });
+
+  const systemStatus = React.useMemo(() => {
+    if (!Array.isArray(healthStatus) || healthStatus.length === 0) return 'unknown';
+    if (healthStatus.some((h: UIServiceCheck) => h.status === 'offline')) return 'critical';
+    if (healthStatus.some((h: UIServiceCheck) => (h.status || '').startsWith('4') || (h.status || '').startsWith('5'))) return 'warning';
+    return 'healthy';
+  }, [healthStatus]);
 
   const rappelNotifications = React.useMemo(() => {
     return rappels
@@ -83,6 +95,23 @@ export const TopBar: React.FC = () => {
               className="w-full h-10 pl-10 pr-4 rounded-lg border border-input bg-background focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
+        </div>
+
+        {/* System Status Badge */}
+        <div className="flex items-center space-x-2 mr-4 bg-accent/30 px-3 py-1.5 rounded-full border border-border/50">
+          <Activity className={cn(
+            "w-4 h-4",
+            systemStatus === 'healthy' ? "text-green-500" : 
+            systemStatus === 'warning' ? "text-yellow-500" : "text-red-500"
+          )} />
+          <span className="text-[10px] font-bold uppercase tracking-tight hidden sm:inline">
+            Status: <span className={cn(
+              systemStatus === 'healthy' ? "text-green-500" : 
+              systemStatus === 'warning' ? "text-yellow-500" : "text-red-500"
+            )}>
+              {systemStatus === 'healthy' ? 'OK' : systemStatus === 'warning' ? 'Attention' : 'Offline'}
+            </span>
+          </span>
         </div>
 
         <div className="flex items-center space-x-4">

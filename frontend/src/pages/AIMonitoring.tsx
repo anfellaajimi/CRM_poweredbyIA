@@ -1,6 +1,6 @@
-﻿import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Activity, AlertTriangle, Bot, CheckCircle, Pencil, Settings, Trash2, XCircle } from 'lucide-react';
+import { Activity, AlertTriangle, Bot, CheckCircle, Pencil, Settings, Trash2, XCircle, Loader2 } from 'lucide-react';
 import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -64,6 +64,10 @@ export const AIMonitoring: React.FC = () => {
   const { data: agentActivity } = useQuery({ queryKey: ['ai-agent-activity'], queryFn: aiMonitoringAPI.getAgentActivity, refetchInterval: 15000 });
   const { data: historyData } = useQuery({ queryKey: ['ai-agent-history'], queryFn: aiMonitoringAPI.getAgentHistory, refetchInterval: 20000 });
   const { data: diagnostics } = useQuery({ queryKey: ['ai-monitoring-diagnostics'], queryFn: aiMonitoringAPI.getDiagnostics, refetchInterval: 15000 });
+  const { data: agentStats = [] } = useQuery({ queryKey: ['ai-agent-stats'], queryFn: aiMonitoringAPI.getAgentStats, refetchInterval: 30000 });
+  const { data: healthStatus = [] } = useQuery({ queryKey: ['health-current'], queryFn: aiMonitoringAPI.getCurrentHealth, refetchInterval: 30000 });
+  const { data: healthStats = {} } = useQuery({ queryKey: ['health-stats'], queryFn: () => aiMonitoringAPI.getHealthStats(24), refetchInterval: 60000 });
+  const { data: incidents = [] } = useQuery({ queryKey: ['health-incidents'], queryFn: aiMonitoringAPI.getIncidents, refetchInterval: 60000 });
 
   const runAgentMutation = useMutation({
     mutationFn: aiMonitoringAPI.runAgent,
@@ -74,6 +78,7 @@ export const AIMonitoring: React.FC = () => {
       qc.invalidateQueries({ queryKey: ['ai-agent-activity-topbar'] });
       qc.invalidateQueries({ queryKey: ['ai-agent-history'] });
       qc.invalidateQueries({ queryKey: ['ai-monitoring-diagnostics'] });
+      qc.invalidateQueries({ queryKey: ['ai-agent-stats'] });
       qc.invalidateQueries({ queryKey: ['rappels'] });
       toast.success('Agent exécuté avec succès');
     },
@@ -154,14 +159,17 @@ export const AIMonitoring: React.FC = () => {
   }, [resolvedAlerts, severityFilter, dateFilter]);
 
   const stats = useMemo(() => {
-    const warning = activeAlerts.filter((a: UIAIAgentAlert) => (a.priority || '').toLowerCase() !== 'elevee').length;
-    const critical = activeAlerts.filter((a: UIAIAgentAlert) => (a.priority || '').toLowerCase() === 'elevee').length;
-    const healthy = monitoring.filter((m) => toStatusKey(m.status) === 'healthy').length;
+    const alerts = agentActivity?.alerts || [];
+    const warning = alerts.filter((a: UIAIAgentAlert) => (a.priority || '').toLowerCase() !== 'elevee').length;
+    const critical = alerts.filter((a: UIAIAgentAlert) => (a.priority || '').toLowerCase() === 'elevee').length;
+    const monitoringList = Array.isArray(monitoring) ? monitoring : [];
+    const healthy = monitoringList.filter((m) => toStatusKey(m.status) === 'healthy').length;
     return { healthy, warning, critical };
-  }, [activeAlerts, monitoring]);
+  }, [agentActivity, monitoring]);
 
   const checksData = useMemo(() => {
-    return [...monitoring]
+    const list = Array.isArray(monitoring) ? monitoring : [];
+    return [...list]
       .sort((a, b) => new Date(a.lastCheck || 0).getTime() - new Date(b.lastCheck || 0).getTime())
       .map((m) => ({
         time: m.lastCheck ? new Date(m.lastCheck).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-',
@@ -170,14 +178,12 @@ export const AIMonitoring: React.FC = () => {
   }, [monitoring]);
 
   const agentActivityData = useMemo(() => {
-    return [...(agentActivity?.actions || [])]
-      .sort((a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime())
-      .slice(-30)
-      .map((a: any) => ({
-        time: a.createdAt ? new Date(a.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-',
-        value: 1,
-      }));
-  }, [agentActivity]);
+    const list = Array.isArray(agentStats) ? agentStats : [];
+    return list.map((s) => ({
+      time: s.time ? new Date(s.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '-',
+      value: s.count || 0,
+    }));
+  }, [agentStats]);
 
   const usedServiceIds = useMemo(() => new Set(monitoring.map((m) => Number(m.serviceID))), [monitoring]);
   const monitoredServices = useMemo(() => [...monitoring], [monitoring]);
@@ -351,26 +357,94 @@ export const AIMonitoring: React.FC = () => {
         <Card><CardContent className="pt-6"><div className="flex items-center justify-between"><div><p className="text-sm text-muted-foreground">Critique</p><p className="text-3xl font-bold mt-2">{stats.critical}</p></div><div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center"><XCircle className="w-6 h-6 text-red-600" /></div></div></CardContent></Card>
       </div>
 
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {(['Frontend', 'Backend', 'Agent IA', 'Database'] as const).map((svc) => {
+          const status = Array.isArray(healthStatus) ? healthStatus.find(h => h.service_name === svc) : undefined;
+          const uptime = healthStats && typeof healthStats === 'object' ? (healthStats[svc] ?? 100) : 100;
+          const isOperational = status?.status === '200';
+          const isOffline = status?.status === 'offline';
+          const isLoading = !status;
+
+          return (
+            <Card key={svc} className="relative overflow-hidden">
+              <CardContent className="pt-6">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">{svc}</p>
+                    <p className="text-2xl font-bold mt-1">{uptime}%</p>
+                    <p className="text-[10px] text-muted-foreground mt-1">Uptime (24h)</p>
+                  </div>
+                  <div className={`p-2 rounded-lg ${isLoading ? 'bg-muted/50' : isOperational ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
+                    {isLoading ? <Loader2 className="w-5 h-5 text-muted-foreground animate-spin" /> : isOperational ? <CheckCircle className="w-5 h-5 text-green-500" /> : <XCircle className="w-5 h-5 text-red-500" />}
+                  </div>
+                </div>
+                <div className="mt-4 flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${isLoading ? 'bg-muted' : (isOperational ? 'bg-green-500 animate-pulse' : 'bg-red-500')}`} />
+                  <span className="text-xs font-semibold">
+                    {isLoading ? 'En attente...' : isOperational ? 'Opérationnel' : isOffline ? 'Offline' : `Erreur ${status.status}`}
+                  </span>
+                  {status?.response_time_ms && <span className="text-[10px] text-muted-foreground ml-auto">{status.response_time_ms}ms</span>}
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
       <Card>
-        <CardHeader><CardTitle>Disponibilité des checks</CardTitle></CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Historique des Incidents</CardTitle>
+          <Badge variant="outline">{incidents.length} incidents enregistrés</Badge>
+        </CardHeader>
         <CardContent>
-          {checksData.length ? (
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={checksData}>
-                <XAxis dataKey="time" />
-                <YAxis domain={[0, 100]} />
-                <Tooltip />
-                <Line type="monotone" dataKey="uptime" stroke="#7c3aed" strokeWidth={3} />
-              </LineChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="space-y-2">
-              <p className="text-sm text-muted-foreground">Aucune donnée réelle de monitoring disponible. Ajoutez/configurez un service monitoré pour alimenter ce graphe.</p>
-              <p className="text-xs text-muted-foreground">
-                Diagnostic: services={diagnostics?.totalServices ?? 0}, URLs configurées={diagnostics?.servicesWithUrl ?? 0}, checks enregistrés={diagnostics?.monitoringRows ?? 0}, services sans monitoring={diagnostics?.servicesWithoutMonitoring ?? 0}
-              </p>
-            </div>
-          )}
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="text-xs uppercase bg-muted/30">
+                <tr>
+                  <th className="px-4 py-3 font-medium">Service</th>
+                  <th className="px-4 py-3 font-medium">Début</th>
+                  <th className="px-4 py-3 font-medium">Fin</th>
+                  <th className="px-4 py-3 font-medium">Durée</th>
+                  <th className="px-4 py-3 font-medium text-right">Statut</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {(Array.isArray(incidents) ? incidents : []).slice(0, 5).map((inc) => (
+                  <tr key={inc.id} className="hover:bg-muted/10 transition-colors">
+                    <td className="px-4 py-3 font-medium">{inc.service_name}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{new Date(inc.started_at).toLocaleString()}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{inc.resolved_at ? new Date(inc.resolved_at).toLocaleString() : '-'}</td>
+                    <td className="px-4 py-3 font-medium">
+                      {inc.resolved_at ? (() => {
+                        const start = new Date(inc.started_at).getTime();
+                        const end = new Date(inc.resolved_at).getTime();
+                        const diff = Math.max(0, Math.floor((end - start) / 1000));
+                        const m = Math.floor(diff / 60);
+                        const s = diff % 60;
+                        return `${m} min ${s} sec`;
+                      })() : (
+                        <span className="flex items-center gap-1.5 text-red-500">
+                          <Loader2 className="w-3 h-3 animate-spin" /> En cours
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <Badge variant={inc.resolved_at ? 'success' : 'danger'}>
+                        {inc.resolved_at ? 'Résolu' : 'En cours'}
+                      </Badge>
+                    </td>
+                  </tr>
+                ))}
+                {!incidents.length && (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
+                      Aucun incident détecté sur la période.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </CardContent>
       </Card>
 
@@ -381,9 +455,9 @@ export const AIMonitoring: React.FC = () => {
             <ResponsiveContainer width="100%" height={260}>
               <LineChart data={agentActivityData}>
                 <XAxis dataKey="time" />
-                <YAxis domain={[0, 1]} ticks={[0, 1]} />
+                <YAxis allowDecimals={false} />
                 <Tooltip />
-                <Line type="stepAfter" dataKey="value" stroke="#0ea5e9" strokeWidth={2} dot />
+                <Line type="monotone" dataKey="value" stroke="#0ea5e9" strokeWidth={2} dot />
               </LineChart>
             </ResponsiveContainer>
           ) : (
@@ -393,7 +467,7 @@ export const AIMonitoring: React.FC = () => {
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {monitoring.map((service) => (
+        {(Array.isArray(monitoring) ? monitoring : []).map((service) => (
           <Card key={service.monitoringID}>
             <CardContent className="pt-6">
               <div className="flex items-start justify-between mb-4">

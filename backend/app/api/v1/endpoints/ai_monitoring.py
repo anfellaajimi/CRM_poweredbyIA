@@ -1,6 +1,7 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -11,8 +12,39 @@ from app.models.service import Service
 from app.schemas.monitoring import AIMonitoringCreate, AIMonitoringRead, AIMonitoringUpdate
 from app.services.ai_agent import run_ai_agent
 from app.services.service_monitoring import run_service_monitoring_checks
+from app.services.health_monitoring import run_health_checks, get_uptime_stats
+from app.models.service_check import ServiceCheck
+from app.models.incident import Incident
 
 router = APIRouter(prefix="/ai-monitoring", tags=["AI Monitoring"])
+
+@router.post("/health/run")
+def manual_health_run(db: Session = Depends(get_db)):
+    return run_health_checks(db)
+
+@router.get("/health/current")
+def get_current_health(db: Session = Depends(get_db)):
+    # Get latest check for each service
+    subquery = db.query(
+        ServiceCheck.service_name,
+        func.max(ServiceCheck.checked_at).label('max_date')
+    ).group_by(ServiceCheck.service_name).subquery()
+    
+    latest_checks = db.query(ServiceCheck).join(
+        subquery,
+        (ServiceCheck.service_name == subquery.c.service_name) & 
+        (ServiceCheck.checked_at == subquery.c.max_date)
+    ).all()
+    
+    return latest_checks
+
+@router.get("/health/stats")
+def get_health_stats(db: Session = Depends(get_db), hours: int = 24):
+    return get_uptime_stats(db, hours)
+
+@router.get("/health/incidents")
+def get_incident_history(db: Session = Depends(get_db), limit: int = 50):
+    return db.query(Incident).order_by(Incident.started_at.desc()).limit(limit).all()
 
 
 @router.post("/agent/run")
@@ -44,7 +76,10 @@ def get_agent_activity(db: Session = Depends(get_db)):
         "alerts": [
             {
                 "id": a.id,
+                "clientId": a.clientID,
                 "projectId": a.projetID,
+                "devisId": a.devisID,
+                "factureId": a.factureID,
                 "title": a.titre,
                 "message": a.message,
                 "priority": a.priorite,
@@ -69,6 +104,35 @@ def get_agent_activity(db: Session = Depends(get_db)):
             "total": len(alerts),
         },
     }
+
+
+@router.get("/agent/stats")
+def get_agent_stats(db: Session = Depends(get_db)):
+    """
+    Returns AI Agent execution counts grouped by 5-minute intervals for the last 24 hours.
+    """
+    now = datetime.utcnow()
+    yesterday = now - timedelta(hours=24)
+    
+    # We aggregate by 5-minute intervals using PostgreSQL date_trunc
+    rows = (
+        db.query(
+            func.date_trunc('minute', ActivityEvent.createdAt).label('minute'),
+            func.count(ActivityEvent.eventID).label('count')
+        )
+        .filter(
+            ActivityEvent.entityType == "ai_agent",
+            ActivityEvent.createdAt >= yesterday
+        )
+        .group_by('minute')
+        .order_by('minute')
+        .all()
+    )
+    
+    return [
+        {"time": r.minute.isoformat(), "count": r.count}
+        for r in rows
+    ]
 
 
 @router.put("/agent/alerts/{alert_id}/resolve", status_code=status.HTTP_204_NO_CONTENT)

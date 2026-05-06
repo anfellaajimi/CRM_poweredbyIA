@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     SMTP_USER: str = ""
     SMTP_PASSWORD: str = ""
     SMTP_FROM: str = ""
+    ADMIN_EMAIL: str = ""
     SMTP_TLS: bool = True
     SMTP_SSL: bool = False
 

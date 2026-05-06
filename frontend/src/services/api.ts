@@ -687,6 +687,30 @@ export const aiMonitoringAPI = {
   getDiagnostics: async (): Promise<UIMonitoringDiagnostics> =>
     (await api.get('/ai-monitoring/diagnostics')).data,
   resolveAlert: async (id: number) => api.put(`/ai-monitoring/agent/alerts/${id}/resolve`),
+  getAgentStats: async (): Promise<{ time: string; count: number }[]> =>
+    (await api.get('/ai-monitoring/agent/stats')).data,
+  // Health Checks
+  runHealthChecks: async () => (await api.post('/ai-monitoring/health/run')).data,
+  getCurrentHealth: async (): Promise<UIServiceCheck[]> => (await api.get('/ai-monitoring/health/current')).data,
+  getHealthStats: async (hours = 24): Promise<Record<string, number>> => (await api.get('/ai-monitoring/health/stats', { params: { hours } })).data,
+  getIncidents: async (): Promise<UIIncident[]> => (await api.get('/ai-monitoring/health/incidents')).data,
+};
+
+export type UIServiceCheck = {
+  id: string;
+  service_name: string;
+  status: string;
+  response_time_ms: number | null;
+  checked_at: string;
+  error_message: string | null;
+};
+
+export type UIIncident = {
+  id: string;
+  service_name: string;
+  started_at: string;
+  resolved_at: string | null;
+  duration_minutes: number | null;
 };
 
 export const dashboardAPI = {
@@ -1188,6 +1212,14 @@ export const settingsAPI = {
   update: async (payload: Partial<UIAppSettings>): Promise<UIAppSettings> => {
     const { data } = await api.put('/settings/', toAppSettingsPayload(payload));
     return toUIAppSettings(data);
+  },
+  uploadImage: async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const { data } = await api.post('/settings/upload-image', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return data.url;
   },
 };
 

@@ -199,6 +199,16 @@ def _auto_resolve_low_severity_alerts(db: Session, now: datetime) -> int:
 
 def run_ai_agent(db: Session, now: datetime | None = None) -> dict:
     now = now or datetime.utcnow()
+    
+    log_activity(
+        db,
+        entity_type="ai_agent",
+        entity_id=None,
+        action="run",
+        message="[AI Agent] Lancement du cycle de supervision complet.",
+        actor="AI Agent",
+    )
+
     projects = (
         db.query(Projet)
         .options(joinedload(Projet.notes))
@@ -211,7 +221,25 @@ def run_ai_agent(db: Session, now: datetime | None = None) -> dict:
         activity, _ = _project_activity_status(project, now)
         status_summary[activity] += 1
         alerts.extend(_detect_project_alerts(project, now))
+        log_activity(
+            db, 
+            entity_type="ai_agent", 
+            entity_id=project.id, 
+            action="project_analysis", 
+            message=f"[AI Agent] Analyse du projet: {project.nomProjet}", 
+            actor="AI Agent"
+        )
 
+    invoices = db.query(Facture).all()
+    for inv in invoices:
+        log_activity(
+            db,
+            entity_type="ai_agent",
+            entity_id=inv.factureID,
+            action="billing_check",
+            message=f"[AI Agent] Vérification facture #{inv.factureID}",
+            actor="AI Agent"
+        )
     alerts.extend(_billing_alerts(db, now))
 
     warning_count = 0

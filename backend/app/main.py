@@ -22,6 +22,7 @@ except Exception:  # pragma: no cover
 from app.services.reminders import generate_project_rappels, send_due_reminder_emails
 from app.services.ai_agent import run_ai_agent
 from app.services.service_monitoring import run_service_monitoring_checks
+from app.services.health_monitoring import run_health_checks
 
 openapi_tags = [
     {"name": "Health", "description": "Health and readiness endpoints."},
@@ -108,6 +109,22 @@ def startup_create_tables() -> None:
         id="daily_job",
         replace_existing=True,
     )
+    def health_monitoring_job() -> None:
+        db = SessionLocal()
+        try:
+            run_health_checks(db)
+        finally:
+            db.close()
+
+    # Run every 30 seconds.
+    scheduler.add_job(
+        health_monitoring_job,
+        "interval",
+        seconds=30,
+        id="health_monitoring_job",
+        replace_existing=True,
+    )
+
     minute_interval = max(1, int(settings.AI_AGENT_CRON_MINUTE_INTERVAL or 15))
     scheduler.add_job(
         ai_agent_job,
@@ -128,6 +145,7 @@ def startup_create_tables() -> None:
         send_due_reminder_emails(db, now=now)
         run_service_monitoring_checks(db, now=now)
         run_ai_agent(db, now=now)
+        run_health_checks(db)
     finally:
         db.close()
 
@@ -141,6 +159,10 @@ def shutdown_scheduler() -> None:
         except Exception:
             pass
 
+
+@app.get("/health", tags=["Health"])
+def health_check():
+    return {"status": "ok", "timestamp": datetime.utcnow()}
 
 @app.get("/", tags=["Health"])
 def root():

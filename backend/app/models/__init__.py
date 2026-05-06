@@ -22,6 +22,8 @@ from app.models.user import User
 from app.models.user_contract import UserContract
 from app.models.utilisateur import Utilisateur
 from app.models.message import Message
+from app.models.service_check import ServiceCheck
+from app.models.incident import Incident
 
 __all__ = [
     "User",
@@ -49,4 +51,6 @@ __all__ = [
     "FactureProjet",
     "Message",
     "DeclarationCNSS",
+    "ServiceCheck",
+    "Incident",
 ]

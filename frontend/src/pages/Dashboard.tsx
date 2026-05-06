@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import {
   Users, Briefcase, DollarSign, FileText, AlertTriangle, TrendingUp,
-  Zap, Loader2, CheckCircle2, Sparkles, X, ExternalLink, LayoutDashboard
+  Zap, Loader2, CheckCircle2, Sparkles, X, ExternalLink, LayoutDashboard, Download
 } from 'lucide-react';
 import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
@@ -214,10 +214,11 @@ const CategoryDetailOverlay: React.FC<{ category: CategoryType; onClose: () => v
   const [selectedItem, setSelectedItem] = React.useState<any>(null);
   const navigate = useNavigate();
   
-  const { data: clients } = useQuery({ queryKey: ['clients-all'], queryFn: () => clientsAPI.getAll(), enabled: category === 'clients' });
-  const { data: projects } = useQuery({ queryKey: ['projects-all'], queryFn: projectsAPI.getAll, enabled: category === 'projects' });
-  const { data: invoices } = useQuery({ queryKey: ['invoices-all'], queryFn: facturesAPI.getAll, enabled: category === 'invoices' || category === 'revenue' });
+  const { data: clients } = useQuery({ queryKey: ['clients-all'], queryFn: () => clientsAPI.getAll(), enabled: category === 'clients' || category === 'monitoring' });
+  const { data: projects } = useQuery({ queryKey: ['projects-all'], queryFn: projectsAPI.getAll, enabled: category === 'projects' || category === 'monitoring' });
+  const { data: invoices } = useQuery({ queryKey: ['invoices-all'], queryFn: facturesAPI.getAll, enabled: category === 'invoices' || category === 'revenue' || category === 'monitoring' });
   const { data: monitoring } = useQuery({ queryKey: ['monitoring-all'], queryFn: aiMonitoringAPI.getAll, enabled: category === 'monitoring' });
+  const { data: agentActivity } = useQuery({ queryKey: ['agent-activity'], queryFn: aiMonitoringAPI.getAgentActivity, enabled: category === 'monitoring' });
 
   const getCategoryTheme = () => {
     switch (category) {
@@ -354,16 +355,52 @@ const CategoryDetailOverlay: React.FC<{ category: CategoryType; onClose: () => v
                     <td style={{ padding: '16px' }}></td>
                   </motion.tr>
                 ))}
-                {category === 'monitoring' && monitoring?.map((m: any) => (
-                  <tr key={m.monitoringID} style={{ borderBottom: `1px solid ${BG}` }}>
-                    <td style={{ padding: '16px', color: TEXT, fontWeight: 600 }}>{m.serviceName}</td>
-                    <td style={{ padding: '16px' }}>
-                      <span style={{ padding: '4px 12px', borderRadius: 20, fontSize: 11, background: m.status === 'healthy' ? `${C_GREEN}15` : `${C_RED}15`, color: m.status === 'healthy' ? C_GREEN : C_RED, fontWeight: 700 }}>{m.status}</span>
-                    </td>
-                    <td style={{ padding: '16px', color: SUBTEXT, fontSize: 14 }}>{m.responseTime}ms de réponse</td>
-                    <td style={{ padding: '16px' }}></td>
-                  </tr>
-                ))}
+                {category === 'monitoring' && (
+                  <>
+                    {monitoring?.map((m: any) => (
+                      <tr key={m.monitoringID} style={{ borderBottom: `1px solid ${BG}` }}>
+                        <td style={{ padding: '16px', color: TEXT, fontWeight: 600 }}>{m.serviceName}</td>
+                        <td style={{ padding: '16px' }}>
+                          <span style={{ padding: '4px 12px', borderRadius: 20, fontSize: 11, background: m.status === 'healthy' ? `${C_GREEN}15` : `${C_RED}15`, color: m.status === 'healthy' ? C_GREEN : C_RED, fontWeight: 700 }}>{m.status}</span>
+                        </td>
+                        <td style={{ padding: '16px', color: SUBTEXT, fontSize: 14 }}>{m.responseTime}ms de réponse</td>
+                        <td style={{ padding: '16px' }}></td>
+                      </tr>
+                    ))}
+                    {agentActivity?.alerts?.map((a: any) => (
+                      <motion.tr 
+                        key={`alert-${a.id}`} 
+                        whileHover={{ background: '#fafbfc' }}
+                        onClick={() => setSelectedItem({ ...a, _type: 'ai_alert' })}
+                        style={{ borderBottom: `1px solid ${BG}`, cursor: 'pointer', transition: 'background 0.2s' }}
+                      >
+                        <td style={{ padding: '16px', color: TEXT, fontWeight: 600 }}>{a.title}</td>
+                        <td style={{ padding: '16px' }}>
+                          <span style={{ 
+                            padding: '4px 12px', borderRadius: 20, fontSize: 11, 
+                            background: (a.priority || '').toLowerCase() === 'elevee' ? `${C_RED}15` : `${C_YELLOW}15`, 
+                            color: (a.priority || '').toLowerCase() === 'elevee' ? C_RED : C_YELLOW, 
+                            fontWeight: 700 
+                          }}>
+                            {a.priority || 'Normale'}
+                          </span>
+                        </td>
+                        <td style={{ padding: '16px', color: SUBTEXT, fontSize: 14 }}>{a.message}</td>
+                        <td style={{ padding: '16px' }}>
+                          {a.projectId && (
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); onClose(); navigate(`/projects/${a.projectId}`); }}
+                              style={{ background: 'none', border: 'none', color: C_BLUE, cursor: 'pointer', padding: 4 }}
+                              title="Ouvrir le projet lié"
+                            >
+                              <ExternalLink size={16} />
+                            </button>
+                          )}
+                        </td>
+                      </motion.tr>
+                    ))}
+                  </>
+                )}
               </tbody>
             </table>
           </div>
@@ -487,6 +524,126 @@ const CategoryDetailOverlay: React.FC<{ category: CategoryType; onClose: () => v
                       <DetailItem label="Échéance" value={selectedItem.dueAt} />
                       <DetailItem label="Date Paiement" value={selectedItem.paidAt} />
                       <DetailItem label="Statut" value={selectedItem.status} />
+
+                      <div style={{ gridColumn: 'span 2', paddingTop: 16 }}>
+                        <button 
+                          onClick={() => {
+                            facturesAPI.exportPDF(selectedItem.id, `Facture_${selectedItem.id}.pdf`);
+                          }}
+                          style={{
+                            width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                            background: `linear-gradient(135deg, ${C_BLUE}, ${C_PURPLE})`, color: '#fff',
+                            border: 'none', borderRadius: 12, padding: '12px', fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                            boxShadow: '0 4px 12px rgba(146, 109, 222, 0.2)'
+                          }}
+                        >
+                          <FileText size={16} />
+                          Télécharger la Facture (PDF)
+                        </button>
+                      </div>
+                    </>
+                  )}
+                  {selectedItem._type === 'ai_alert' && (
+                    <>
+                      <div style={{ gridColumn: 'span 2', display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8, padding: '12px', background: `${C_BLUE}08`, borderRadius: 12 }}>
+                        <Sparkles size={20} color={C_BLUE} />
+                        <div>
+                          <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: TEXT }}>{selectedItem.title}</p>
+                          <p style={{ margin: 0, fontSize: 11, fontWeight: 700, color: C_BLUE, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Alerte IA Système</p>
+                        </div>
+                      </div>
+                      <div style={{ gridColumn: 'span 2' }}>
+                        <DetailItem label="Message" value={selectedItem.message} />
+                      </div>
+                      <DetailItem label="Priorité" value={selectedItem.priority} />
+                      <DetailItem label="Détectée le" value={new Date(selectedItem.createdAt).toLocaleString()} />
+                      <DetailItem label="Statut" value={selectedItem.status} />
+                      
+                      {/* Related Entity Details */}
+                      {(() => {
+                        if (selectedItem.factureId) {
+                          const f = invoices?.find((i: any) => i.id === selectedItem.factureId);
+                          if (f) return (
+                            <div style={{ gridColumn: 'span 2', marginTop: 12, padding: 16, background: '#f8faff', borderRadius: 16, border: `1px solid ${C_BLUE}20` }}>
+                              <p style={{ fontSize: 12, fontWeight: 800, color: C_BLUE, textTransform: 'uppercase', marginBottom: 12 }}>Détails de la Facture liée</p>
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                                <DetailItem label="ID Facture" value={f.id} />
+                                <DetailItem label="Montant" value={`${f.amount.toLocaleString()} ${f.devise}`} />
+                                <DetailItem label="Échéance" value={f.dueAt} />
+                                <DetailItem label="Statut" value={f.status} />
+                              </div>
+                            </div>
+                          );
+                        }
+                        if (selectedItem.projectId) {
+                          const p = projects?.find((i: any) => i.id === selectedItem.projectId);
+                          if (p) return (
+                            <div style={{ gridColumn: 'span 2', marginTop: 12, padding: 16, background: '#f8faff', borderRadius: 16, border: `1px solid ${C_GREEN}20` }}>
+                              <p style={{ fontSize: 12, fontWeight: 800, color: C_GREEN, textTransform: 'uppercase', marginBottom: 12 }}>Détails du Projet lié</p>
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                                <DetailItem label="Nom" value={p.name} />
+                                <DetailItem label="Progrès" value={`${p.progress}%`} />
+                                <DetailItem label="Budget" value={`${p.budget.toLocaleString()} ${p.devise}`} />
+                                <DetailItem label="Deadline" value={p.deadline} />
+                              </div>
+                            </div>
+                          );
+                        }
+                        if (selectedItem.clientId) {
+                          const c = clients?.find((i: any) => i.id === selectedItem.clientId);
+                          if (c) return (
+                            <div style={{ gridColumn: 'span 2', marginTop: 12, padding: 16, background: '#f8faff', borderRadius: 16, border: `1px solid ${C_RED}20` }}>
+                              <p style={{ fontSize: 12, fontWeight: 800, color: C_RED, textTransform: 'uppercase', marginBottom: 12 }}>Détails du Client lié</p>
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                                <DetailItem label="Nom" value={`${c.name} ${c.prenom}`} />
+                                <DetailItem label="Email" value={c.email} />
+                                <DetailItem label="Tel" value={c.phone} />
+                                <DetailItem label="Ville" value={c.ville} />
+                              </div>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
+
+                      <div style={{ gridColumn: 'span 2', display: 'flex', gap: 12, paddingTop: 16 }}>
+                        <button 
+                          onClick={() => {
+                            if (selectedItem.factureId) {
+                               facturesAPI.exportPDF(selectedItem.factureId, `Facture_${selectedItem.factureId}.pdf`);
+                            } else {
+                               toast.info("Téléchargement du rapport d'analyse en cours...");
+                            }
+                          }}
+                          style={{
+                            flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                            background: `linear-gradient(135deg, ${C_BLUE}, ${C_PURPLE})`, color: '#fff',
+                            border: 'none', borderRadius: 12, padding: '12px', fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                            boxShadow: '0 4px 12px rgba(146, 109, 222, 0.2)'
+                          }}
+                        >
+                          <Download size={16} />
+                          Télécharger
+                        </button>
+                        
+                        {(selectedItem.projectId || selectedItem.clientId) && (
+                          <button 
+                            onClick={() => {
+                              onClose();
+                              if (selectedItem.projectId) navigate(`/projects/${selectedItem.projectId}`);
+                              else if (selectedItem.clientId) navigate(`/clients/${selectedItem.clientId}`);
+                            }}
+                            style={{
+                              flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                              background: '#fff', color: TEXT,
+                              border: `1px solid ${BORDER}`, borderRadius: 12, padding: '12px', fontSize: 14, fontWeight: 700, cursor: 'pointer'
+                            }}
+                          >
+                            <ExternalLink size={16} />
+                            Voir Fiche
+                          </button>
+                        )}
+                      </div>
                     </>
                   )}
                 </div>
@@ -689,6 +846,12 @@ export const Dashboard: React.FC = () => {
     runExecution.mutate();
   };
 
+  const { data: healthStats = {} } = useQuery({
+    queryKey: ['health-stats-dashboard'],
+    queryFn: () => aiMonitoringAPI.getHealthStats(24),
+    refetchInterval: 60000,
+  });
+
   if (isLoading || !data) {
     return (
       <div style={{ background: BG, minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -833,6 +996,30 @@ export const Dashboard: React.FC = () => {
             : data.reminders.map((r: any, i: number) => (
                 <LigneRappel key={r.id} title={r.title} dateLimite={r.dateLimite} priorite={r.priorite} />
               ))}
+        </CarteSombre>
+      </div>
+
+      {/* Disponibilité des Services */}
+      <div style={{ gridColumn: 'span 12' }}>
+        <CarteSombre titre="Disponibilité des Services (24h)" delay={0.62} onClick={() => navigate('/ai-monitoring')}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
+            {['Frontend', 'Backend', 'Agent IA', 'Database'].map((svc) => {
+              const uptime = (healthStats && typeof healthStats === 'object') ? healthStats[svc] : undefined;
+              const hasData = uptime !== undefined;
+              return (
+                <div key={svc} style={{ textAlign: 'center' }}>
+                  <p style={{ fontSize: 10, color: MUTED, textTransform: 'uppercase', marginBottom: 4 }}>{svc}</p>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: !hasData ? MUTED : uptime > 99 ? C_GREEN : C_YELLOW }}>
+                    {hasData ? `${uptime}%` : '--%'}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 4 }}>
+                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: !hasData ? MUTED : uptime > 99 ? C_GREEN : C_YELLOW, boxShadow: hasData ? `0 0 10px ${uptime > 99 ? C_GREEN : C_YELLOW}` : 'none' }} />
+                    <span style={{ fontSize: 9, fontWeight: 600 }}>{hasData ? 'ACTIF' : 'SCAN...'}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </CarteSombre>
       </div>
 

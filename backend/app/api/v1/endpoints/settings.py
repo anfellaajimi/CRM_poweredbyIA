@@ -1,10 +1,21 @@
+import cloudinary.uploader
 from typing import Any
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, File, UploadFile, HTTPException
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.api.v1.endpoints.auth import get_current_user as get_current_active_user
 from app.models.app_settings import AppSettings
 from app.schemas.app_settings import AppSettings as AppSettingsSchema, AppSettingsUpdate
+from app.core.config import settings as app_settings
+
+import cloudinary
+
+cloudinary.config(
+    cloud_name=app_settings.CLOUDINARY_CLOUD_NAME,
+    api_key=app_settings.CLOUDINARY_API_KEY,
+    api_secret=app_settings.CLOUDINARY_API_SECRET,
+    secure=True,
+)
 
 router = APIRouter()
 
@@ -50,3 +61,25 @@ def update_settings(
     db.commit()
     db.refresh(settings)
     return settings
+
+@router.post("/upload-image")
+async def upload_settings_image(
+    file: UploadFile = File(...),
+    current_user: Any = Depends(get_current_active_user),
+) -> Any:
+    """
+    Upload an image for organization settings (logo or stamp) to Cloudinary.
+    """
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="File must be an image")
+    
+    try:
+        file_bytes = await file.read()
+        upload_result = cloudinary.uploader.upload(
+            file_bytes,
+            folder="crm-professional/settings",
+            resource_type="image"
+        )
+        return {"url": upload_result.get("secure_url")}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
