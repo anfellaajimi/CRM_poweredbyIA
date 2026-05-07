@@ -23,6 +23,7 @@ from app.services.reminders import generate_project_rappels, send_due_reminder_e
 from app.services.ai_agent import run_ai_agent
 from app.services.service_monitoring import run_service_monitoring_checks
 from app.services.health_monitoring import run_health_checks
+from app.services.ml_service import MLService
 
 openapi_tags = [
     {"name": "Health", "description": "Health and readiness endpoints."},
@@ -116,6 +117,13 @@ def startup_create_tables() -> None:
         finally:
             db.close()
 
+    def ml_predictions_job() -> None:
+        db = SessionLocal()
+        try:
+            MLService.run_all_predictions(db)
+        finally:
+            db.close()
+
     # Run every 30 seconds.
     scheduler.add_job(
         health_monitoring_job,
@@ -133,6 +141,14 @@ def startup_create_tables() -> None:
         replace_existing=True,
     )
 
+    # ML Predictions every 24h at 02:00
+    scheduler.add_job(
+        ml_predictions_job,
+        CronTrigger(hour=2, minute=0),
+        id="ml_predictions_job",
+        replace_existing=True,
+    )
+
     scheduler.start()
     _scheduler = scheduler
     _scheduler_started = True
@@ -146,6 +162,7 @@ def startup_create_tables() -> None:
         run_service_monitoring_checks(db, now=now)
         run_ai_agent(db, now=now)
         run_health_checks(db)
+        MLService.run_all_predictions(db)
     finally:
         db.close()
 

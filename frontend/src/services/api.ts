@@ -696,6 +696,14 @@ export const aiMonitoringAPI = {
   getIncidents: async (): Promise<UIIncident[]> => (await api.get('/ai-monitoring/health/incidents')).data,
 };
 
+export const aiPredictionsAPI = {
+  getRevenue: async () => (await api.get('/predictions/revenue')).data,
+  getProjects: async () => (await api.get('/predictions/projects')).data,
+  getRisks: async () => (await api.get('/predictions/risks')).data,
+  getPerformance: async () => (await api.get('/predictions/performance')).data,
+  recalculate: async () => (await api.post('/predictions/recalculate')).data,
+};
+
 export type UIServiceCheck = {
   id: string;
   service_name: string;

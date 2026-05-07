@@ -22,6 +22,7 @@ import { Factures } from '../pages/Factures';
 import { Contrats } from '../pages/Contrats';
 import { CahierDeCharge } from '../pages/CahierDeCharge';
 import { AIMonitoring } from '../pages/AIMonitoring';
+import { AIPredictions } from '../pages/AIPredictions';
 import { Rappels } from '../pages/Rappels';
 import { Users } from '../pages/Users';
 import { UserDetails } from '../pages/UserDetails';
@@ -86,6 +87,7 @@ export default function App() {
             <Route path="/contrats" element={<Contrats />} />
             <Route path="/cahier-de-charge" element={<CahierDeCharge />} />
             <Route path="/ai-monitoring" element={<AIMonitoring />} />
+            <Route path="/ai-predictions" element={<AIPredictions />} />
             <Route path="/rappels" element={<Rappels />} />
             <Route path="/users" element={<Users />} />
             <Route path="/users/:id" element={<UserDetails />} />

@@ -20,6 +20,7 @@ from app.api.v1.endpoints.user_contracts import router as user_contracts_router
 from app.api.v1.endpoints.utilisateurs import router as utilisateurs_router
 from app.api.v1.endpoints.messages import router as messages_router
 from app.api.v1.endpoints.declaration_cnss import router as declaration_cnss_router
+from app.api.v1.endpoints.ml_predictions import router as ml_predictions_router
 
 api_router = APIRouter()
 api_router.include_router(health_router)
@@ -41,4 +42,5 @@ api_router.include_router(factures_router)
 api_router.include_router(contrats_router)
 api_router.include_router(cahier_router)
 api_router.include_router(messages_router)
+api_router.include_router(ml_predictions_router)
 api_router.include_router(settings_router, prefix="/settings", tags=["settings"])

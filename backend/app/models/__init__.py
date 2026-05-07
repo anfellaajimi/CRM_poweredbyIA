@@ -24,6 +24,7 @@ from app.models.utilisateur import Utilisateur
 from app.models.message import Message
 from app.models.service_check import ServiceCheck
 from app.models.incident import Incident
+from app.models.ml_prediction import MLPrediction
 
 __all__ = [
     "User",
@@ -53,4 +54,5 @@ __all__ = [
     "DeclarationCNSS",
     "ServiceCheck",
     "Incident",
+    "MLPrediction",
 ]
