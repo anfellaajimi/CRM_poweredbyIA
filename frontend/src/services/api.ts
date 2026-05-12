@@ -42,7 +42,7 @@ export const downloadPDF = async (url: string, filename: string, viewOnly = fals
   const { data } = await api.get(url, { responseType: 'blob' });
   const blob = new Blob([data], { type: 'application/pdf' });
   const blobUrl = window.URL.createObjectURL(blob);
-  
+
   if (viewOnly) {
     window.open(blobUrl, '_blank');
   } else {
@@ -53,7 +53,7 @@ export const downloadPDF = async (url: string, filename: string, viewOnly = fals
     link.click();
     link.remove();
   }
-  
+
   // Clean up the URL after a small delay to ensure the browser has time to start the action
   setTimeout(() => window.URL.revokeObjectURL(blobUrl), 100);
 };
@@ -347,6 +347,11 @@ export type UIAppSettings = {
 
   appearanceTheme?: 'light' | 'dark';
   appearancePrimaryColor?: string;
+
+  subscriptionPlan?: string;
+  subscriptionStatus?: string;
+  paymentMethodLast4?: string;
+  paymentMethodExpiry?: string;
 };
 
 const toUIAppSettings = (item: any): UIAppSettings => ({
@@ -376,6 +381,11 @@ const toUIAppSettings = (item: any): UIAppSettings => ({
 
   appearanceTheme: item.appearance_theme === 'dark' ? 'dark' : 'light',
   appearancePrimaryColor: item.appearance_primary_color || '#6366f1',
+
+  subscriptionPlan: item.subscription_plan || 'Enterprise AI',
+  subscriptionStatus: item.subscription_status || 'Actif',
+  paymentMethodLast4: item.payment_method_last4 || '4242',
+  paymentMethodExpiry: item.payment_method_expiry || '12/2027',
 });
 
 const toAppSettingsPayload = (item: Partial<UIAppSettings>) => ({
@@ -405,6 +415,11 @@ const toAppSettingsPayload = (item: Partial<UIAppSettings>) => ({
 
   appearance_theme: item.appearanceTheme,
   appearance_primary_color: item.appearancePrimaryColor,
+
+  subscription_plan: item.subscriptionPlan,
+  subscription_status: item.subscriptionStatus,
+  payment_method_last4: item.paymentMethodLast4,
+  payment_method_expiry: item.paymentMethodExpiry,
 });
 
 export type UICahier = {
@@ -702,6 +717,11 @@ export const aiPredictionsAPI = {
   getRisks: async () => (await api.get('/predictions/risks')).data,
   getPerformance: async () => (await api.get('/predictions/performance')).data,
   recalculate: async () => (await api.post('/predictions/recalculate')).data,
+  getRecommendations: async () => (await api.get('/predictions/smart-recommendations')).data,
+  getDevInsights: async () => (await api.get('/predictions/dev-insights')).data,
+  getBudgetIntelligence: async () => (await api.get('/predictions/budget-intelligence')).data,
+  chat: async (message: string) => (await api.post('/predictions/chat', { message })).data,
+  getResourceOptimization: async () => (await api.get('/predictions/resource-optimization')).data,
 };
 
 export type UIServiceCheck = {
@@ -1201,7 +1221,7 @@ export const devisAPI = {
     return toUIDevis(res);
   },
   delete: (id: string) => api.delete(`/devis/${id}`),
-  exportPDF: (id: number, filename: string, viewOnly = false) => 
+  exportPDF: (id: number, filename: string, viewOnly = false) =>
     downloadPDF(`/devis/${id}/pdf`, filename, viewOnly),
 };
 
@@ -1249,7 +1269,7 @@ export const facturesAPI = {
     return toUIFacture(res);
   },
   delete: (id: string) => api.delete(`/factures/${id}`),
-  exportPDF: (id: number, filename: string, viewOnly = false) => 
+  exportPDF: (id: number, filename: string, viewOnly = false) =>
     downloadPDF(`/factures/${id}/pdf`, filename, viewOnly),
 };
 
@@ -1271,7 +1291,7 @@ export const contratsAPI = {
     return toUIContrat(res);
   },
   delete: (id: string) => api.delete(`/contrats/${id}`),
-  exportPDF: (id: number, filename: string, viewOnly = false) => 
+  exportPDF: (id: number, filename: string, viewOnly = false) =>
     downloadPDF(`/contrats/${id}/pdf`, filename, viewOnly),
 };
 

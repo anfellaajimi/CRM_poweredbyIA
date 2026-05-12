@@ -39,3 +39,9 @@ class AppSettings(Base):
     # Appearance Settings
     appearance_theme: Mapped[str | None] = mapped_column(String(20), default="light")
     appearance_primary_color: Mapped[str | None] = mapped_column(String(20), default="#6366f1")
+
+    # Subscription & Billing Settings
+    subscription_plan: Mapped[str | None] = mapped_column(String(100), default="Enterprise AI")
+    subscription_status: Mapped[str | None] = mapped_column(String(50), default="Actif")
+    payment_method_last4: Mapped[str | None] = mapped_column(String(10), default="4242")
+    payment_method_expiry: Mapped[str | None] = mapped_column(String(20), default="12/2027")

@@ -257,13 +257,20 @@ class MLService:
             cls._save_prediction(db, 'performance', float(len(perf)), 0.92, 'current', {'details': perf})
 
             db.commit()
-            log_activity(db, "ai_prediction", None, "recalc",
-                         "[ML] Recalcul complet des prédictions IA réussi.", "System")
+            log_activity(
+                db,
+                entity_type="ai_prediction",
+                entity_id=None,
+                action="recalc",
+                message="[ML] Recalcul complet des prédictions IA réussi.",
+                actor="System"
+            )
             logger.info("[MLService] All predictions computed and saved successfully.")
 
         except Exception as exc:
             logger.error(f"[MLService] Prediction run failed: {exc}", exc_info=True)
             db.rollback()
+            raise exc
 
     @staticmethod
     def _save_prediction(db: Session, p_type: str, val: float, conf: float,
@@ -286,3 +293,127 @@ class MLService:
                 period=period,
                 metadata_json=meta
             ))
+
+    @staticmethod
+    def calculate_health_score(db: Session) -> Dict[str, Any]:
+        risks = MLService.predict_risks(db)
+        high_risks = len([r for r in risks if r['risk_level'] == 'High'])
+        total_projects = len(risks)
+        
+        score = 100.0
+        if total_projects > 0:
+            score -= (high_risks / total_projects) * 50
+            
+        return {'current_score': max(0.0, score)}
+
+    @staticmethod
+    def predict_dev_insights(db: Session) -> List[Dict[str, Any]]:
+        users = db.query(Utilisateur).options(joinedload(Utilisateur.projets)).all()
+        devs = []
+        for u in users:
+            active_projects = [p for p in u.projets if (p.status or '').lower() not in {'termine', 'terminé', 'done', 'completed'}]
+            if not active_projects:
+                continue
+                
+            workload = min(100.0, len(active_projects) * 25.0)
+            risk = "OK"
+            if workload > 80:
+                risk = "High"
+            elif workload >= 60:
+                risk = "Medium"
+                
+            devs.append({
+                'name': u.nom or f'User {u.userID}',
+                'active_projects': len(active_projects),
+                'workload_percentage': workload,
+                'burnout_risk_level': risk,
+                'avg_completion_days': 15.5
+            })
+        return sorted(devs, key=lambda x: x['workload_percentage'], reverse=True)
+
+    @staticmethod
+    def predict_budget_intelligence(db: Session) -> List[Dict[str, Any]]:
+        projects = db.query(Projet).filter(
+            Projet.status.notin_(['termine', 'terminé', 'done', 'completed'])
+        ).all()
+        
+        budgets = []
+        for p in projects:
+            b = float(p.budget) if p.budget else 0.0
+            s = float(p.depense) if p.depense else 0.0
+            
+            if b == 0:
+                continue
+                
+            overrun = max(0.0, ((s - b) / b) * 100) if s > b else 0.0
+            roi = 25.0
+            
+            budgets.append({
+                'project_name': p.nomProjet,
+                'budget': b,
+                'spent': s,
+                'overrun_percentage': overrun,
+                'estimated_roi': roi
+            })
+            
+        return sorted(budgets, key=lambda x: x['overrun_percentage'], reverse=True)
+
+    @staticmethod
+    def predict_resource_allocation(db: Session) -> Dict[str, Any]:
+        users = db.query(Utilisateur).options(joinedload(Utilisateur.projets)).all()
+        active_users = []
+        for u in users:
+            if not u.actif: continue
+            active_projects = [p for p in u.projets if (p.status or '').lower() not in {'termine', 'terminé', 'done', 'completed'}]
+            workload = min(100.0, len(active_projects) * 30.0)
+            status = "Élevé" if workload >= 80 else "Moyen" if workload >= 50 else "Bien"
+            active_users.append({
+                'id': u.userID,
+                'name': u.nom or f'User {u.userID}',
+                'role': u.role,
+                'workload': workload,
+                'status': status,
+                'avg_completion_days': 16.0, # 16 j/projet as requested
+                'projects': [{'id': p.id, 'name': p.nomProjet} for p in active_projects]
+            })
+
+        for u in active_users:
+            u['simulated_workload'] = u['workload']
+
+        overloaded = [u for u in active_users if u['workload'] >= 80]
+        # On considère "disponible" tout développeur ayant 70% ou moins de charge
+        underloaded = sorted([u for u in active_users if u['simulated_workload'] <= 70], key=lambda x: x['simulated_workload'])
+        
+        recommendations = []
+        rec_id = 1
+        
+        for ov in overloaded:
+            if not ov['projects']: continue
+            if underloaded:
+                target = underloaded[0]
+                proj_to_transfer = ov['projects'][-1]
+                recommendations.append({
+                    'id': rec_id,
+                    'type': 'transfer',
+                    'priority': 'Urgent',
+                    'title': f"Surcharge imminente : {ov['name']}",
+                    'description': f"Transférer le projet '{proj_to_transfer['name']}' à {target['name']}.",
+                    'from_user': ov['name'],
+                    'from_user_id': ov['id'],
+                    'to_user': target['name'],
+                    'to_user_id': target['id'],
+                    'project': proj_to_transfer['name'],
+                    'project_id': proj_to_transfer['id'],
+                    'workload_reduction': 30
+                })
+                rec_id += 1
+                target['simulated_workload'] += 30
+                underloaded = sorted([u for u in underloaded if u['simulated_workload'] <= 70], key=lambda x: x['simulated_workload'])
+
+        # Sort all users by workload descending for the radar chart
+        active_users = sorted(active_users, key=lambda x: x['workload'], reverse=True)
+
+        return {
+            "developers": active_users,
+            "recommendations": recommendations
+        }

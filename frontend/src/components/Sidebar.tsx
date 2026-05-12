@@ -28,13 +28,14 @@ const menuItems = [
   { icon: Receipt, label: 'Factures', path: '/factures' },
   { icon: FileSignature, label: 'Contrats', path: '/contrats' },
   { icon: ClipboardList, label: 'Cahier de Charge', path: '/cahier-de-charge' },
-  { 
-    icon: Activity, 
-    label: 'AI Monitoring', 
+  { icon: Activity, label: "Automate d'Alertes", path: '/alert-automaton' },
+  {
+    icon: Sparkles,
+    label: 'Intelligence Artificielle',
     path: '/ai-monitoring',
     children: [
-      { label: 'Supervision', path: '/ai-monitoring' },
-      { label: 'Prédictions IA', path: '/ai-predictions', icon: Sparkles }
+      { label: 'Allocation IA', path: '/ai-monitoring' },
+      { label: 'Prédictions IA', path: '/ai-predictions' }
     ]
   },
   { icon: Bell, label: 'Rappels', path: '/rappels' },
@@ -45,10 +46,10 @@ const menuItems = [
 export const Sidebar: React.FC = () => {
   const location = useLocation();
   const { isCollapsed, toggleSidebar } = useSidebarStore();
-  const [expandedItems, setExpandedItems] = React.useState<string[]>(['AI Monitoring']);
+  const [expandedItems, setExpandedItems] = React.useState<string[]>(['Intelligence Artificielle']);
 
   const toggleExpand = (label: string) => {
-    setExpandedItems(prev => 
+    setExpandedItems(prev =>
       prev.includes(label) ? prev.filter(i => i !== label) : [...prev, label]
     );
   };

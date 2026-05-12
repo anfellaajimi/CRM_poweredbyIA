@@ -4,7 +4,8 @@ import {
   TrendingUp, TrendingDown, AlertCircle, CheckCircle2, 
   Sparkles, BrainCircuit, BarChart3, LineChart as LineChartIcon,
   Users, Briefcase, DollarSign, Calendar, RefreshCw,
-  ChevronRight, Info, ShieldCheck
+  ChevronRight, Info, ShieldCheck,
+  Bot, X, Send, Lightbulb, Cpu, Wallet, ArrowRight
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, 
@@ -95,6 +96,30 @@ export const AIPredictions: React.FC = () => {
     queryKey: ['ml-performance'], 
     queryFn: aiPredictionsAPI.getPerformance 
   });
+  
+  const { data: recommendations, refetch: refetchRecs } = useQuery({ 
+    queryKey: ['ml-recommendations'], 
+    queryFn: aiPredictionsAPI.getRecommendations 
+  });
+
+  const { data: budgetInt, refetch: refetchBudget } = useQuery({ 
+    queryKey: ['ml-budget'], 
+    queryFn: aiPredictionsAPI.getBudgetIntelligence 
+  });
+
+
+
+  const [isChatOpen, setIsChatOpen] = React.useState(false);
+  const [chatInput, setChatInput] = React.useState('');
+  const [chatMessages, setChatMessages] = React.useState<{role: 'user'|'bot', text: string}[]>([
+    { role: 'bot', text: 'Bonjour ! Je suis l\'Assistant IA CRM propulsé par Gemini. Je peux analyser vos données et répondre à vos questions (ex: "Quel sera mon CA en juin ?", "Quel développeur est en surcharge ?").' }
+  ]);
+  const [isChatting, setIsChatting] = React.useState(false);
+  const chatEndRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMessages, isChatOpen]);
 
   const handleRecalculate = async () => {
     const promise = aiPredictionsAPI.recalculate();
@@ -105,6 +130,25 @@ export const AIPredictions: React.FC = () => {
     });
     await promise;
     refetchRev(); refetchProj(); refetchRisks(); refetchPerf();
+    refetchRecs(); refetchBudget();
+  };
+
+
+
+  const handleChat = async () => {
+    if (!chatInput.trim()) return;
+    const msg = chatInput.trim();
+    setChatMessages(prev => [...prev, { role: 'user', text: msg }]);
+    setChatInput('');
+    setIsChatting(true);
+    try {
+      const res = await aiPredictionsAPI.chat(msg);
+      setChatMessages(prev => [...prev, { role: 'bot', text: res.reply }]);
+    } catch (e) {
+      setChatMessages(prev => [...prev, { role: 'bot', text: 'Désolé, une erreur est survenue lors de la communication avec Gemini.' }]);
+    } finally {
+      setIsChatting(false);
+    }
   };
 
   const revenueChartData = React.useMemo(() => {
@@ -312,37 +356,37 @@ export const AIPredictions: React.FC = () => {
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="lg:col-span-2 bg-white dark:bg-[#1a1d2e] border border-gray-200 dark:border-white/5 rounded-3xl overflow-hidden shadow-sm dark:shadow-none"
+          className="lg:col-span-2 bg-white dark:bg-[#1a1d2e] border border-gray-200 dark:border-white/5 rounded-xl overflow-hidden shadow-sm dark:shadow-none"
         >
-          <div className="p-6 border-b border-gray-100 dark:border-white/5 flex justify-between items-center bg-gray-50/80 dark:bg-white/[0.02]">
+          <div className="p-6 border-b border-gray-100 dark:border-white/5 flex justify-between items-center bg-white dark:bg-white/[0.02]">
             <div className="flex items-center gap-3">
-              <ShieldCheck className="text-amber-500 dark:text-amber-400" />
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white">Analyse des Risques Projets</h3>
+              <ShieldCheck className="text-gray-700 dark:text-white" size={20} />
+              <h3 className="text-base font-bold text-gray-900 dark:text-white">Analyse des Risques Projets</h3>
             </div>
-            <span className="text-xs font-bold px-3 py-1 bg-amber-400/10 text-amber-600 dark:text-amber-400 rounded-full border border-amber-400/20">
+            <span className="text-xs font-bold px-3 py-1 bg-white dark:bg-transparent text-orange-500 rounded-full border border-orange-500">
               {risks?.filter((r: any) => r.risk_level === 'High').length} Critique(s)
             </span>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-100 border-collapse">
+            <table className="w-full border-collapse">
               <thead>
-                <tr className="bg-gray-50 dark:bg-white/5 text-left">
-                  <th className="px-6 py-4 text-xs font-black text-gray-400 dark:text-white/30 uppercase tracking-widest">Projet</th>
-                  <th className="px-6 py-4 text-xs font-black text-gray-400 dark:text-white/30 uppercase tracking-widest">Score Risque</th>
-                  <th className="px-6 py-4 text-xs font-black text-gray-400 dark:text-white/30 uppercase tracking-widest">Statut IA</th>
-                  <th className="px-6 py-4 text-xs font-black text-gray-400 dark:text-white/30 uppercase tracking-widest">Facteurs de Risque</th>
+                <tr className="bg-gray-50/50 dark:bg-white/5 text-left border-b border-gray-100 dark:border-white/5">
+                  <th className="px-5 py-3 text-[11px] font-bold text-gray-500 dark:text-white/40 uppercase tracking-wider">Projet</th>
+                  <th className="px-5 py-3 text-[11px] font-bold text-gray-500 dark:text-white/40 uppercase tracking-wider">Score Risque</th>
+                  <th className="px-5 py-3 text-[11px] font-bold text-gray-500 dark:text-white/40 uppercase tracking-wider">Statut IA</th>
+                  <th className="px-5 py-3 text-[11px] font-bold text-gray-500 dark:text-white/40 uppercase tracking-wider">Facteurs de Risque</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-white/5">
-                {risks?.map((r: any) => (
+              <tbody className="divide-y divide-gray-100 dark:divide-white/5 bg-white dark:bg-transparent">
+                {risks?.slice(0, 5).map((r: any) => (
                   <tr key={r.project_id} className="hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="font-bold text-gray-900 dark:text-white">{r.project_name}</div>
-                      <div className="text-[10px] text-gray-400 dark:text-white/30">ID: {r.project_id}</div>
+                    <td className="px-5 py-3">
+                      <div className="font-bold text-gray-900 dark:text-white text-xs">{r.project_name}</div>
+                      <div className="text-[10px] text-gray-400 dark:text-white/30 mt-0.5">ID: {r.project_id}</div>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 h-1.5 w-16 bg-gray-200 dark:bg-white/5 rounded-full overflow-hidden">
+                    <td className="px-5 py-3">
+                      <div className="flex items-center gap-3">
+                        <div className="h-1 w-10 bg-gray-200 dark:bg-white/5 rounded-full overflow-hidden">
                           <div 
                             className="h-full rounded-full transition-all duration-1000"
                             style={{ 
@@ -351,25 +395,25 @@ export const AIPredictions: React.FC = () => {
                             }}
                           />
                         </div>
-                        <span className="text-xs font-black" style={{ color: r.risk_score > 60 ? COLORS.danger : r.risk_score > 30 ? COLORS.warning : COLORS.success }}>
+                        <span className="text-[11px] font-bold" style={{ color: r.risk_score > 60 ? COLORS.danger : r.risk_score > 30 ? COLORS.warning : COLORS.success }}>
                           {r.risk_score}%
                         </span>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-5 py-3">
                       <span className={cn(
-                        "px-2 py-1 rounded-lg text-[10px] font-black uppercase",
-                        r.risk_level === 'High' ? "bg-red-100 dark:bg-red-500/10 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/20" : 
-                        r.risk_level === 'Medium' ? "bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20" :
-                        "bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20"
+                        "px-2 py-1 rounded text-[9px] font-bold uppercase",
+                        r.risk_level === 'High' ? "bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400" : 
+                        r.risk_level === 'Medium' ? "bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400" :
+                        "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
                       )}>
                         {r.risk_level === 'High' ? '🔴 Critique' : r.risk_level === 'Medium' ? '⚠️ Modéré' : '✅ Sain'}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-wrap gap-1">
+                    <td className="px-5 py-3">
+                      <div className="flex flex-wrap gap-2">
                         {r.reasons.map((reason: string, i: number) => (
-                          <span key={i} className="text-[9px] font-medium text-gray-500 dark:text-white/40 bg-gray-100 dark:bg-white/5 px-2 py-0.5 rounded border border-gray-200 dark:border-white/5">
+                          <span key={i} className="text-[9px] font-medium text-gray-500 dark:text-white/40 bg-white dark:bg-white/5 px-2.5 py-0.5 rounded-full border border-gray-200 dark:border-white/5">
                             {reason}
                           </span>
                         ))}
@@ -386,43 +430,191 @@ export const AIPredictions: React.FC = () => {
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white dark:bg-[#1a1d2e] border border-gray-200 dark:border-white/5 rounded-3xl p-6 space-y-6 shadow-sm dark:shadow-none"
+          className="bg-white dark:bg-[#1a1d2e] border border-gray-200 dark:border-white/5 rounded-xl p-6 space-y-6 shadow-sm dark:shadow-none"
         >
           <div className="flex items-center gap-3">
             <Sparkles className="text-purple-500 dark:text-purple-400" />
             <h3 className="text-lg font-bold text-gray-900 dark:text-white">Top Performance</h3>
           </div>
-          <div className="space-y-4">
-            {performance?.slice(0, 5).map((p: any, i: number) => (
-              <div key={p.user_id} className="group flex items-center justify-between p-4 rounded-2xl bg-gray-50 dark:bg-white/[0.02] border border-gray-200 dark:border-white/5 hover:bg-gray-100 dark:hover:bg-white/[0.05] transition-all cursor-default">
-                <div className="flex items-center gap-4">
-                  <div className="relative">
-                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-500/20 dark:to-purple-500/20 flex items-center justify-center font-black text-indigo-600 dark:text-white/40 border border-indigo-200 dark:border-white/10 group-hover:scale-110 transition-transform">
-                      {p.name.charAt(0)}
-                    </div>
-                    {i === 0 && (
-                      <div className="absolute -top-1 -right-1 w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center border-2 border-white dark:border-[#1a1d2e]">
-                        <span className="text-[10px]">👑</span>
-                      </div>
-                    )}
+          <div className="space-y-3">
+            {performance?.slice(0, 4).map((p: any, i: number) => (
+              <div key={p.user_id} className="group flex items-center justify-between p-3.5 rounded-xl bg-white dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 hover:border-gray-200 transition-all cursor-default shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-indigo-50/50 dark:bg-indigo-500/20 flex items-center justify-center font-black text-indigo-500 dark:text-white/40 border border-indigo-100 dark:border-white/10 group-hover:scale-105 transition-transform">
+                    {p.name.charAt(0)}
                   </div>
                   <div>
-                    <div className="font-bold text-gray-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">{p.name}</div>
-                    <div className="text-[10px] text-gray-400 dark:text-white/30 font-bold uppercase tracking-wider">{p.projects_count} Projets • {p.completed_count} Livrés</div>
+                    <div className="font-bold text-gray-900 dark:text-white text-xs">{p.name}</div>
+                    <div className="text-[9px] text-gray-400 dark:text-white/30 font-bold uppercase tracking-wider">{p.projects_count} Projets • {p.completed_count} Livrés</div>
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className="text-xl font-black text-gray-900 dark:text-white">{Math.round(p.score)}</div>
-                  <div className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-tighter">Score IA</div>
+                <div className="text-right flex flex-col items-end">
+                  <div className="text-lg font-black text-gray-900 dark:text-white leading-none">{Math.round(p.score)}</div>
+                  <div className="text-[8px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-tighter mt-0.5">Score IA</div>
                 </div>
               </div>
             ))}
           </div>
-          <button className="w-full py-4 text-xs font-black uppercase tracking-widest text-gray-400 dark:text-white/30 hover:text-gray-700 dark:hover:text-white transition-colors">
-            Voir le classement complet
-          </button>
         </motion.div>
       </div>
+
+      {/* 1. Smart Recommendations */}
+      <div className="space-y-6 mt-8">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-yellow-100 dark:bg-yellow-500/10 flex items-center justify-center">
+            <Lightbulb className="text-yellow-500" size={24} />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Smart Recommendations</h2>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {recommendations?.map((rec: any) => (
+            <div key={rec.id} className="bg-white dark:bg-[#1a1d2e] border border-gray-200 dark:border-white/5 rounded-xl p-5 shadow-sm hover:border-purple-500/30 transition-all group">
+              <div className="flex justify-between items-start mb-3">
+                <span className={cn(
+                  "px-2.5 py-1 rounded text-[10px] font-bold uppercase",
+                  rec.priority === 'Urgent' ? "bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400" :
+                  rec.priority === 'Important' ? "bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400" :
+                  "bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                )}>
+                  {rec.priority === 'Urgent' ? '🔴 Urgent' : rec.priority === 'Important' ? '⚠️ Important' : '💡 Suggestion'}
+                </span>
+              </div>
+              <h4 className="font-bold text-gray-900 dark:text-white text-sm mb-1 group-hover:text-purple-500 transition-colors">{rec.title}</h4>
+              <p className="text-xs text-gray-500 dark:text-white/50">{rec.description}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-8 mt-8">
+
+
+        {/* 3. Budget Intelligence */}
+        <div className="bg-white dark:bg-[#1a1d2e] border border-gray-200 dark:border-white/5 rounded-xl p-6 shadow-sm">
+          <div className="flex items-center gap-3 mb-6">
+            <Wallet className="text-emerald-500" />
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Budget Intelligence</h2>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-gray-100 dark:border-white/5">
+                  <th className="pb-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Projet</th>
+                  <th className="pb-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider text-right">Prévu vs Consommé</th>
+                  <th className="pb-3 text-[10px] font-bold text-gray-400 uppercase tracking-wider text-right">Dépassement</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-white/5">
+                {budgetInt?.map((b: any, i: number) => (
+                  <tr key={i}>
+                    <td className="py-3">
+                      <div className="font-bold text-xs text-gray-900 dark:text-white">{b.project_name}</div>
+                      <div className="text-[9px] text-gray-400 font-medium mt-0.5">ROI Est. {Math.round(b.estimated_roi)}%</div>
+                    </td>
+                    <td className="py-3 text-right">
+                      <div className="text-xs font-bold text-gray-900 dark:text-white">{b.budget.toLocaleString()} / {b.spent.toLocaleString()} DT</div>
+                    </td>
+                    <td className="py-3 text-right">
+                      {b.overrun_percentage > 15 ? (
+                         <span className="inline-block px-2 py-1 bg-red-50 dark:bg-red-500/10 rounded text-xs font-bold text-red-500">+{Math.round(b.overrun_percentage)}% ⚠️</span>
+                      ) : b.overrun_percentage > 0 ? (
+                         <span className="inline-block px-2 py-1 bg-amber-50 dark:bg-amber-500/10 rounded text-xs font-bold text-amber-500">+{Math.round(b.overrun_percentage)}%</span>
+                      ) : (
+                         <span className="inline-block px-2 py-1 bg-emerald-50 dark:bg-emerald-500/10 rounded text-xs font-bold text-emerald-500">OK ✅</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+
+
+      {/* 5. Chatbot Gemini IA */}
+      <div className="fixed bottom-6 right-6 z-50">
+        {!isChatOpen ? (
+          <button 
+            onClick={() => setIsChatOpen(true)}
+            className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white shadow-[0_0_20px_rgba(147,51,234,0.4)] hover:scale-110 transition-transform relative group"
+          >
+            <Bot size={32} className="group-hover:animate-pulse" />
+            <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 rounded-full border-2 border-white dark:border-[#0f111a]" />
+          </button>
+        ) : (
+          <div className="w-[380px] sm:w-[420px] bg-white dark:bg-[#1a1d2e] rounded-2xl shadow-2xl border border-gray-200 dark:border-white/10 overflow-hidden flex flex-col h-[550px] animate-in slide-in-from-bottom-5">
+            <div className="p-4 bg-gradient-to-r from-purple-900 to-[#1a1d2e] flex justify-between items-center border-b border-white/5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-purple-500 flex items-center justify-center shadow-[0_0_15px_#d946ef]"><Bot size={20} className="text-white"/></div>
+                <div>
+                  <h4 className="text-sm font-bold text-white">Assistant IA Prédictif</h4>
+                  <p className="text-[10px] text-purple-300 font-medium">Powered by Gemini AI</p>
+                </div>
+              </div>
+              <button onClick={() => setIsChatOpen(false)} className="text-white/50 hover:text-white"><X size={20}/></button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-[#11131e]">
+              {chatMessages.map((msg, i) => (
+                <div key={i} className={cn("flex", msg.role === 'user' ? "justify-end" : "justify-start")}>
+                  <div className={cn(
+                    "max-w-[85%] rounded-2xl p-4 text-sm leading-relaxed",
+                    msg.role === 'user' ? "bg-purple-600 text-white rounded-br-sm shadow-md" : "bg-white dark:bg-[#1a1d2e] text-gray-800 dark:text-gray-200 rounded-bl-sm border border-gray-100 dark:border-white/5 shadow-md"
+                  )}>
+                    {msg.text}
+                  </div>
+                </div>
+              ))}
+              {isChatting && (
+                <div className="flex justify-start">
+                  <div className="bg-white dark:bg-[#1a1d2e] rounded-2xl rounded-bl-sm p-4 border border-gray-100 dark:border-white/5 flex gap-1.5 shadow-md">
+                    <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" />
+                    <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: "0.2s" }} />
+                    <span className="w-2 h-2 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: "0.4s" }} />
+                  </div>
+                </div>
+              )}
+              <div ref={chatEndRef} />
+            </div>
+            
+            <div className="p-4 bg-white dark:bg-[#1a1d2e] border-t border-gray-100 dark:border-white/5 space-y-3">
+              {chatMessages.length === 1 && (
+                <div className="flex flex-wrap gap-2 pb-1">
+                  {["Quel sera mon CA en juin ?", "Quel projet va échouer ?", "Qui est en surcharge ?"].map(q => (
+                    <button 
+                      key={q}
+                      onClick={() => setChatInput(q)}
+                      className="text-[11px] px-3 py-1.5 rounded-full bg-gray-100 dark:bg-purple-500/10 text-gray-700 dark:text-purple-300 border border-gray-200 dark:border-purple-500/20 hover:bg-gray-200 dark:hover:bg-purple-500/20 transition-colors font-medium"
+                    >
+                      {q}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="flex gap-2">
+                <input 
+                  type="text" 
+                  value={chatInput}
+                  onChange={e => setChatInput(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleChat()}
+                  placeholder="Posez votre question à l'IA..."
+                  className="flex-1 bg-gray-50 dark:bg-black/40 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white outline-none focus:border-purple-500 transition-colors"
+                />
+                <button 
+                  onClick={handleChat}
+                  disabled={!chatInput.trim() || isChatting}
+                  className="w-12 h-12 bg-purple-600 text-white rounded-xl flex items-center justify-center hover:bg-purple-500 disabled:opacity-50 transition-colors shadow-sm"
+                >
+                  <Send size={20} className={chatInput.trim() && !isChatting ? "ml-1" : ""} />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
     </div>
   );
 };

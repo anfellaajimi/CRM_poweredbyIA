@@ -21,6 +21,7 @@ import { Devis } from '../pages/Devis';
 import { Factures } from '../pages/Factures';
 import { Contrats } from '../pages/Contrats';
 import { CahierDeCharge } from '../pages/CahierDeCharge';
+import { AlertAutomaton } from '../pages/AlertAutomaton';
 import { AIMonitoring } from '../pages/AIMonitoring';
 import { AIPredictions } from '../pages/AIPredictions';
 import { Rappels } from '../pages/Rappels';
@@ -86,6 +87,7 @@ export default function App() {
             <Route path="/factures" element={<Factures />} />
             <Route path="/contrats" element={<Contrats />} />
             <Route path="/cahier-de-charge" element={<CahierDeCharge />} />
+            <Route path="/alert-automaton" element={<AlertAutomaton />} />
             <Route path="/ai-monitoring" element={<AIMonitoring />} />
             <Route path="/ai-predictions" element={<AIPredictions />} />
             <Route path="/rappels" element={<Rappels />} />

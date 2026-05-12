@@ -29,6 +29,11 @@ class AppSettingsBase(BaseModel):
     appearance_theme: Optional[str] = "light"
     appearance_primary_color: Optional[str] = "#6366f1"
 
+    subscription_plan: Optional[str] = "Enterprise AI"
+    subscription_status: Optional[str] = "Actif"
+    payment_method_last4: Optional[str] = "4242"
+    payment_method_expiry: Optional[str] = "12/2027"
+
 class AppSettingsCreate(AppSettingsBase):
     pass
 

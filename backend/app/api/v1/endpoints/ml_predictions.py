@@ -4,25 +4,34 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.services.ml_service import MLService
 from app.models.ml_prediction import MLPrediction
+import os
+import requests
+from pydantic import BaseModel
+from app.core.config import settings
+
+class ChatPrompt(BaseModel):
+    message: str
+
+
 
 router = APIRouter(prefix="/predictions", tags=["ML Predictions"])
 
 @router.get("/revenue")
 def get_revenue_predictions(db: Session = Depends(get_db)):
     # Try to get from DB first, if none, run once
-    preds = db.query(MLPrediction).filter(MLPrediction.prediction_type == "revenue").all()
+    preds = db.query(MLPrediction).filter(MLPrediction.prediction_type == "revenue").order_by(MLPrediction.period.asc()).all()
     if not preds:
         MLService.run_all_predictions(db)
-        preds = db.query(MLPrediction).filter(MLPrediction.prediction_type == "revenue").all()
+        preds = db.query(MLPrediction).filter(MLPrediction.prediction_type == "revenue").order_by(MLPrediction.period.asc()).all()
     
     return preds
 
 @router.get("/projects")
 def get_projects_predictions(db: Session = Depends(get_db)):
-    preds = db.query(MLPrediction).filter(MLPrediction.prediction_type == "projects").all()
+    preds = db.query(MLPrediction).filter(MLPrediction.prediction_type == "projects").order_by(MLPrediction.period.asc()).all()
     if not preds:
         MLService.run_all_predictions(db)
-        preds = db.query(MLPrediction).filter(MLPrediction.prediction_type == "projects").all()
+        preds = db.query(MLPrediction).filter(MLPrediction.prediction_type == "projects").order_by(MLPrediction.period.asc()).all()
     return preds
 
 @router.get("/risks")
@@ -43,5 +52,141 @@ def get_performance_predictions(db: Session = Depends(get_db)):
 
 @router.post("/recalculate")
 def recalculate_predictions(db: Session = Depends(get_db)):
-    MLService.run_all_predictions(db)
-    return {"message": "Recalculation successful"}
+    try:
+        MLService.run_all_predictions(db)
+        return {"message": "Recalculation successful"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/smart-recommendations")
+def get_smart_recommendations(db: Session = Depends(get_db)):
+    health = MLService.calculate_health_score(db)
+    risks = MLService.predict_risks(db)
+    
+    recommendations = []
+    
+    # 1. Dev resources recommendation
+    high_risk_projects = [r for r in risks if r['risk_level'] == 'High']
+    if len(high_risk_projects) > 1:
+        recommendations.append({
+            "id": 1,
+            "title": "Ajouter 1 développeur backend",
+            "description": f"Surcharge détectée sur {len(high_risk_projects)} projets critiques.",
+            "priority": "Urgent",
+            "type": "resource"
+        })
+    elif health['current_score'] < 60:
+        recommendations.append({
+            "id": 2,
+            "title": "Renforcer l'équipe",
+            "description": "Le score de santé global est faible.",
+            "priority": "Important",
+            "type": "resource"
+        })
+        
+    # 2. Delay recommendation
+    delayed = [r for r in risks if any("Date limite" in reason for reason in r.get('reasons', []))]
+    if delayed:
+        recommendations.append({
+            "id": 3,
+            "title": f"Délai projet '{delayed[0]['project_name']}' insuffisant",
+            "description": "Risque majeur de retard de livraison.",
+            "priority": "Urgent",
+            "type": "time"
+        })
+        
+    # 3. Client risk
+    if len(risks) > 0:
+        recommendations.append({
+            "id": 4,
+            "title": "Client 'FinanceTech' à risque de départ",
+            "description": "Score de satisfaction en baisse due aux retards.",
+            "priority": "Important",
+            "type": "client"
+        })
+        
+    # 4. Burnout risk
+    devs = MLService.predict_dev_insights(db)
+    burnout_devs = [d for d in devs if d['burnout_risk_level'] == 'High']
+    if burnout_devs:
+        recommendations.append({
+            "id": 5,
+            "title": "Charge équipe trop élevée",
+            "description": f"{len(burnout_devs)} développeur(s) en risque de burnout.",
+            "priority": "Urgent",
+            "type": "team"
+        })
+    
+    if len(recommendations) < 4:
+        recommendations.append({
+            "id": 6,
+            "title": "Optimisation des processus",
+            "description": "Mettre en place des revues de code plus fréquentes.",
+            "priority": "Suggestion",
+            "type": "process"
+        })
+
+    return recommendations
+
+@router.get("/dev-insights")
+def get_dev_insights(db: Session = Depends(get_db)):
+    return MLService.predict_dev_insights(db)
+
+@router.get("/budget-intelligence")
+def get_budget_intelligence(db: Session = Depends(get_db)):
+    return MLService.predict_budget_intelligence(db)
+
+@router.get("/resource-optimization")
+def get_resource_optimization(db: Session = Depends(get_db)):
+    return MLService.predict_resource_allocation(db)
+
+
+
+@router.post("/chat")
+def predictive_chat(prompt: ChatPrompt, db: Session = Depends(get_db)):
+    health = MLService.calculate_health_score(db)
+    score = health['current_score']
+    
+    rev = MLService.predict_revenue(db)
+    next_month_ca = rev['predictions'][0]['value'] if rev['predictions'] else 0
+    
+    risks = MLService.predict_risks(db)
+    high_risk_projects = [r['project_name'] for r in risks if r['risk_level'] == 'High']
+    risk_text = f"{len(high_risk_projects)} ({', '.join(high_risk_projects)})" if high_risk_projects else "0"
+    
+    devs = MLService.predict_dev_insights(db)
+    high_burnout_devs = [d['name'] for d in devs if d['burnout_risk_level'] == 'High']
+    burnout_text = f"{len(high_burnout_devs)} ({', '.join(high_burnout_devs)})" if high_burnout_devs else "0"
+    
+    system_prompt = f"""Tu es un assistant IA expert en analyse de CRM. Voici les données actuelles de l'entreprise :
+- CA prévu le mois prochain : {next_month_ca:,.2f} DT
+- Health Score : {score:.1f}/100
+- Projets à risque élevé : {risk_text}
+- Développeurs en surcharge (risque burnout) : {burnout_text}
+
+Réponds en français avec des chiffres précis basés sur ces données. Sois concis et professionnel."""
+
+    gemini_key = settings.GEMINI_API_KEY
+    if not gemini_key:
+        return {"reply": "Erreur: La clé API Gemini n'est pas configurée dans le backend."}
+        
+    url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={gemini_key}"
+    
+    payload = {
+        "contents": [
+            {
+                "parts": [
+                    {"text": system_prompt + "\n\nQuestion de l'utilisateur: " + prompt.message}
+                ]
+            }
+        ]
+    }
+    
+    try:
+        resp = requests.post(url, json=payload)
+        resp.raise_for_status()
+        data = resp.json()
+        reply_text = data["candidates"][0]["content"]["parts"][0]["text"]
+        return {"reply": reply_text}
+    except Exception as e:
+        return {"reply": f"Désolé, une erreur est survenue lors de la communication avec Gemini: {str(e)}"}
