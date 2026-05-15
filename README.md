@@ -1,298 +1,277 @@
-## Guide d'onboarding
-- Voir docs/ONBOARDING_INTERNE.md
+﻿# CRM Professional
 
-# 🚀 CRM AI-Powered Professional - PostgreSQL
+Plateforme CRM full-stack (FastAPI + React) pour piloter les clients, projets et documents commerciaux (devis, factures, contrats, cahier de charge), avec des capacités IA intégrées (prédiction, recommandation, génération assistée).
 
-CRM professionnel avec intelligence artificielle et base de données PostgreSQL.
+## 1. Vue d'ensemble
 
-## 📋 Prérequis
+## 1.1 Objectif produit
+CRM Professional vise à unifier les opérations commerciales et de delivery dans une seule application:
+- gestion du cycle client (prospection -> exécution -> facturation -> contractualisation),
+- suivi opérationnel des projets,
+- automatisation assistée par IA pour accélérer la décision.
 
-- Python 3.8+
-- PostgreSQL 12+
-- Un navigateur web moderne
+## 1.2 Parties prenantes
+- Direction / Manager: vision synthétique, suivi des KPI, alertes et arbitrage de charge.
+- Équipe opérationnelle (Admin, Developer): exécution quotidienne (clients, projets, docs).
+- Client final: accès à un portail dédié pour consulter ses données et documents.
 
-## 🔧 Installation
+## 1.3 Valeur métier
+- réduction du temps administratif via des formulaires unifiés et exports,
+- amélioration de la qualité décisionnelle via l’IA (résumés, scoring, recommandations),
+- meilleure traçabilité (historique d’actions, statuts, signatures, pièces jointes).
 
-### 1. Installer PostgreSQL
+## 2. Fonctionnalités
 
-#### Sur Windows:
-1. Télécharger PostgreSQL depuis: https://www.postgresql.org/download/windows/
-2. Installer avec le mot de passe: `postgres` (ou personnalisé)
-3. Le service PostgreSQL démarre automatiquement
+## 2.1 Gestion métier
+- Clients: création, mise à jour, suivi statut, devise, informations fiscales.
+- Projets: équipe, notes, fichiers, jalons, rappels, scoring.
+- Devis: création, lignes d’articles, statut, conversion potentielle.
+- Factures: génération et suivi.
+- Contrats: édition, signatures client/prestataire, export PDF.
+- Cahier de charge: rédaction structurée, versioning, export.
 
-#### Sur Ubuntu/Debian:
-```bash
-sudo apt update
-sudo apt install postgresql postgresql-contrib
-sudo systemctl start postgresql
+## 2.2 Espace client
+- Authentification client séparée (`/client-auth`),
+- Portail client (`/client-portal/*`) pour la consultation ciblée.
+
+## 2.3 IA intégrée
+- Chat prédictif (Groq) basé sur les données CRM.
+- Résumé automatique des notes projet (`/projets/{id}/notes/summary`).
+- Auto scoring IA clients (`/clients/ai-scoring/recompute`).
+- Recommandations de réallocation de ressources (AI Monitoring).
+- Génération assistée:
+  - devis (`POST /ai-generation/devis`),
+  - cahier de charge (`POST /ai-generation/cahier`).
+
+## 3. Architecture technique
+
+```text
+[Frontend React/Vite/TS] --HTTP JSON--> [FastAPI /api/v1] --ORM--> [PostgreSQL]
+                                                |
+                                             [Alembic]
+                                                |
+                                           [Migrations]
 ```
 
-#### Sur macOS:
-```bash
-brew install postgresql
-brew services start postgresql
+## 3.1 Frontend
+- Framework: React + TypeScript + Vite.
+- Data fetching: Axios + TanStack Query.
+- State global: Zustand (auth, thème, UI state).
+- Routing: React Router.
+- UI: composants custom + librairies utilitaires.
+
+## 3.2 Backend
+- API: FastAPI.
+- ORM: SQLAlchemy 2.x.
+- Migrations: Alembic.
+- DB: PostgreSQL.
+- Services IA: appels HTTP vers Groq via `requests`.
+- Jobs / automatisations: APScheduler (selon modules activés).
+
+## 4. Structure du repository
+
+```text
+crm-professional/
+  backend/
+    app/
+      api/v1/endpoints/      # Endpoints REST
+      core/config.py         # Configuration centralisée
+      db/                    # Session, Base, registry
+      models/                # Entités SQLAlchemy
+      schemas/               # Contrats Pydantic
+      services/              # Logique métier/IA
+    alembic/                 # Migrations DB
+    scripts/bootstrap_db.py  # Initialisation DB locale
+    requirements.txt
+    .env.example
+  frontend/
+    src/
+      app/App.tsx            # Routing principal
+      pages/                 # Écrans métier
+      services/api.ts        # Couche d’accès API
+      store/                 # Zustand stores
+      components/            # UI + métier
+    package.json
+    .env.example
+  README.md
 ```
 
-### 2. Créer la base de données
+## 5. Pré-requis
+- Python 3.11+
+- PostgreSQL 14+
+- Node.js 18+
+- npm 9+
 
-```bash
-# Se connecter à PostgreSQL
-sudo -u postgres psql
+## 6. Installation locale
 
-# Créer la base de données
-CREATE DATABASE crm_db;
-
-# Créer un utilisateur (optionnel)
-CREATE USER crm_user WITH PASSWORD 'votre_mot_de_passe';
-GRANT ALL PRIVILEGES ON DATABASE crm_db TO crm_user;
-
-# Quitter
-\q
-```
-
-### 3. Configurer le projet
-
-1. **Modifier la configuration dans `app-postgresql.py`:**
-
-```python
-DB_CONFIG = {
-    "host": "localhost",
-    "database": "crm_db",
-    "user": "postgres",        # Votre utilisateur PostgreSQL
-    "password": "postgres",    # Votre mot de passe PostgreSQL
-    "port": 5432
-}
-```
-
-2. **Installer les dépendances Python:**
-
-```bash
+## 6.1 Backend
+```powershell
+cd backend
+python -m venv venv
+venv\Scripts\activate
 pip install -r requirements.txt
+python scripts\bootstrap_db.py
+alembic upgrade head
+uvicorn app.main:app --reload
 ```
 
-## 🚀 Lancement
+API docs:
+- Swagger: `http://localhost:8000/docs`
+- OpenAPI: `http://localhost:8000/openapi.json`
 
-### 1. Démarrer le backend
-
-```bash
-python app-postgresql.py
+## 6.2 Frontend
+```powershell
+cd frontend
+npm install
+npm run dev
 ```
 
-Le backend va automatiquement:
-- ✅ Se connecter à PostgreSQL
-- ✅ Créer toutes les tables nécessaires
-- ✅ Insérer les données de test
-- ✅ Démarrer l'API sur http://localhost:8000
+Application:
+- `http://localhost:5173`
 
-### 2. Ouvrir le frontend
+## 7. Configuration environnement
 
-Double-cliquez sur `CRM-PROFESSIONAL-FINAL.html` ou ouvrez-le dans votre navigateur.
+## 7.1 Backend (`backend/.env`)
+Créer le fichier à partir de `backend/.env.example`.
 
-### 3. Se connecter
+Variables critiques:
+- `POSTGRES_USER`
+- `POSTGRES_PASSWORD`
+- `POSTGRES_HOST`
+- `POSTGRES_PORT`
+- `POSTGRES_DB`
+- `GROQ_API_KEY`
+- `GROQ_MODEL` (ex: `llama-3.1-8b-instant`)
+- `CORS_ORIGINS`
+- Variables Cloudinary si upload cloud activé.
 
-```
-Email: admin@crm.com
-Mot de passe: admin123
-```
+## 7.2 Frontend (`frontend/.env`)
+Créer le fichier à partir de `frontend/.env.example`.
 
-## 🗄️ Structure de la base de données
-
-Le système crée automatiquement 8 tables:
-
-### Tables principales:
-- **users** - Utilisateurs du système
-- **clients** - Clients de l'entreprise
-- **projets** - Projets en cours et terminés
-- **services** - Services (hébergement, domaines, etc.)
-- **rappels** - Rappels et notifications
-- **monitoring** - Données de monitoring des services
-- **alertes** - Alertes système
-- **tokens** - Tokens d'authentification
-
-### Schéma des relations:
-
-```
-users
-  └─ tokens (authentification)
-
-clients
-  ├─ projets
-  │   └─ services
-  │       └─ monitoring
-  └─ rappels
-
-alertes (indépendant)
+Exemple:
+```env
+VITE_API_URL=http://localhost:8000/api/v1
 ```
 
-## 📊 Fonctionnalités
+## 8. Modules API (niveau fonctionnel)
+Base URL: `/api/v1`
 
-### ✅ Gestion complète
-- 👥 **Clients**: CRUD complet
-- 📁 **Projets**: Gestion avec détails élaborés
-- 💼 **Services**: Suivi des services actifs
-- 🔔 **Rappels**: Système de notifications
-- 🤖 **Monitoring IA**: Surveillance en temps réel
-- ⚠️ **Alertes**: Système d'alertes intelligent
+- `/auth`: login/register staff + profil.
+- `/client-auth`: login/signup client.
+- `/client-portal`: endpoints du portail client.
+- `/clients`: gestion clients.
+- `/projets`: gestion projets + sous-modules (team/notes/files/milestones).
+- `/devis`, `/factures`, `/contrats`: documents commerciaux.
+- `/cahier-de-charge`: spécifications projet.
+- `/predictions`: endpoints IA prédictive.
+- `/ai-monitoring`: optimisation allocation ressources.
+- `/ai-generation`: génération assistée de contenu.
 
-### 🎨 Modal de détails de projet
-Chaque projet affiche:
-- 📋 Informations complètes (statut, responsable, priorité, budget)
-- 📊 Barre de progression animée
-- 💬 Commentaires avec auteur et date
-- 📝 Notes importantes
-- ⭐ Évaluation sur 5 étoiles
-- 🎨 Design professionnel avec animations
+## 9. Flux métiers principaux
 
-## 🔍 Vérification PostgreSQL
+## 9.1 Authentification staff
+1. Front appelle `POST /auth/login`.
+2. Backend valide utilisateur.
+3. Token stocké côté frontend (`localStorage`) et injecté dans `Authorization`.
 
-### Vérifier que PostgreSQL fonctionne:
+## 9.2 Gestion projet collaborative
+1. Création projet.
+2. Ajout équipe projet.
+3. Alimentation notes/fichiers/jalons/rappels.
+4. IA peut résumer les notes et produire des recommandations.
 
-```bash
-# Sur Linux/macOS
-sudo systemctl status postgresql
+## 9.3 Cycle documentaire
+1. Générer/éditer devis.
+2. Conversion / continuité vers facturation.
+3. Contrat + signature.
+4. Export PDF pour archivage / partage.
 
-# Ou
-pg_isready
+## 10. Data model (simplifié)
+Entités centrales:
+- `clients`
+- `projets`
+- `utilisateurs`
+- `devis`
+- `factures`
+- `contrats`
+- `cahier_de_charge`
+- `rappels`
+- `ml_predictions` / tables de monitoring selon modules
+
+Relations clés:
+- 1 client -> N projets/devis/factures/contrats.
+- N utilisateurs <-> N projets (affectation équipe).
+- Projet -> notes/fichiers/jalons.
+
+## 11. IA: détails d’implémentation
+- Provider actuel: Groq.
+- Les endpoints IA utilisent `GROQ_API_KEY` + `GROQ_MODEL`.
+- Des mécanismes de tolérance existent pour réponses IA non strictement JSON (parse + tentative de réparation).
+
+## 12. Sécurité
+- Ne jamais versionner de secrets (`.env`, clés API, credentials DB).
+- Rotation immédiate des clés exposées.
+- Contrôler les rôles/permissions avant release.
+- Vérifier les routes client vs staff (isolation des accès).
+
+## 13. Qualité & tests (pratique actuelle)
+Le projet est majoritairement validé par tests manuels ciblés.
+
+Checklist recommandée avant livraison:
+- backend démarre + docs OpenAPI accessibles,
+- frontend démarre + login fonctionne,
+- CRUD client/projet/devis/facture/contrat,
+- signature contrat client/prestataire,
+- fonctionnalités IA critiques (génération, résumé, monitoring).
+
+## 14. Dette technique connue
+- Incohérences de typage TypeScript sur certains écrans hors scope immédiat.
+- Restes d’encodage historique sur certaines chaînes FR.
+- Hétérogénéité partielle entre familles de composants UI.
+
+## 15. Troubleshooting
+
+## 15.1 `500` sur `PUT /contrats/{id}`
+Cause fréquente: payload d’update non partiel.
+Action: vérifier que le frontend envoie uniquement les champs à modifier.
+
+## 15.2 `502 Reponse IA invalide (JSON attendu)`
+- vérifier `GROQ_API_KEY`,
+- vérifier la connectivité sortante,
+- vérifier `GROQ_MODEL`.
+
+## 15.3 `401` côté frontend
+- token expiré/invalide,
+- `VITE_API_URL` incorrect,
+- CORS backend mal configuré.
+
+## 15.4 Migrations incohérentes
+```powershell
+cd backend
+alembic current
+alembic history
+alembic upgrade head
 ```
 
-### Se connecter à la base de données:
+## 16. Guide d’onboarding
 
-```bash
-psql -U postgres -d crm_db
-```
+## 16.1 Manager (30-45 min)
+1. Lire sections 1, 2, 9.
+2. Parcourir les modules dans l’application.
+3. Valider la checklist qualité section 13.
 
-### Commandes utiles PostgreSQL:
+## 16.2 Développeur (1-2 jours)
+1. Setup local complet (sections 5-7).
+2. Lire `backend/app/api/v1/api.py`, `frontend/src/services/api.ts`, `frontend/src/app/App.tsx`.
+3. Exécuter un flux end-to-end réel.
+4. Prendre un ticket de faible risque pour 1er commit.
 
-```sql
--- Lister toutes les tables
-\dt
+## 17. Conventions de contribution
+- Branches courtes par sujet.
+- Commit messages explicites.
+- Pas de secrets dans les commits.
+- Si modèle DB modifié: migration Alembic obligatoire.
+- Si endpoint modifié: mise à jour `frontend/src/services/api.ts` obligatoire.
 
--- Voir les clients
-SELECT * FROM clients;
-
--- Voir les projets
-SELECT * FROM projets;
-
--- Compter les enregistrements
-SELECT COUNT(*) FROM clients;
-
--- Quitter
-\q
-```
-
-## 🐛 Résolution de problèmes
-
-### Erreur de connexion PostgreSQL
-
-**Problème:** `FATAL: password authentication failed`
-
-**Solution:**
-1. Vérifier le mot de passe dans `DB_CONFIG`
-2. Réinitialiser le mot de passe PostgreSQL:
-
-```bash
-sudo -u postgres psql
-ALTER USER postgres PASSWORD 'nouveau_mot_de_passe';
-```
-
-### Base de données n'existe pas
-
-**Problème:** `database "crm_db" does not exist`
-
-**Solution:**
-```bash
-sudo -u postgres psql
-CREATE DATABASE crm_db;
-```
-
-### Port déjà utilisé
-
-**Problème:** Port 8000 déjà utilisé
-
-**Solution:** Modifier le port dans `app-postgresql.py`:
-```python
-uvicorn.run(..., port=8001, ...)
-```
-
-### PostgreSQL ne démarre pas
-
-**Sur Ubuntu/Debian:**
-```bash
-sudo systemctl start postgresql
-sudo systemctl enable postgresql
-```
-
-**Sur macOS:**
-```bash
-brew services start postgresql
-```
-
-## 📦 Dépendances
-
-- **FastAPI**: Framework web moderne
-- **Uvicorn**: Serveur ASGI
-- **psycopg2-binary**: Driver PostgreSQL pour Python
-- **python-multipart**: Pour les formulaires
-- **pydantic**: Validation des données
-
-## 🔒 Sécurité
-
-⚠️ **Important pour la production:**
-
-1. Changer le mot de passe admin dans la base de données
-2. Utiliser des variables d'environnement pour les credentials
-3. Activer SSL pour PostgreSQL
-4. Hasher les mots de passe (bcrypt)
-5. Utiliser JWT tokens avec expiration
-
-## 📝 Scripts SQL utiles
-
-### Reset complet de la base de données:
-
-```sql
--- Se connecter à PostgreSQL
-sudo -u postgres psql -d crm_db
-
--- Supprimer toutes les données
-TRUNCATE TABLE rappels, monitoring, alertes, services, projets, clients, tokens, users CASCADE;
-
--- Redémarrer l'application pour réinsérer les données de test
-```
-
-### Backup de la base de données:
-
-```bash
-pg_dump -U postgres crm_db > backup_crm_db.sql
-```
-
-### Restaurer le backup:
-
-```bash
-psql -U postgres crm_db < backup_crm_db.sql
-```
-
-## 🎯 Prochaines étapes
-
-- [ ] Ajouter l'authentification JWT
-- [ ] Hasher les mots de passe avec bcrypt
-- [ ] Ajouter la pagination pour les grandes listes
-- [ ] Implémenter le search/filtre
-- [ ] Ajouter les exports PDF/Excel
-- [ ] Notifications en temps réel avec WebSockets
-
-## 📞 Support
-
-Pour toute question ou problème:
-- Vérifier d'abord que PostgreSQL est bien démarré
-- Vérifier les logs dans le terminal
-- Consulter la documentation PostgreSQL: https://www.postgresql.org/docs/
-
-## 📄 Licence
-
-MIT License - Libre d'utilisation
-
----
-
-Fait avec ❤️ et Python + PostgreSQL
-
-
+## 18. Licence
+Projet interne. Adapter la politique de licence selon les règles de l’organisation.
