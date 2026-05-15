@@ -1,12 +1,12 @@
 import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Download, Plus, Search, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, FileText, ChevronUp, Eye, Pencil, Trash2 } from 'lucide-react';
+import { Download, Plus, Search, ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, FileText, ChevronUp, Eye, Pencil, Trash2, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Modal } from '../components/ui/Modal';
 import { PDFPreview } from '../components/PDFPreview';
 import { DevisPrint } from '../components/DevisPrint';
-import { clientsAPI, devisAPI, facturesAPI, UIDevis } from '../services/api';
+import { aiGenerationAPI, clientsAPI, devisAPI, facturesAPI, UIDevis } from '../services/api';
 import { cn } from '../utils/cn';
 
 const articleVide = { description: '', quantity: 1, unitPrice: 0 };
@@ -115,6 +115,7 @@ export const Devis: React.FC = () => {
     fiscalStamp: 1.0,
     articles: [{ ...articleVide }],
   });
+  const [aiPromptDevis, setAiPromptDevis] = useState('');
 
   const { data: listDevis = [], isLoading: isLoadingDevis } = useQuery({ queryKey: ['devis'], queryFn: devisAPI.getAll });
   const { data: clients = [] } = useQuery({ queryKey: ['clients'], queryFn: () => clientsAPI.getAll() });
@@ -189,6 +190,38 @@ export const Devis: React.FC = () => {
       toast.success('Devis converti en facture avec succès');
     },
     onError: (err: any) => toast.error(`Erreur conversion: ${err?.response?.data?.message ?? err?.message}`),
+  });
+
+  const mutationGenererDevisIA = useMutation({
+    mutationFn: () => {
+      const client = clients.find((c) => c.id === nouveauDevis.clientId);
+      if (!client) throw new Error('Selectionnez un client avant generation IA');
+      return aiGenerationAPI.generateDevis({
+        client_name: client.name,
+        prompt: aiPromptDevis || nouveauDevis.titre || 'Devis standard',
+        devise: client.devise || 'TND',
+      });
+    },
+    onSuccess: (data: any) => {
+      const days = Number(data.valid_until_days || 30);
+      const validUntil = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+      setNouveauDevis((prev) => ({
+        ...prev,
+        titre: data.title || prev.titre,
+        validUntil,
+        taxRate: Number(data.tax_rate ?? prev.taxRate ?? 19),
+        fiscalStamp: Number(data.fiscal_stamp ?? prev.fiscalStamp ?? 1.0),
+        articles: Array.isArray(data.items) && data.items.length
+          ? data.items.map((it: any) => ({
+              description: String(it.description || ''),
+              quantity: Number(it.quantity || 1),
+              unitPrice: Number(it.unitPrice || 0),
+            }))
+          : prev.articles,
+      }));
+      toast.success('Devis genere par IA');
+    },
+    onError: (err: any) => toast.error(err?.message || 'Generation IA devis impossible'),
   });
 
   const changerStatut = (id: number, statut: string, devis: UIDevis) => {
@@ -451,6 +484,29 @@ export const Devis: React.FC = () => {
       {/* Modal création / modification devis */}
       <Modal isOpen={modalOuvert} onClose={() => { setModalOuvert(false); reinitialiserFormulaire(); }} title={modeEdition ? 'Modifier le devis' : 'Créer un devis'} size="lg">
         <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); creerOuModifierDevis(); }}>
+          <div className="p-3 rounded-lg border border-indigo-100 bg-indigo-50/60">
+            <label className="block text-sm font-medium mb-1 text-gray-700">Brief IA (optionnel)</label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                className="w-full border border-gray-200 rounded-lg p-2 text-sm focus:ring-2 focus:ring-indigo-500"
+                placeholder="Ex: Devis CRM avec dashboard, auth, API, support 3 mois..."
+                value={aiPromptDevis}
+                onChange={(e) => setAiPromptDevis(e.target.value)}
+              />
+              <button
+                type="button"
+                onClick={() => mutationGenererDevisIA.mutate()}
+                disabled={mutationGenererDevisIA.isPending || !nouveauDevis.clientId}
+                className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50"
+              >
+                <span className="inline-flex items-center gap-1">
+                  <Sparkles className="w-4 h-4" />
+                  {mutationGenererDevisIA.isPending ? 'Generation...' : 'Generer avec IA'}
+                </span>
+              </button>
+            </div>
+          </div>
 
           <div>
             <label className="block text-sm font-medium mb-1 text-gray-700">Client</label>

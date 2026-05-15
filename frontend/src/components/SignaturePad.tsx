@@ -17,20 +17,23 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({ onSave, onCancel, ti
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    ctx.strokeStyle = '#1e3a8a';
-    ctx.lineWidth = 2;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
+    const applyBrush = () => {
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      ctx.strokeStyle = '#1e3a8a';
+      ctx.lineWidth = 2;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+    };
 
     const resizeCanvas = () => {
-      const rect = canvas.parentElement?.getBoundingClientRect();
-      if (rect) {
-        canvas.width = rect.width;
-        canvas.height = 200;
-      }
+      const parent = canvas.parentElement;
+      if (!parent) return;
+      const width = Math.floor(parent.clientWidth || parent.getBoundingClientRect().width || 0);
+      if (!width) return;
+      canvas.width = width;
+      canvas.height = 200;
+      applyBrush();
     };
 
     resizeCanvas();
@@ -38,19 +41,21 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({ onSave, onCancel, ti
     return () => window.removeEventListener('resize', resizeCanvas);
   }, []);
 
-  const getPos = (e: React.MouseEvent | React.TouchEvent) => {
+  const getPos = (e: React.MouseEvent | React.TouchEvent | React.PointerEvent) => {
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
     const rect = canvas.getBoundingClientRect();
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    const touch = 'touches' in e ? e.touches[0] : null;
+    const clientX = touch ? touch.clientX : e.clientX;
+    const clientY = touch ? touch.clientY : e.clientY;
     return {
       x: clientX - rect.left,
       y: clientY - rect.top
     };
   };
 
-  const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
+  const startDrawing = (e: React.MouseEvent | React.TouchEvent | React.PointerEvent) => {
+    e.preventDefault();
     setIsDrawing(true);
     setIsEmpty(false);
     const { x, y } = getPos(e);
@@ -58,11 +63,15 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({ onSave, onCancel, ti
     if (ctx) {
       ctx.beginPath();
       ctx.moveTo(x, y);
+      // Draw a minimal dot so single click/tap is visible and counts.
+      ctx.lineTo(x + 0.01, y + 0.01);
+      ctx.stroke();
     }
   };
 
-  const draw = (e: React.MouseEvent | React.TouchEvent) => {
+  const draw = (e: React.MouseEvent | React.TouchEvent | React.PointerEvent) => {
     if (!isDrawing) return;
+    e.preventDefault();
     const { x, y } = getPos(e);
     const ctx = canvasRef.current?.getContext('2d');
     if (ctx) {
@@ -112,6 +121,10 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({ onSave, onCancel, ti
         <div className="relative border-2 border-dashed border-indigo-100 rounded-xl bg-indigo-50/20 h-[200px] cursor-crosshair overflow-hidden group">
           <canvas
             ref={canvasRef}
+            onPointerDown={startDrawing}
+            onPointerMove={draw}
+            onPointerUp={stopDrawing}
+            onPointerLeave={stopDrawing}
             onMouseDown={startDrawing}
             onMouseMove={draw}
             onMouseUp={stopDrawing}
@@ -119,7 +132,8 @@ export const SignaturePad: React.FC<SignaturePadProps> = ({ onSave, onCancel, ti
             onTouchStart={startDrawing}
             onTouchMove={draw}
             onTouchEnd={stopDrawing}
-            className="absolute inset-0 w-full h-full"
+            className="absolute inset-0 w-full h-full touch-none"
+            style={{ touchAction: 'none' }}
           />
           {isEmpty && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-40 group-hover:opacity-60 transition-opacity">

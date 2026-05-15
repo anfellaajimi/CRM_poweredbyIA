@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, MoreHorizontal, ChevronLeft, ChevronRight, Edit2, Trash2 } from 'lucide-react';
+import { Plus, Search, MoreHorizontal, ChevronLeft, ChevronRight, Edit2, Trash2, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { Modal } from '../components/ui/Modal';
 import { clientsAPI, UIClient } from '../services/api';
@@ -103,6 +103,7 @@ export const Clients: React.FC = () => {
   const [page, setPage] = useState(1);
   const [openActionsFor, setOpenActionsFor] = useState<string | null>(null);
   const [clientToDelete, setClientToDelete] = useState<UIClient | null>(null);
+  const [aiScoringMap, setAiScoringMap] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -136,6 +137,19 @@ export const Clients: React.FC = () => {
       setClientToDelete(null);
     },
     onError: () => toast.error('Suppression impossible'),
+  });
+
+  const recomputeAIScoringMutation = useMutation({
+    mutationFn: clientsAPI.recomputeAIScoring,
+    onSuccess: (data) => {
+      const next: Record<string, string> = {};
+      (data.items || []).forEach((item) => {
+        next[String(item.client_id)] = item.ai_scoring;
+      });
+      setAiScoringMap(next);
+      toast.success('Scoring IA clients mis a jour');
+    },
+    onError: () => toast.error('Impossible de recalculer le scoring IA'),
   });
 
   useEffect(() => {
@@ -202,14 +216,28 @@ export const Clients: React.FC = () => {
 
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <h1 style={{ fontSize: 26, fontWeight: 700, color: '#0f172a', margin: 0 }}>Clients</h1>
-        <button onClick={() => setIsAddModalOpen(true)}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 8, background: '#7c3aed', color: '#fff',
-            border: 'none', borderRadius: 8, padding: '10px 18px', fontSize: 14, fontWeight: 600,
-            cursor: 'pointer', boxShadow: '0 2px 8px #7c3aed44'
-          }}>
-          <Plus size={16} /> Ajouter Client
-        </button>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button
+            onClick={() => recomputeAIScoringMutation.mutate()}
+            disabled={recomputeAIScoringMutation.isPending}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8, background: '#0f766e', color: '#fff',
+              border: 'none', borderRadius: 8, padding: '10px 18px', fontSize: 14, fontWeight: 600,
+              cursor: recomputeAIScoringMutation.isPending ? 'not-allowed' : 'pointer', boxShadow: '0 2px 8px #0f766e44',
+              opacity: recomputeAIScoringMutation.isPending ? 0.7 : 1
+            }}
+          >
+            <Sparkles size={16} /> {recomputeAIScoringMutation.isPending ? 'Scoring IA...' : 'Auto Scoring IA'}
+          </button>
+          <button onClick={() => setIsAddModalOpen(true)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8, background: '#7c3aed', color: '#fff',
+              border: 'none', borderRadius: 8, padding: '10px 18px', fontSize: 14, fontWeight: 600,
+              cursor: 'pointer', boxShadow: '0 2px 8px #7c3aed44'
+            }}>
+            <Plus size={16} /> Ajouter Client
+          </button>
+        </div>
       </div>
 
       <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 1px 4px #0000000a' }}>
@@ -306,7 +334,7 @@ export const Clients: React.FC = () => {
                   <td style={{ padding: '14px 20px', fontSize: 13, color: '#475569' }}>{client.email}</td>
                   <td style={{ padding: '14px 20px', fontSize: 13, color: '#475569' }}>{client.phone}</td>
                   <td style={{ padding: '14px 20px' }}><StatusBadge status={client.status || ''} /></td>
-                  <td style={{ padding: '14px 20px' }}><ScoringBadge scoring={client.scoring} /></td>
+                  <td style={{ padding: '14px 20px' }}><ScoringBadge scoring={aiScoringMap[client.id] || client.scoring} /></td>
                   <td style={{ padding: '14px 20px', fontSize: 13, color: '#94a3b8' }}>{client.createdAt}</td>
                   <td style={{ padding: '14px 20px' }} onClick={e => e.stopPropagation()}>
                     <div style={{ position: 'relative', display: 'inline-block' }} data-client-actions={client.id}>

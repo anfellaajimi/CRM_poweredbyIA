@@ -51,11 +51,15 @@ export const Users: React.FC = () => {
   });
 
   const { data: utilisateurs = [] } = useQuery({ queryKey: ['users'], queryFn: usersAPI.getAll });
+  const utilisateursInternes = useMemo(
+    () => utilisateurs.filter((u) => (u.role || '').toLowerCase() !== 'client'),
+    [utilisateurs]
+  );
 
   useEffect(() => {
     if (!editId) return;
 
-    const u = utilisateurs.find(x => String(x.id) === String(editId));
+    const u = utilisateursInternes.find(x => String(x.id) === String(editId));
     if (!u) return;
 
     setUtilisateurSelectionne({ ...u });
@@ -64,7 +68,7 @@ export const Users: React.FC = () => {
       prev.delete('edit');
       return prev;
     }, { replace: true });
-  }, [editId, setSearchParams, utilisateurs]);
+  }, [editId, setSearchParams, utilisateursInternes]);
 
   const mutationCreer = useMutation({
     mutationFn: usersAPI.create,
@@ -125,11 +129,11 @@ export const Users: React.FC = () => {
   };
 
   const premierId = useMemo(() => {
-    if (!utilisateurs.length) return null;
-    return utilisateurs.reduce((minId, u) => (Number(u.id) < Number(minId) ? u.id : minId), utilisateurs[0].id);
-  }, [utilisateurs]);
+    if (!utilisateursInternes.length) return null;
+    return utilisateursInternes.reduce((minId, u) => (Number(u.id) < Number(minId) ? u.id : minId), utilisateursInternes[0].id);
+  }, [utilisateursInternes]);
 
-  const utilisateursTries = useMemo(() => [...utilisateurs].sort((a, b) => Number(b.id) - Number(a.id)), [utilisateurs]);
+  const utilisateursTries = useMemo(() => [...utilisateursInternes].sort((a, b) => Number(b.id) - Number(a.id)), [utilisateursInternes]);
 
   const utilisateursFiltres = useMemo(() => {
     return utilisateursTries.filter((u) => {
@@ -144,10 +148,10 @@ export const Users: React.FC = () => {
   }, [utilisateursTries, recherche, filtreRole, filtreStatut]);
 
   const stats = useMemo(() => {
-    const totalMembres = utilisateurs.length;
-    const actifs = utilisateurs.filter((u) => u.status === 'Actif').length;
+    const totalMembres = utilisateursInternes.length;
+    const actifs = utilisateursInternes.filter((u) => u.status === 'Actif').length;
     return { totalMembres, actifs };
-  }, [utilisateurs]);
+  }, [utilisateursInternes]);
 
   if (utilisateurCourant?.role !== 'Admin') {
     return (

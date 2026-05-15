@@ -1,11 +1,11 @@
 import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Download, Plus, Trash2, Search, Pencil, Share2, Eye, X, FileText } from 'lucide-react';
+import { Download, Plus, Trash2, Search, Pencil, Share2, Eye, X, FileText, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Modal } from '../components/ui/Modal';
 import { CahierForm } from '../components/cahier/CahierForm';
-import { cahierAPI, projectsAPI, UICahier } from '../services/api';
+import { aiGenerationAPI, cahierAPI, projectsAPI, UICahier } from '../services/api';
 
 const cahierVide: Partial<UICahier> = {
   projetID: 0,
@@ -34,6 +34,7 @@ export const CahierDeCharge: React.FC = () => {
   const [brouillon, setBrouillon] = useState<Partial<UICahier>>(cahierVide);
   const [brouillonModif, setBrouillonModif] = useState<Partial<UICahier>>(cahierVide);
   const [recherche, setRecherche] = useState('');
+  const [aiPromptCahier, setAiPromptCahier] = useState('');
 
   const { data: cahiers = [] } = useQuery({ queryKey: ['cahiers'], queryFn: cahierAPI.getAll });
   const { data: projets = [] } = useQuery({ queryKey: ['projects'], queryFn: projectsAPI.getAll });
@@ -70,6 +71,36 @@ export const CahierDeCharge: React.FC = () => {
       toast.success('Cahier supprimé');
     },
     onError: (err: any) => toast.error(`Erreur: ${err?.response?.data?.detail ?? err?.response?.data?.message ?? err?.message}`),
+  });
+
+  const mutationGenererCahierIA = useMutation({
+    mutationFn: () => {
+      const projetNom = nomProjet(Number(brouillon.projetID || 0));
+      if (!brouillon.projetID) throw new Error('Selectionnez un projet avant generation IA');
+      return aiGenerationAPI.generateCahier({
+        project_name: projetNom,
+        prompt: aiPromptCahier || brouillon.objet || 'Cahier de charge standard',
+      });
+    },
+    onSuccess: (data: any) => {
+      setBrouillon((prev) => ({
+        ...prev,
+        objet: data.objet || prev.objet || '',
+        version: data.version || prev.version || '1.0',
+        description: data.description || prev.description || '',
+        objectif: data.objectif || prev.objectif || '',
+        perimetre: data.perimetre || prev.perimetre || '',
+        fonctionnalites: data.fonctionnalites || prev.fonctionnalites || '',
+        contraintes: data.contraintes || prev.contraintes || '',
+        delais: data.delais || prev.delais || '',
+        budgetTexte: data.budgetTexte || prev.budgetTexte || '',
+        userStories: data.userStories || prev.userStories || '',
+        reglesMetier: data.reglesMetier || prev.reglesMetier || '',
+        documentsReference: data.documentsReference || prev.documentsReference || '',
+      }));
+      toast.success('Cahier genere par IA');
+    },
+    onError: (err: any) => toast.error(err?.message || 'Generation IA cahier impossible'),
   });
 
   const confirmerSuppression = (cahier: UICahier) => {
@@ -208,6 +239,28 @@ export const CahierDeCharge: React.FC = () => {
       )}
 
       <Modal isOpen={modalCreerOuvert} onClose={() => setModalCreerOuvert(false)} title="Nouveau Cahier de Charge" size="xl">
+        <div className="mb-4 p-3 rounded-lg border border-indigo-100 bg-indigo-50/60">
+          <label className="block text-sm font-medium mb-1 text-gray-700">Brief IA (optionnel)</label>
+          <div className="flex gap-2">
+            <input
+              className="w-full border border-gray-200 rounded-lg p-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              placeholder="Ex: Cahier pour app mobile CRM avec auth, dashboards, reporting..."
+              value={aiPromptCahier}
+              onChange={(e) => setAiPromptCahier(e.target.value)}
+            />
+            <button
+              type="button"
+              onClick={() => mutationGenererCahierIA.mutate()}
+              disabled={mutationGenererCahierIA.isPending || !brouillon.projetID}
+              className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50"
+            >
+              <span className="inline-flex items-center gap-1">
+                <Sparkles className="w-4 h-4" />
+                {mutationGenererCahierIA.isPending ? 'Generation...' : 'Generer avec IA'}
+              </span>
+            </button>
+          </div>
+        </div>
         <CahierForm
           valeurs={brouillon}
           setValeurs={setBrouillon}

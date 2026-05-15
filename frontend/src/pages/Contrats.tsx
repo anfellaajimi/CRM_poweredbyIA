@@ -504,19 +504,31 @@ export const Contrats: React.FC = () => {
     {signatureOuverte && contratSelectionneDetail && (
       <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-md animate-in fade-in duration-300">
         <div className="w-full max-w-xl">
-          <SignaturePad 
+          <SignaturePad
             title={signatureOuverte === 'client' ? `Signature du Client — ${contratSelectionneDetail.clientName}` : "Signature du Prestataire — QUETRATECH"}
             onCancel={() => setSignatureOuverte(null)}
             onSave={(data) => {
-              mutationModifier.mutate({ 
-                id: contratSelectionneDetail.numericId, 
-                data: { 
-                  ...contratSelectionneDetail,
-                  [signatureOuverte === 'client' ? 'isSignedByClient' : 'isSignedByProvider']: true,
-                  [signatureOuverte === 'client' ? 'signatureClient' : 'signatureProvider']: data 
-                } 
-              });
-              setSignatureOuverte(null);
+              const target = signatureOuverte;
+              if (!target) return;
+              const signaturePayload =
+                target === 'client'
+                  ? { isSignedByClient: true, signatureClient: data }
+                  : { isSignedByProvider: true, signatureProvider: data };
+              mutationModifier.mutate(
+                {
+                  id: contratSelectionneDetail.numericId,
+                  data: signaturePayload,
+                },
+                {
+                  onSuccess: () => {
+                    setSignatureOuverte(null);
+                    toast.success('Signature enregistree');
+                  },
+                  onError: () => {
+                    toast.error("La signature n'a pas pu etre enregistree");
+                  },
+                }
+              );
             }}
           />
         </div>
@@ -676,7 +688,7 @@ export const Contrats: React.FC = () => {
                         <div className="p-3 bg-white rounded-full shadow-sm mb-3 group-hover/sig:scale-110 transition-transform cursor-pointer border border-indigo-100">
                           <Pencil className="w-6 h-6 text-indigo-400" />
                         </div>
-                        <p className="text-xs font-bold text-gray-400 group-hover/sig:text-indigo-600">Signer ici (SaaS)</p>
+                        <p className="text-xs font-bold text-gray-400 group-hover/sig:text-indigo-600">Signer ici (Prestataire)</p>
                         <p className="text-[9px] text-gray-300 mt-1">Cliquer pour capturer la signature</p>
                       </>
                     )}

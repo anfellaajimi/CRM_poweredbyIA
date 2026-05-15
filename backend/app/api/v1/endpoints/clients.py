@@ -5,10 +5,19 @@ from sqlalchemy import or_, cast, String, func
 
 from app.db.session import get_db
 from app.models.client import Client
+from app.models.projet import Projet
 from app.api.v1.endpoints._activity import log_activity
 from app.schemas.client import ClientCreate, ClientRead, ClientUpdate
 
 router = APIRouter(prefix="/clients", tags=["Clients"])
+
+
+def _label_from_score(score: float) -> str:
+    if score >= 70:
+        return "Haute"
+    if score >= 40:
+        return "Moyen"
+    return "Faible"
 
 
 @router.get("", response_model=list[ClientRead])
@@ -101,3 +110,68 @@ def delete_client(client_id: int, db: Session = Depends(get_db)):
     db.delete(item)
     db.commit()
     return None
+
+
+@router.post("/ai-scoring/recompute")
+def recompute_ai_scoring(db: Session = Depends(get_db)):
+    clients = db.query(Client).all()
+    results = []
+
+    for c in clients:
+        score = 0.0
+        reasons: list[str] = []
+
+        if c.email:
+            score += 20
+            reasons.append("email present")
+        if c.tel:
+            score += 10
+            reasons.append("phone present")
+        if c.adresse:
+            score += 10
+            reasons.append("address present")
+        if c.matriculeFiscale:
+            score += 10
+            reasons.append("tax id present")
+        if c.secteurActivite:
+            score += 10
+            reasons.append("industry present")
+        if c.entreprise:
+            score += 5
+
+        projects = db.query(Projet).filter(Projet.clientID == c.id).all()
+        total_projects = len(projects)
+        if total_projects >= 3:
+            score += 15
+            reasons.append("project volume")
+        elif total_projects >= 1:
+            score += 8
+
+        if total_projects:
+            avg_progress = sum(float(p.progression or 0) for p in projects) / total_projects
+            done_count = sum(1 for p in projects if (p.status or "").lower() in {"termine", "completed", "done"})
+            if avg_progress >= 70:
+                score += 15
+                reasons.append("good progress")
+            elif avg_progress >= 40:
+                score += 8
+            if done_count >= 1:
+                score += 10
+                reasons.append("completed projects")
+
+        if (c.status or "").lower() == "actif":
+            score += 10
+        else:
+            score -= 10
+
+        score = max(0.0, min(100.0, score))
+        results.append(
+            {
+                "client_id": c.id,
+                "ai_score_value": round(score, 1),
+                "ai_scoring": _label_from_score(score),
+                "reasons": reasons[:4],
+            }
+        )
+
+    return {"items": results}

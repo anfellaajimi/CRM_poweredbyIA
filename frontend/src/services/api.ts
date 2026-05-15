@@ -206,6 +206,8 @@ export const clientsAPI = {
     return toUIClient(data);
   },
   delete: (id: string) => api.delete(`/clients/${id}`),
+  recomputeAIScoring: async (): Promise<{ items: Array<{ client_id: number; ai_score_value: number; ai_scoring: string; reasons: string[] }> }> =>
+    (await api.post('/clients/ai-scoring/recompute')).data,
 };
 
 export const projectsAPI = {
@@ -238,6 +240,7 @@ export const projectNotesAPI = {
   get: async (projectId: string) => (await api.get(`/projets/${projectId}/notes`)).data,
   create: async (projectId: string, contenu: string) => (await api.post(`/projets/${projectId}/notes`, { contenu })).data,
   delete: async (projectId: string, noteId: number) => api.delete(`/projets/${projectId}/notes/${noteId}`),
+  summarize: async (projectId: string): Promise<{ summary: string }> => (await api.get(`/projets/${projectId}/notes/summary`)).data,
 };
 
 export const projectFilesAPI = {
@@ -1046,6 +1049,28 @@ const toContratPayload = (item: Partial<UIContrat>) => ({
   signatureProvider: item.signatureProvider || null,
 });
 
+const toContratUpdatePayload = (item: Partial<UIContrat>) => {
+  const payload: any = {};
+  if (item.clientId !== undefined) payload.clientID = Number(item.clientId);
+  if (item.titre !== undefined) payload.titre = item.titre || null;
+  if (item.objet !== undefined) payload.objet = item.objet || null;
+  if (item.obligations !== undefined) payload.obligations = item.obligations || null;
+  if (item.responsabilites !== undefined) payload.responsabilites = item.responsabilites || null;
+  if (item.dateDebut !== undefined) payload.dateDebut = item.dateDebut || null;
+  if (item.dateFin !== undefined) payload.dateFin = item.dateFin || null;
+  if (item.dateRenouvellement !== undefined) payload.dateRenouvellement = item.dateRenouvellement || null;
+  if (item.needsRenewal !== undefined) payload.needsRenewal = Boolean(item.needsRenewal);
+  if (item.type !== undefined) payload.typeContrat = item.type || 'Contrat de services';
+  if (item.value !== undefined) payload.montant = Number(item.value || 0);
+  if (item.conditions !== undefined) payload.conditions = item.conditions || null;
+  if (item.status !== undefined) payload.status = item.status || 'actif';
+  if (item.isSignedByClient !== undefined) payload.isSignedByClient = Boolean(item.isSignedByClient);
+  if (item.signatureClient !== undefined) payload.signatureClient = item.signatureClient || null;
+  if (item.isSignedByProvider !== undefined) payload.isSignedByProvider = Boolean(item.isSignedByProvider);
+  if (item.signatureProvider !== undefined) payload.signatureProvider = item.signatureProvider || null;
+  return payload;
+};
+
 export const usersAPI = {
   getAll: async (): Promise<UIUser[]> => {
     const { data } = await api.get('/utilisateurs');
@@ -1232,6 +1257,13 @@ export const devisAPI = {
     downloadPDF(`/devis/${id}/pdf`, filename, viewOnly),
 };
 
+export const aiGenerationAPI = {
+  generateDevis: async (payload: { client_name: string; prompt: string; devise?: string }) =>
+    (await api.post('/ai-generation/devis', payload)).data,
+  generateCahier: async (payload: { project_name: string; prompt: string }) =>
+    (await api.post('/ai-generation/cahier', payload)).data,
+};
+
 export const activityAPI = {
   getRecent: async (params?: { limit?: number; offset?: number }) => {
     const { data } = await api.get('/activity', { params });
@@ -1294,7 +1326,7 @@ export const contratsAPI = {
     return toUIContrat(res);
   },
   update: async (id: string, data: Partial<UIContrat>): Promise<UIContrat> => {
-    const { data: res } = await api.put(`/contrats/${id}`, toContratPayload(data));
+    const { data: res } = await api.put(`/contrats/${id}`, toContratUpdatePayload(data));
     return toUIContrat(res);
   },
   delete: (id: string) => api.delete(`/contrats/${id}`),

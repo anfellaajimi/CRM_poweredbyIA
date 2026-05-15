@@ -397,7 +397,7 @@ export const Login: React.FC = () => {
                     style={{ width: 15, height: 15, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%' }} />
                   Connexion...
                 </>
-              ) : 'Create Account'}
+              ) : 'Connexion'}
             </motion.button>
           </form>
 

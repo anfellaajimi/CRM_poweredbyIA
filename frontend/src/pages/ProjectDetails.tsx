@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Edit, Pin, PinOff, Plus, Trash2, Upload, X, LayoutDashboard } from 'lucide-react';
+import { ArrowLeft, Edit, Pin, PinOff, Plus, Sparkles, Trash2, Upload, X, LayoutDashboard } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Badge } from '../components/ui/Badge';
@@ -70,6 +70,7 @@ export const ProjectDetails: React.FC = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [editProject, setEditProject] = useState<Partial<UIProject>>({});
   const [newNote, setNewNote] = useState('');
+  const [notesSummary, setNotesSummary] = useState('');
   const [selectedUserId, setSelectedUserId] = useState('');
   const [cahierDraft, setCahierDraft] = useState<Partial<UICahier>>(cahierDefaults);
 
@@ -196,6 +197,17 @@ export const ProjectDetails: React.FC = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project-notes', id] });
       toast.success('Note supprimée');
+    },
+  });
+
+  const summarizeNotes = useMutation({
+    mutationFn: () => projectNotesAPI.summarize(id),
+    onSuccess: (data) => {
+      setNotesSummary(data.summary || '');
+      toast.success('Resume genere');
+    },
+    onError: () => {
+      toast.error('Impossible de generer le resume IA');
     },
   });
 
@@ -453,8 +465,27 @@ export const ProjectDetails: React.FC = () => {
       label: 'Bloc Notes',
       content: (
         <Card>
-          <CardHeader><CardTitle>Notes</CardTitle></CardHeader>
+          <CardHeader>
+            <div className="flex items-center justify-between gap-3">
+              <CardTitle>Notes</CardTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => summarizeNotes.mutate()}
+                disabled={!notes.length || summarizeNotes.isPending}
+              >
+                <Sparkles className="w-4 h-4 mr-2" />
+                {summarizeNotes.isPending ? 'Generation du resume...' : 'Resumer les notes (IA)'}
+              </Button>
+            </div>
+          </CardHeader>
           <CardContent>
+            {notesSummary && (
+              <div className="mb-4 p-3 rounded-lg border border-indigo-200 bg-indigo-50/60 dark:bg-indigo-950/30 dark:border-indigo-900">
+                <p className="text-xs font-semibold text-indigo-700 dark:text-indigo-300 mb-1">Resume IA</p>
+                <p className="text-sm whitespace-pre-wrap">{notesSummary}</p>
+              </div>
+            )}
             <div className="flex gap-2 mb-4">
               <Input value={newNote} onChange={(e) => setNewNote(e.target.value)} placeholder="Écrire une note..." />
               <Button onClick={() => newNote.trim() && createNote.mutate(newNote.trim())}>Ajouter</Button>

@@ -23,6 +23,7 @@ from app.api.v1.endpoints.declaration_cnss import router as declaration_cnss_rou
 from app.api.v1.endpoints.ml_predictions import router as ml_predictions_router
 from app.api.v1.endpoints.client_portal import router as client_portal_router
 from app.api.v1.endpoints.client_auth import router as client_auth_router
+from app.api.v1.endpoints.ai_generation import router as ai_generation_router
 
 api_router = APIRouter()
 api_router.include_router(health_router)
@@ -47,4 +48,5 @@ api_router.include_router(messages_router)
 api_router.include_router(ml_predictions_router)
 api_router.include_router(client_portal_router)
 api_router.include_router(client_auth_router)
+api_router.include_router(ai_generation_router)
 api_router.include_router(settings_router, prefix="/settings", tags=["settings"])

@@ -4,9 +4,11 @@ from uuid import uuid4
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from fastapi.responses import FileResponse
+import requests
 from sqlalchemy.orm import Session
 
 from app.api.v1.endpoints._activity import log_activity
+from app.core.config import settings
 from app.db.session import get_db
 from app.models.cahier_de_charge import CahierDeCharge
 from app.models.projet import Projet
@@ -129,6 +131,60 @@ def delete_note(projet_id: int, note_id: int, db: Session = Depends(get_db)):
     )
     db.commit()
     return None
+
+
+@router.get("/{projet_id}/notes/summary")
+def summarize_notes(projet_id: int, db: Session = Depends(get_db)):
+    projet = _get_project_or_404(db, projet_id)
+    notes = (
+        db.query(ProjetNote)
+        .filter(ProjetNote.projetID == projet_id)
+        .order_by(ProjetNote.createdAt.desc())
+        .all()
+    )
+    if not notes:
+        return {"summary": "Aucune note a resumer pour ce projet."}
+
+    notes_text = "\n".join([f"- {n.contenu}" for n in notes[:30] if (n.contenu or "").strip()])
+    if not notes_text.strip():
+        return {"summary": "Les notes du projet sont vides."}
+
+    groq_key = settings.GROQ_API_KEY
+    if not groq_key:
+        top_notes = [n.contenu.strip() for n in notes if (n.contenu or "").strip()][:3]
+        fallback = "Resume rapide (sans IA): " + " | ".join(top_notes)
+        return {"summary": fallback}
+
+    prompt = (
+        f"Projet: {projet.nomProjet}\n"
+        "Resume en francais les notes suivantes en 4-6 puces courtes.\n"
+        "Inclure: avancement, risques, blocages, prochaines actions.\n\n"
+        f"{notes_text}"
+    )
+
+    try:
+        resp = requests.post(
+            "https://api.groq.com/openai/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {groq_key}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": settings.GROQ_MODEL,
+                "messages": [
+                    {"role": "system", "content": "Tu es un assistant PM qui fait des resumes clairs et actionnables."},
+                    {"role": "user", "content": prompt},
+                ],
+                "temperature": 0.2,
+            },
+            timeout=30,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        summary = data["choices"][0]["message"]["content"]
+        return {"summary": summary}
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Echec generation resume IA: {str(e)}")
 
 
 @router.get("/{projet_id}/files", response_model=list[ProjetFileRead])

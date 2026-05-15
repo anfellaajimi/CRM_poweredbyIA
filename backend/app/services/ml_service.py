@@ -364,6 +364,7 @@ class MLService:
         active_users = []
         for u in users:
             if not u.actif: continue
+            if (u.role or "").lower() == "client": continue
             active_projects = [p for p in u.projets if (p.status or '').lower() not in {'termine', 'terminé', 'done', 'completed'}]
             workload = min(100.0, len(active_projects) * 30.0)
             status = "Élevé" if workload >= 80 else "Moyen" if workload >= 50 else "Bien"
