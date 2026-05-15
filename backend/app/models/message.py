@@ -11,15 +11,18 @@ class Message(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     expediteurID: Mapped[int] = mapped_column(
-        ForeignKey("utilisateurs.userID", ondelete="CASCADE"),
+        Integer,
         nullable=False,
         index=True,
     )
     destinataireID: Mapped[int] = mapped_column(
-        ForeignKey("utilisateurs.userID", ondelete="CASCADE"),
+        Integer,
         nullable=False,
         index=True,
     )
+    expediteurType: Mapped[str] = mapped_column(String(20), default="staff", nullable=False)
+    destinataireType: Mapped[str] = mapped_column(String(20), default="staff", nullable=False)
+    
     contenu: Mapped[str] = mapped_column(Text, nullable=False)
     type: Mapped[str] = mapped_column(String(20), default="text", nullable=False, index=True)
     mediaUrl: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -29,6 +32,3 @@ class Message(Base):
     createdAt: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, nullable=False, index=True
     )
-
-    expediteur = relationship("Utilisateur", foreign_keys=[expediteurID])
-    destinataire = relationship("Utilisateur", foreign_keys=[destinataireID])

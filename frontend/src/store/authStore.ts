@@ -1,12 +1,12 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { authAPI } from '../services/api';
+import { authAPI, clientAuthAPI } from '../services/api';
 
 export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'Admin' | 'Manager' | 'Developer';
+  role: 'Admin' | 'Manager' | 'Developer' | 'Client';
   avatar?: string;
 }
 
@@ -14,6 +14,8 @@ interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
+  loginClient: (email: string, password: string) => Promise<void>;
+  signupClient: (name: string, email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string, role: string) => Promise<void>;
   logout: () => void;
   updateUser: (user: User) => void;
@@ -25,6 +27,32 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       user: null,
       isAuthenticated: false,
+      loginClient: async (email: string, password: string) => {
+        const { data } = await clientAuthAPI.login(email, password);
+        localStorage.setItem('auth-token', data.access_token);
+        const apiUser = data.user || {};
+        const user: User = {
+          id: String(apiUser.id ?? ''),
+          name: apiUser.name ?? '',
+          email: apiUser.email ?? email,
+          role: 'Client',
+          avatar: apiUser.avatar,
+        };
+        set({ user, isAuthenticated: true });
+      },
+      signupClient: async (name: string, email: string, password: string) => {
+        const { data } = await clientAuthAPI.signup({ nom: name, email, password });
+        localStorage.setItem('auth-token', data.access_token);
+        const apiUser = data.user || {};
+        const user: User = {
+          id: String(apiUser.id ?? ''),
+          name: apiUser.name ?? name,
+          email: apiUser.email ?? email,
+          role: 'Client',
+          avatar: apiUser.avatar,
+        };
+        set({ user, isAuthenticated: true });
+      },
       login: async (email: string, password: string) => {
         const { data } = await authAPI.login(email, password);
         localStorage.setItem('auth-token', data.access_token);
@@ -34,6 +62,7 @@ export const useAuthStore = create<AuthState>()(
           manager: 'Manager',
           developpeur: 'Developer',
           developer: 'Developer',
+          client: 'Client',
         };
 
         const apiUser = data.user || {};
@@ -61,6 +90,7 @@ export const useAuthStore = create<AuthState>()(
           manager: 'Manager',
           developpeur: 'Developer',
           developer: 'Developer',
+          client: 'Client',
         };
 
         const apiUser = data.user || {};
@@ -89,6 +119,7 @@ export const useAuthStore = create<AuthState>()(
           manager: 'Manager',
           developpeur: 'Developer',
           developer: 'Developer',
+          client: 'Client',
         };
 
         const user: User = {

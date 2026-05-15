@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
     HelpCircle, 
     MessageSquare, 
     Mail, 
-    BookOpen, 
     Search, 
     ChevronDown, 
     ExternalLink, 
@@ -50,6 +50,7 @@ const FAQItem: React.FC<{ question: string; answer: string }> = ({ question, ans
 };
 
 export const Support: React.FC = () => {
+    const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState('');
     const [isTicketModalOpen, setIsTicketModalOpen] = useState(false);
 
@@ -119,7 +120,7 @@ export const Support: React.FC = () => {
                 </div>
 
                 {/* Quick Help Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {[
                         { 
                             icon: MessageSquare, 
@@ -138,14 +139,6 @@ export const Support: React.FC = () => {
                             color: "bg-purple-50",
                             iconColor: "text-purple-600"
                         },
-                        { 
-                            icon: BookOpen, 
-                            title: "Base de connaissances", 
-                            desc: "Guides complets et tutoriels vidéo détaillés.",
-                            action: "Consulter la doc",
-                            color: "bg-emerald-50",
-                            iconColor: "text-emerald-600"
-                        }
                     ].map((card, i) => (
                         <div key={i} className="bg-white border border-gray-100 rounded-3xl p-8 shadow-sm transition-all hover:shadow-xl hover:-translate-y-1 group">
                             <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center mb-6 transition-transform group-hover:scale-110", card.color)}>
@@ -154,7 +147,13 @@ export const Support: React.FC = () => {
                             <h3 className="font-black text-xl text-gray-900 mb-2">{card.title}</h3>
                             <p className="text-gray-500 text-sm font-medium mb-6 leading-relaxed">{card.desc}</p>
                             <button 
-                                onClick={() => card.title.includes('email') ? setIsTicketModalOpen(true) : toast.info("Cette fonctionnalité arrive bientôt !")}
+                                onClick={() => {
+                                    if (card.title.includes('email')) {
+                                        setIsTicketModalOpen(true);
+                                    } else if (card.title.includes('Chat')) {
+                                        navigate('/chat');
+                                    }
+                                }}
                                 className={cn(
                                     "w-full py-3 rounded-xl font-bold text-sm transition-all flex items-center justify-center gap-2",
                                     card.primary 
@@ -168,6 +167,7 @@ export const Support: React.FC = () => {
                         </div>
                     ))}
                 </div>
+
 
                 {/* FAQ Section */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 pt-8 border-t border-gray-100">

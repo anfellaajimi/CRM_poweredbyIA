@@ -172,6 +172,11 @@ const toProjectPayload = (project: Partial<UIProject>) => ({
   scoring: project.scoring || 'Moyen',
 });
 
+export const clientAuthAPI = {
+  login: (email: string, password: string) => api.post('/client-auth/login', { email, password }),
+  signup: (payload: { nom: string; email: string; password: string }) => api.post('/client-auth/signup', payload),
+};
+
 export const authAPI = {
   login: (email: string, motDePasse: string) => api.post('/auth/login', { email, motDePasse }),
   register: (payload: { nom: string; email: string; motDePasse: string; role: string }) =>
@@ -751,7 +756,7 @@ export type UIUser = {
   email: string;
   telephone?: string;
   dateNaissance?: string;
-  role: 'Admin' | 'Manager' | 'Developer';
+  role: 'Admin' | 'Manager' | 'Developer' | 'Client';
   status: 'Actif' | 'Inactif';
   joinedAt: string;
   avatar: string;
@@ -869,12 +874,14 @@ const roleToUi = (role: string): UIUser['role'] => {
   const normalized = role.toLowerCase();
   if (normalized === 'admin') return 'Admin';
   if (normalized === 'manager') return 'Manager';
+  if (normalized === 'client') return 'Client';
   return 'Developer';
 };
 
 const roleToApi = (role: UIUser['role']) => {
   if (role === 'Admin') return 'admin';
   if (role === 'Manager') return 'manager';
+  if (role === 'Client') return 'client';
   return 'developpeur';
 };
 
@@ -1348,4 +1355,20 @@ export const chatAPI = {
   markRead: async (messageId: number): Promise<void> => {
     await api.put(`/messages/${messageId}/read`);
   },
+};
+
+export const clientPortalAPI = {
+  getProfile: async () => (await api.get('/client-portal/me')).data,
+  updateProfile: async (payload: any) => (await api.put('/client-portal/me', payload)).data,
+  getProjects: async () => (await api.get('/client-portal/projects')).data,
+  getProjectDetails: async (id: number) => (await api.get(`/client-portal/projects/${id}`)).data,
+  getDevis: async () => (await api.get('/client-portal/documents/devis')).data,
+  getFactures: async () => (await api.get('/client-portal/documents/factures')).data,
+  getContracts: async () => (await api.get('/client-portal/documents/contracts')).data,
+  exportDevisPDF: (id: number, filename: string, viewOnly = false) =>
+    downloadPDF(`/devis/${id}/pdf`, filename, viewOnly),
+  exportFacturePDF: (id: number, filename: string, viewOnly = false) =>
+    downloadPDF(`/factures/${id}/pdf`, filename, viewOnly),
+  exportContractPDF: (id: number, filename: string, viewOnly = false) =>
+    downloadPDF(`/contrats/${id}/pdf`, filename, viewOnly),
 };

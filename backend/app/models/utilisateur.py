@@ -1,6 +1,5 @@
 from datetime import datetime
-
-from sqlalchemy import Boolean, DateTime, Integer, String
+from sqlalchemy import Boolean, DateTime, Integer, String, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base_class import Base
@@ -20,7 +19,10 @@ class Utilisateur(Base):
     cnssId: Mapped[str | None] = mapped_column(String(50), nullable=True)
     oauth_provider: Mapped[str | None] = mapped_column(String(50), nullable=True)
     oauth_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    
+    clientID: Mapped[int | None] = mapped_column(Integer, ForeignKey("clients.id"), nullable=True)
 
     projets = relationship("Projet", secondary="projet_utilisateurs", back_populates="utilisateurs")
     contracts = relationship("UserContract", back_populates="user", cascade="all, delete-orphan")
     cnss_declarations = relationship("DeclarationCNSS", back_populates="user", cascade="all, delete-orphan")
+    client = relationship("Client")

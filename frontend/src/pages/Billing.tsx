@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
-import { CreditCard, Download, Receipt, TrendingUp, Wallet, Clock, CheckCircle2, Pencil, ShieldCheck, X } from 'lucide-react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { facturesAPI, settingsAPI, UIFacture, UIAppSettings } from '../services/api';
+import { CreditCard, Download, Receipt, TrendingUp, Clock, CheckCircle2 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { facturesAPI, settingsAPI, UIFacture } from '../services/api';
 import { cn } from '../utils/cn';
-import { toast } from 'sonner';
-import { Modal } from '../components/ui/Modal';
+
+
 
 const formatAmount = (amount: number, currency: string = 'DT') => {
     return new Intl.NumberFormat('fr-FR', {
@@ -15,9 +15,8 @@ const formatAmount = (amount: number, currency: string = 'DT') => {
 };
 
 export const Billing: React.FC = () => {
-    const qc = useQueryClient();
-    const [isSubscriptionModalOpen, setSubscriptionModalOpen] = useState(false);
-    const [isPaymentModalOpen, setPaymentModalOpen] = useState(false);
+
+
 
     const { data: factures = [], isLoading: loadingFactures } = useQuery({
         queryKey: ['factures'],
@@ -29,16 +28,7 @@ export const Billing: React.FC = () => {
         queryFn: settingsAPI.get,
     });
 
-    const updateSettingsMutation = useMutation({
-        mutationFn: (payload: Partial<UIAppSettings>) => settingsAPI.update(payload),
-        onSuccess: () => {
-            qc.invalidateQueries({ queryKey: ['settings'] });
-            toast.success('Paramètres mis à jour avec succès');
-            setSubscriptionModalOpen(false);
-            setPaymentModalOpen(false);
-        },
-        onError: () => toast.error('Erreur lors de la mise à jour'),
-    });
+
 
     const stats = React.useMemo(() => {
         const total = factures.reduce((acc, f) => acc + (f.amount || 0), 0);
@@ -104,12 +94,11 @@ export const Billing: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <div className="lg:col-span-2 space-y-6">
-                        <div className="flex items-center justify-between">
-                            <h3 className="text-xl font-bold text-gray-900">Historique des factures</h3>
-                            <div className="text-xs font-bold text-gray-400 uppercase tracking-widest">{factures.length} Factures au total</div>
-                        </div>
+                <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-xl font-bold text-gray-900">Historique des factures</h3>
+                        <div className="text-xs font-bold text-gray-400 uppercase tracking-widest">{factures.length} Factures au total</div>
+                    </div>
                         <div className="bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left text-sm">
@@ -164,136 +153,10 @@ export const Billing: React.FC = () => {
                                 </table>
                             </div>
                         </div>
-                    </div>
-
-                    <div className="space-y-6">
-                        <h3 className="text-xl font-bold text-gray-900">Abonnement & Plan</h3>
-                        <div className="bg-gradient-to-br from-indigo-600 to-purple-700 rounded-3xl p-6 shadow-xl shadow-indigo-500/20 text-white space-y-6">
-                            <div className="flex justify-between items-start">
-                                <div>
-                                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-200">Plan Actuel</span>
-                                    <h4 className="text-2xl font-black mt-1">{settings?.subscriptionPlan || 'Enterprise AI'}</h4>
-                                </div>
-                                <div className="p-2 bg-white/10 rounded-xl backdrop-blur-md">
-                                    <Sparkles className="w-6 h-6 text-indigo-200" />
-                                </div>
-                            </div>
-
-                            <div className="space-y-4">
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-indigo-100/70 font-medium">Statut</span>
-                                    <span className="font-bold">{settings?.subscriptionStatus || 'Actif'}</span>
-                                </div>
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-indigo-100/70 font-medium">Utilisateurs</span>
-                                    <span className="font-bold">Illimité</span>
-                                </div>
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-indigo-100/70 font-medium">Prochain paiement</span>
-                                    <span className="font-bold">14 Nov 2026</span>
-                                </div>
-                            </div>
-
-                            <button 
-                                onClick={() => setSubscriptionModalOpen(true)}
-                                className="w-full py-3 bg-white text-indigo-700 rounded-xl font-bold text-sm hover:bg-indigo-50 transition-colors shadow-lg"
-                            >
-                                Gérer l'abonnement
-                            </button>
-                        </div>
-
-                        <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm space-y-4">
-                            <h4 className="font-bold text-gray-900 flex items-center gap-2">
-                                <Wallet className="text-gray-400" size={18} />
-                                Méthode de paiement
-                            </h4>
-                            <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-xl border border-gray-100">
-                                <div className="w-10 h-7 bg-indigo-600 rounded flex gap-1 justify-center items-center">
-                                    <div className="w-3 h-3 rounded-full bg-red-400/80 mix-blend-screen"></div>
-                                    <div className="w-3 h-3 rounded-full bg-amber-400/80 mix-blend-screen -ml-2"></div>
-                                </div>
-                                <div className="flex-1">
-                                    <p className="text-xs font-bold text-gray-900 italic">Mastercard •••• {settings?.paymentMethodLast4 || '4242'}</p>
-                                    <p className="text-[10px] text-gray-400 font-bold uppercase mt-0.5">Exp: {settings?.paymentMethodExpiry || '12/2027'}</p>
-                                </div>
-                                <button 
-                                    onClick={() => setPaymentModalOpen(true)}
-                                    className="text-[10px] font-black text-indigo-600 uppercase hover:underline"
-                                >
-                                    Éditer
-                                </button>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             </motion.div>
 
-            {/* Modal Gérer l'abonnement */}
-            <Modal isOpen={isSubscriptionModalOpen} onClose={() => setSubscriptionModalOpen(false)} title="Modifier l'abonnement">
-                <div className="space-y-4 p-2">
-                    <p className="text-sm text-gray-500">Choisissez votre nouveau forfait Enterprise.</p>
-                    <div className="grid grid-cols-1 gap-3">
-                        {['Basic Pro', 'Enterprise AI', 'SaaS Ultimate'].map((plan) => (
-                            <button
-                                key={plan}
-                                onClick={() => updateSettingsMutation.mutate({ subscriptionPlan: plan })}
-                                className={cn(
-                                    "flex items-center justify-between p-4 rounded-xl border transition-all",
-                                    settings?.subscriptionPlan === plan 
-                                        ? "border-indigo-600 bg-indigo-50/50" 
-                                        : "border-gray-100 hover:border-indigo-200 hover:bg-gray-50"
-                                )}
-                            >
-                                <span className="font-bold text-gray-900">{plan}</span>
-                                {settings?.subscriptionPlan === plan && <ShieldCheck className="text-indigo-600" size={20} />}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            </Modal>
 
-            {/* Modal Éditer Paiement */}
-            <Modal isOpen={isPaymentModalOpen} onClose={() => setPaymentModalOpen(false)} title="Modifier le mode de paiement">
-                <form 
-                    className="space-y-4 p-2"
-                    onSubmit={(e) => {
-                        e.preventDefault();
-                        const formData = new FormData(e.currentTarget);
-                        updateSettingsMutation.mutate({
-                            paymentMethodLast4: (formData.get('last4') as string) || settings?.paymentMethodLast4,
-                            paymentMethodExpiry: (formData.get('expiry') as string) || settings?.paymentMethodExpiry,
-                        });
-                    }}
-                >
-                    <div className="space-y-2">
-                        <label className="text-xs font-bold text-gray-500 uppercase">4 derniers chiffres</label>
-                        <input 
-                            name="last4"
-                            type="text" 
-                            maxLength={4}
-                            defaultValue={settings?.paymentMethodLast4}
-                            placeholder="4242"
-                            className="w-full p-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono"
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <label className="text-xs font-bold text-gray-500 uppercase">Date d'expiration (MM/AAAA)</label>
-                        <input 
-                            name="expiry"
-                            type="text" 
-                            defaultValue={settings?.paymentMethodExpiry}
-                            placeholder="12/2027"
-                            className="w-full p-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                        />
-                    </div>
-                    <button 
-                        type="submit"
-                        className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors mt-4"
-                    >
-                        Mettre à jour
-                    </button>
-                </form>
-            </Modal>
         </div>
     );
 };

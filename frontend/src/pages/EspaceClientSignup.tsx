@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'motion/react';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, CheckCircle2, AlertCircle } from 'lucide-react';
 
 /* ─── Quatratech Q Logo ─── */
 const QLogoSVG = ({ size = 36 }: { size?: number }) => (
@@ -17,36 +17,29 @@ const QLogoSVG = ({ size = 36 }: { size?: number }) => (
   </svg>
 );
 
-export const EspaceClient: React.FC = () => {
-  const [email, setEmail]           = useState('');
-  const [motDePasse, setMotDePasse] = useState('');
-  const [sesouvenir, setSeSouvenir] = useState(false);
-  const [voirMdp, setVoirMdp]       = useState(false);
+export const EspaceClientSignup: React.FC = () => {
+  const [nom, setNom] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [voirMdp, setVoirMdp] = useState(false);
   const [chargement, setChargement] = useState(false);
   const [emailActif, setEmailActif] = useState(false);
-  const [mdpActif, setMdpActif]     = useState(false);
-  const { loginClient } = useAuthStore();
-  const navigate  = useNavigate();
+  const [nomActif, setNomActif] = useState(false);
+  const [mdpActif, setMdpActif] = useState(false);
+  
+  const { signupClient } = useAuthStore();
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setChargement(true);
     try {
-      await loginClient(email, motDePasse);
-      
-      // Get the fresh state from the store manually or via the return if login was modified
-      // For now, we'll check the role after the await
-      const user = useAuthStore.getState().user;
-      
-      if (user?.role === 'Client') {
-        toast.success('Bienvenue dans votre espace client !');
-        navigate('/client-portal');
-      } else {
-        toast.success('Connexion réussie !');
-        navigate('/');
-      }
+      await signupClient(nom, email, password);
+      toast.success('Votre compte a été créé avec succès !');
+      navigate('/client-portal');
     } catch (err: any) {
-      toast.error('Email ou mot de passe incorrect.');
+      const errorMsg = err.response?.data?.detail || "Une erreur est survenue lors de l'inscription.";
+      toast.error(errorMsg);
     } finally {
       setChargement(false);
     }
@@ -66,7 +59,7 @@ export const EspaceClient: React.FC = () => {
         borderBottom: '1px solid #e8eaf0',
         display: 'flex', alignItems: 'center',
       }}>
-        <Link to="/login" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
+        <Link to="/espace-client" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
           <QLogoSVG size={38} />
           <span style={{
             color: '#1a237e', fontWeight: 800, fontSize: 22,
@@ -89,23 +82,59 @@ export const EspaceClient: React.FC = () => {
           transition={{ duration: 0.45 }}
           style={{ width: '100%', maxWidth: 600 }}
         >
+          {/* Badge Invitation */}
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            padding: '8px 16px', background: '#e8eaf6', borderRadius: 100,
+            color: '#1a237e', fontSize: 12, fontWeight: 700,
+            textTransform: 'uppercase', letterSpacing: '0.05em',
+            marginBottom: 24
+          }}>
+            <CheckCircle2 size={16} />
+            Accès réservé aux clients Quatratech
+          </div>
+
           {/* Title */}
           <h1 style={{
-            color: '#1a237e', fontWeight: 800, fontSize: 28,
-            margin: '0 0 16px',
+            color: '#1a237e', fontWeight: 800, fontSize: 32,
+            margin: '0 0 12px',
+            letterSpacing: '-0.02em'
           }}>
-            Connectez-vous
+            Créez votre compte portail
           </h1>
 
-          {/* Register link */}
-          <p style={{ color: '#546e7a', fontSize: 14, margin: '0 0 32px' }}>
-            Vous n'avez pas de compte ?{' '}
-            <Link to="/client-signup" style={{ color: '#1565c0', fontWeight: 700, textDecoration: 'none' }}>
-              Créer un compte
-            </Link>
+          <p style={{ color: '#546e7a', fontSize: 16, margin: '0 0 32px', lineHeight: 1.6 }}>
+            Utilisez l'adresse email associée à votre dossier client pour activer votre accès.
           </p>
 
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+            
+            {/* Nom complet */}
+            <div>
+              <label style={{
+                display: 'block', color: '#1a237e',
+                fontWeight: 700, fontSize: 14, marginBottom: 8,
+              }}>
+                Nom complet *
+              </label>
+              <input
+                type="text"
+                value={nom}
+                onChange={e => setNom(e.target.value)}
+                onFocus={() => setNomActif(true)}
+                onBlur={() => setNomActif(false)}
+                placeholder="Ex: Jean Dupont"
+                required
+                style={{
+                  width: '100%', boxSizing: 'border-box',
+                  padding: '14px 16px',
+                  border: `2px solid ${nomActif ? '#1565c0' : '#cfd8dc'}`,
+                  borderRadius: 4, fontSize: 15, outline: 'none',
+                  color: '#1a237e', background: '#fff',
+                  transition: 'border-color 0.2s',
+                }}
+              />
+            </div>
 
             {/* Email */}
             <div>
@@ -113,14 +142,15 @@ export const EspaceClient: React.FC = () => {
                 display: 'block', color: '#1a237e',
                 fontWeight: 700, fontSize: 14, marginBottom: 8,
               }}>
-                Email ou identifiant *
+                Adresse email professionnelle *
               </label>
               <input
-                type="text"
+                type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 onFocus={() => setEmailActif(true)}
                 onBlur={() => setEmailActif(false)}
+                placeholder="votre@email.com"
                 required
                 style={{
                   width: '100%', boxSizing: 'border-box',
@@ -131,38 +161,6 @@ export const EspaceClient: React.FC = () => {
                   transition: 'border-color 0.2s',
                 }}
               />
-              {/* Remember checkbox */}
-              <label 
-                onClick={() => setSeSouvenir(!sesouvenir)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 8,
-                  marginTop: 10, cursor: 'pointer',
-                }}
-              >
-                <div
-                  style={{
-                    width: 16, height: 16, borderRadius: 3, flexShrink: 0,
-                    border: `2px solid ${sesouvenir ? '#1565c0' : '#90a4ae'}`,
-                    background: sesouvenir ? '#1565c0' : '#fff',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    cursor: 'pointer', transition: 'all 0.18s',
-                  }}
-                >
-                  <AnimatePresence>
-                    {sesouvenir && (
-                      <motion.svg
-                        initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
-                        width="10" height="10" viewBox="0 0 10 10" fill="none"
-                      >
-                        <path d="M1.5 5L4 7.5L8.5 2.5" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                      </motion.svg>
-                    )}
-                  </AnimatePresence>
-                </div>
-                <span style={{ fontSize: 13, color: '#546e7a', userSelect: 'none' }}>
-                  Se souvenir de ce compte
-                </span>
-              </label>
             </div>
 
             {/* Password */}
@@ -171,15 +169,16 @@ export const EspaceClient: React.FC = () => {
                 display: 'block', color: '#1a237e',
                 fontWeight: 700, fontSize: 14, marginBottom: 8,
               }}>
-                Mot de passe *
+                Définir un mot de passe *
               </label>
               <div style={{ position: 'relative' }}>
                 <input
                   type={voirMdp ? 'text' : 'password'}
-                  value={motDePasse}
-                  onChange={e => setMotDePasse(e.target.value)}
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
                   onFocus={() => setMdpActif(true)}
                   onBlur={() => setMdpActif(false)}
+                  placeholder="••••••••"
                   required
                   style={{
                     width: '100%', boxSizing: 'border-box',
@@ -205,6 +204,17 @@ export const EspaceClient: React.FC = () => {
               </div>
             </div>
 
+            {/* Disclaimer */}
+            <div style={{
+              padding: '16px', background: '#fff9c4', borderRadius: 8,
+              border: '1px solid #fff176', display: 'flex', gap: 12
+            }}>
+              <AlertCircle size={20} style={{ color: '#fbc02d', flexShrink: 0 }} />
+              <p style={{ margin: 0, fontSize: 13, color: '#5d4037', lineHeight: 1.5 }}>
+                L'inscription est réservée aux clients enregistrés. Si votre email n'est pas reconnu, veuillez contacter votre gestionnaire de compte Quatratech.
+              </p>
+            </div>
+
             {/* Submit button */}
             <motion.button
               type="submit"
@@ -221,6 +231,7 @@ export const EspaceClient: React.FC = () => {
                 opacity: chargement ? 0.75 : 1,
                 transition: 'opacity 0.2s',
                 letterSpacing: '0.02em',
+                marginTop: 8
               }}
             >
               {chargement ? (
@@ -234,20 +245,21 @@ export const EspaceClient: React.FC = () => {
                       borderTopColor: 'white', borderRadius: '50%',
                     }}
                   />
-                  Connexion...
+                  Activation en cours...
                 </>
-              ) : 'Se connecter'}
+              ) : 'Activer mon espace'}
             </motion.button>
 
           </form>
 
-          {/* Forgot password */}
-          <div style={{ marginTop: 24 }}>
+          {/* Login link */}
+          <div style={{ marginTop: 32, textAlign: 'center' }}>
+            <span style={{ color: '#546e7a', fontSize: 14 }}>Vous avez déjà un compte ? </span>
             <Link
-              to="/forgot-password"
+              to="/espace-client"
               style={{ color: '#1565c0', fontWeight: 700, fontSize: 14, textDecoration: 'none' }}
             >
-              Mot de passe oublié ?
+              Connectez-vous ici
             </Link>
           </div>
         </motion.div>

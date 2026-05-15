@@ -4,7 +4,6 @@ import { Sidebar } from '../components/Sidebar';
 import { TopBar } from '../components/TopBar';
 import { useSidebarStore } from '../store/sidebarStore';
 import { cn } from '../utils/cn';
-import { Toaster } from 'sonner';
 
 export const DashboardLayout: React.FC = () => {
   const { isCollapsed, isFullScreen } = useSidebarStore();
@@ -23,7 +22,6 @@ export const DashboardLayout: React.FC = () => {
           <Outlet />
         </div>
       </main>
-      <Toaster position="top-right" richColors />
     </div>
   );
 };

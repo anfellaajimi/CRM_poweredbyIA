@@ -81,7 +81,14 @@ def get_current_user(
     except JWTError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
         
-    user = db.get(Utilisateur, int(user_id))
+    user_type: str = payload.get("user_type", "staff")
+    
+    if user_type == "client":
+        from app.models.client_portal_user import ClientPortalUser
+        user = db.get(ClientPortalUser, int(user_id))
+    else:
+        user = db.get(Utilisateur, int(user_id))
+        
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
     return user
@@ -108,7 +115,7 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
     if not is_valid:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
 
-    token = create_access_token(subject=user.userID)
+    token = create_access_token(data={"sub": str(user.userID), "user_type": "staff"})
     return {"access_token": token, "token_type": "bearer", "user": _to_user_payload(user)}
 
 
@@ -129,7 +136,7 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(user)
 
-    token = create_access_token(subject=user.userID)
+    token = create_access_token(data={"sub": str(user.userID), "user_type": "staff"})
     return {"access_token": token, "token_type": "bearer", "user": _to_user_payload(user)}
 
 
@@ -176,7 +183,7 @@ async def google_callback(request: Request, db: Session = Depends(get_db)):
             user.avatarUrl = avatar
         db.commit()
 
-    jwt_token = create_access_token(subject=user.userID)
+    jwt_token = create_access_token(data={"sub": str(user.userID), "user_type": "staff"})
     return RedirectResponse(url=f"{settings.FRONTEND_URL}/login?token={jwt_token}")
 
 
@@ -228,7 +235,7 @@ async def github_callback(request: Request, db: Session = Depends(get_db)):
             user.avatarUrl = avatar
         db.commit()
 
-    jwt_token = create_access_token(subject=user.userID)
+    jwt_token = create_access_token(data={"sub": str(user.userID), "user_type": "staff"})
     return RedirectResponse(url=f"{settings.FRONTEND_URL}/login?token={jwt_token}")
 
 @router.get("/me")

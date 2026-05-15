@@ -21,6 +21,8 @@ class ClientBase(BaseModel):
     status: str = "actif"
     devise: str = "TND"
 
+
+class ClientCreate(ClientBase):
     @model_validator(mode="after")
     def validate_type_specific_fields(self):
         client_type = (self.typeClient or "").lower()
@@ -31,10 +33,6 @@ class ClientBase(BaseModel):
             if not self.raisonSociale:
                 raise ValueError("Client moral requires raisonSociale")
         return self
-
-
-class ClientCreate(ClientBase):
-    pass
 
 
 class ClientUpdate(BaseModel):

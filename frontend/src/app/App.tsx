@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useThemeStore } from '../store/themeStore';
+import { Toaster } from 'sonner';
 
 import { AuthLayout } from '../layouts/AuthLayout';
 import { DashboardLayout } from '../layouts/DashboardLayout';
@@ -11,7 +12,7 @@ import { Login } from '../pages/Login';
 import { Register } from '../pages/Register';
 import { ForgotPassword } from '../pages/ForgotPassword';
 import { EspaceClient } from '../pages/EspaceClient';
-import { EspaceClientRegister } from '../pages/EspaceClientRegister';
+import { EspaceClientSignup } from '../pages/EspaceClientSignup';
 import { Dashboard } from '../pages/Dashboard';
 import { Clients } from '../pages/Clients';
 import { ClientDetails } from '../pages/ClientDetails';
@@ -34,6 +35,13 @@ import { Settings } from '../pages/Settings';
 import { Billing } from '../pages/Billing';
 import { Support } from '../pages/Support';
 import { Chat } from '../pages/Chat';
+
+import { ClientLayout } from '../layouts/ClientLayout';
+import { ClientDashboard } from '../pages/client/ClientDashboard';
+import { ClientProjects } from '../pages/client/ClientProjects';
+import { ClientDocuments } from '../pages/client/ClientDocuments';
+import { ClientProfile } from '../pages/client/ClientProfile';
+import { ClientProjectDetails } from '../pages/client/ClientProjectDetails';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -66,14 +74,31 @@ export default function App() {
             <Route path="/forgot-password" element={<ForgotPassword />} />
           </Route>
 
-          {/* Espace Client — standalone, no auth required */}
+          {/* Espace Client — standalone login/register */}
           <Route path="/espace-client" element={<EspaceClient />} />
-          <Route path="/espace-client/register" element={<EspaceClientRegister />} />
+          <Route path="/client-signup" element={<EspaceClientSignup />} />
 
-          {/* Protected dashboard routes */}
+          {/* Protected Client Portal routes */}
           <Route
             element={
-              <ProtectedRoute>
+              <ProtectedRoute allowedRoles={['Client']}>
+                <ClientLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route path="/client-portal" element={<ClientDashboard />} />
+            <Route path="/client-portal/projects" element={<ClientProjects />} />
+            <Route path="/client-portal/projects/:id" element={<ClientProjectDetails />} />
+            <Route path="/client-portal/documents" element={<ClientDocuments />} />
+            <Route path="/client-portal/profile" element={<ClientProfile />} />
+            {/* Reusing Chat for client too */}
+            <Route path="/client-portal/chat" element={<Chat />} />
+          </Route>
+
+          {/* Protected dashboard routes (Admin/Manager/Developer only) */}
+          <Route
+            element={
+              <ProtectedRoute allowedRoles={['Admin', 'Manager', 'Developer']}>
                 <DashboardLayout />
               </ProtectedRoute>
             }
@@ -102,9 +127,10 @@ export default function App() {
           </Route>
 
           <Route path="/404" element={<NotFound />} />
-          <Route path="*" element={<NotFound />} />
+          <Route path="*" element={<Navigate to="/404" replace />} />
         </Routes>
       </BrowserRouter>
+      <Toaster position="top-right" richColors />
     </QueryClientProvider>
   );
 }

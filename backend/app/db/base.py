@@ -19,6 +19,7 @@ from app.models.user import User
 from app.models.user_contract import UserContract
 from app.models.utilisateur import Utilisateur
 from app.models.declaration_cnss import DeclarationCNSS
+from app.models.client_portal_user import ClientPortalUser
 
 __all__ = [
     "User",
@@ -44,4 +45,5 @@ __all__ = [
     "ProjetUtilisateur",
     "DevisProjet",
     "FactureProjet",
+    "ClientPortalUser",
 ]

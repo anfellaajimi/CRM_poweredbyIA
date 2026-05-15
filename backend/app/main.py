@@ -157,12 +157,49 @@ def startup_create_tables() -> None:
     db = SessionLocal()
     try:
         now = datetime.utcnow()
-        generate_project_rappels(db, now=now)
-        send_due_reminder_emails(db, now=now)
-        run_service_monitoring_checks(db, now=now)
-        run_ai_agent(db, now=now)
-        run_health_checks(db)
-        MLService.run_all_predictions(db)
+        
+        try:
+            generate_project_rappels(db, now=now)
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            print(f"Error in generate_project_rappels: {e}")
+            
+        try:
+            send_due_reminder_emails(db, now=now)
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            print(f"Error in send_due_reminder_emails: {e}")
+            
+        try:
+            run_service_monitoring_checks(db, now=now)
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            print(f"Error in run_service_monitoring_checks: {e}")
+            
+        try:
+            run_ai_agent(db, now=now)
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            print(f"Error in run_ai_agent: {e}")
+            
+        try:
+            run_health_checks(db)
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            print(f"Error in run_health_checks: {e}")
+            
+        try:
+            MLService.run_all_predictions(db)
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            print(f"Error in MLService.run_all_predictions: {e}")
+            
     finally:
         db.close()
 
