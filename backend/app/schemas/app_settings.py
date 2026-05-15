@@ -16,9 +16,9 @@ class AppSettingsBase(BaseModel):
     default_validity_days: Optional[int] = 30
     document_notes: Optional[str] = None
 
-    ai_provider: Optional[str] = "openai"
+    ai_provider: Optional[str] = "groq"
     ai_api_key: Optional[str] = None
-    ai_model: Optional[str] = "gpt-4"
+    ai_model: Optional[str] = "llama-3.1-8b-instant"
 
     notifications_enabled: Optional[bool] = True
     notifications_email_enabled: Optional[bool] = False

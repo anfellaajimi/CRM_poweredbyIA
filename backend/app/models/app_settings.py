@@ -25,9 +25,9 @@ class AppSettings(Base):
     document_notes: Mapped[str | None] = mapped_column(Text)
 
     # IA Settings
-    ai_provider: Mapped[str | None] = mapped_column(String(50), default="openai")
+    ai_provider: Mapped[str | None] = mapped_column(String(50), default="groq")
     ai_api_key: Mapped[str | None] = mapped_column(String(255))
-    ai_model: Mapped[str | None] = mapped_column(String(100), default="gpt-4")
+    ai_model: Mapped[str | None] = mapped_column(String(100), default="llama-3.1-8b-instant")
 
     # Notification Settings
     notifications_enabled: Mapped[bool | None] = mapped_column(Boolean, default=True)

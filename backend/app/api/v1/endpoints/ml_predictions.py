@@ -4,7 +4,6 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.services.ml_service import MLService
 from app.models.ml_prediction import MLPrediction
-import os
 import requests
 from pydantic import BaseModel
 from app.core.config import settings
@@ -70,16 +69,16 @@ def get_smart_recommendations(db: Session = Depends(get_db)):
     if len(high_risk_projects) > 1:
         recommendations.append({
             "id": 1,
-            "title": "Ajouter 1 développeur backend",
-            "description": f"Surcharge détectée sur {len(high_risk_projects)} projets critiques.",
+            "title": "Ajouter 1 developpeur backend",
+            "description": f"Surcharge detectee sur {len(high_risk_projects)} projets critiques.",
             "priority": "Urgent",
             "type": "resource"
         })
     elif health['current_score'] < 60:
         recommendations.append({
             "id": 2,
-            "title": "Renforcer l'équipe",
-            "description": "Le score de santé global est faible.",
+            "title": "Renforcer l'equipe",
+            "description": "Le score de sante global est faible.",
             "priority": "Important",
             "type": "resource"
         })
@@ -89,7 +88,7 @@ def get_smart_recommendations(db: Session = Depends(get_db)):
     if delayed:
         recommendations.append({
             "id": 3,
-            "title": f"Délai projet '{delayed[0]['project_name']}' insuffisant",
+            "title": f"Delai projet '{delayed[0]['project_name']}' insuffisant",
             "description": "Risque majeur de retard de livraison.",
             "priority": "Urgent",
             "type": "time"
@@ -99,7 +98,7 @@ def get_smart_recommendations(db: Session = Depends(get_db)):
     if len(risks) > 0:
         recommendations.append({
             "id": 4,
-            "title": "Client 'FinanceTech' à risque de départ",
+            "title": "Client 'FinanceTech' a risque de depart",
             "description": "Score de satisfaction en baisse due aux retards.",
             "priority": "Important",
             "type": "client"
@@ -111,8 +110,8 @@ def get_smart_recommendations(db: Session = Depends(get_db)):
     if burnout_devs:
         recommendations.append({
             "id": 5,
-            "title": "Charge équipe trop élevée",
-            "description": f"{len(burnout_devs)} développeur(s) en risque de burnout.",
+            "title": "Charge equipe trop elevee",
+            "description": f"{len(burnout_devs)} developpeur(s) en risque de burnout.",
             "priority": "Urgent",
             "type": "team"
         })
@@ -121,7 +120,7 @@ def get_smart_recommendations(db: Session = Depends(get_db)):
         recommendations.append({
             "id": 6,
             "title": "Optimisation des processus",
-            "description": "Mettre en place des revues de code plus fréquentes.",
+            "description": "Mettre en place des revues de code plus frequentes.",
             "priority": "Suggestion",
             "type": "process"
         })
@@ -158,35 +157,39 @@ def predictive_chat(prompt: ChatPrompt, db: Session = Depends(get_db)):
     high_burnout_devs = [d['name'] for d in devs if d['burnout_risk_level'] == 'High']
     burnout_text = f"{len(high_burnout_devs)} ({', '.join(high_burnout_devs)})" if high_burnout_devs else "0"
     
-    system_prompt = f"""Tu es un assistant IA expert en analyse de CRM. Voici les données actuelles de l'entreprise :
-- CA prévu le mois prochain : {next_month_ca:,.2f} DT
+    system_prompt = f"""Tu es un assistant IA expert en analyse de CRM. Voici les donnees actuelles de l'entreprise :
+- CA prevu le mois prochain : {next_month_ca:,.2f} DT
 - Health Score : {score:.1f}/100
-- Projets à risque élevé : {risk_text}
-- Développeurs en surcharge (risque burnout) : {burnout_text}
+- Projets a risque eleve : {risk_text}
+- Developpeurs en surcharge (risque burnout) : {burnout_text}
 
-Réponds en français avec des chiffres précis basés sur ces données. Sois concis et professionnel."""
+Reponds en francais avec des chiffres precis bases sur ces donnees. Sois concis et professionnel."""
 
-    gemini_key = settings.GEMINI_API_KEY
-    if not gemini_key:
-        return {"reply": "Erreur: La clé API Gemini n'est pas configurée dans le backend."}
-        
-    url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={gemini_key}"
-    
+    groq_key = settings.GROQ_API_KEY
+    if not groq_key:
+        return {"reply": "Erreur: La cle API Groq n'est pas configuree dans le backend."}
+
+    url = "https://api.groq.com/openai/v1/chat/completions"
     payload = {
-        "contents": [
-            {
-                "parts": [
-                    {"text": system_prompt + "\n\nQuestion de l'utilisateur: " + prompt.message}
-                ]
-            }
-        ]
+        "model": settings.GROQ_MODEL,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": prompt.message}
+        ],
+        "temperature": 0.2
     }
-    
+    headers = {
+        "Authorization": f"Bearer {groq_key}",
+        "Content-Type": "application/json",
+    }
+
     try:
-        resp = requests.post(url, json=payload)
+        resp = requests.post(url, json=payload, headers=headers, timeout=30)
         resp.raise_for_status()
         data = resp.json()
-        reply_text = data["candidates"][0]["content"]["parts"][0]["text"]
+        reply_text = data["choices"][0]["message"]["content"]
         return {"reply": reply_text}
     except Exception as e:
-        return {"reply": f"Désolé, une erreur est survenue lors de la communication avec Gemini: {str(e)}"}
+        return {"reply": f"Desole, une erreur est survenue lors de la communication avec Groq: {str(e)}"}
+
+
